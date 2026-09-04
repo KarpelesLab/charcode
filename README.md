@@ -15,7 +15,7 @@ labels actually name.
 - **No `unsafe`.** The crate is `#![forbid(unsafe_code)]`.
 - **`no_std`.** Works with an allocator, or without one.
 - **Complete.** All 40 encodings in the standard and all 228 of their labels,
-  plus 46 charsets from outside it.
+  plus 47 charsets from outside it.
 - **Honest.** A label resolves to the charset it names. The standard's
   substitutions live behind their own lookup, where a browser can ask for
   them — see [Two lookups, on purpose](#two-lookups-on-purpose).
