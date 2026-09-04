@@ -232,10 +232,10 @@ ENCODING_DOCS = {
     "UTF-16BE": "UTF-16BE.  Decode only; encoding to it yields UTF-8, per `get an output encoding`.",
     "UTF-16LE": "UTF-16LE.  Decode only; encoding to it yields UTF-8, per `get an output encoding`.",
     "x-user-defined": "x-user-defined, which maps bytes 0x80 to 0xFF into the private use area.",
-    "Big5": "The standard's Big5: Big5 plus the Hong Kong Supplementary Character Set and other common extensions.  For Big5 itself see [`BIG5`].",
-    "EUC-JP": "The standard's EUC-JP, which folds the NEC and IBM extension rows into the JIS X 0208 plane and remaps six of its pointers.  Its decoder accepts JIS X 0212 via the 0x8F prefix; its encoder never writes one.  For EUC-JP itself see [`EUC_JP`].",
-    "ISO-2022-JP": "The standard's ISO-2022-JP, which adds a half-width katakana mode behind `ESC ( I`, folds the NEC and IBM extension rows into the JIS X 0208 plane, and remaps six of its pointers.  For ISO-2022-JP itself see [`ISO_2022_JP`].",
-    "Shift_JIS": "The standard's Shift_JIS, which is Windows codepage 932: the NEC and IBM extension rows, the end-user defined area, and seven of JIS X 0208's pointers remapped.  For Shift_JIS itself see [`SHIFT_JIS`].",
+    "Big5": "The standard's Big5: Big5 plus the Hong Kong Supplementary Character Set and other common extensions.  For Big5 itself see [`BIG5`](crate::BIG5).",
+    "EUC-JP": "The standard's EUC-JP, which folds the NEC and IBM extension rows into the JIS X 0208 plane and remaps six of its pointers.  Its decoder accepts JIS X 0212 via the 0x8F prefix; its encoder never writes one.  For EUC-JP itself see [`EUC_JP`](crate::EUC_JP).",
+    "ISO-2022-JP": "The standard's ISO-2022-JP, which adds a half-width katakana mode behind `ESC ( I`, folds the NEC and IBM extension rows into the JIS X 0208 plane, and remaps six of its pointers.  For ISO-2022-JP itself see [`ISO_2022_JP`](crate::ISO_2022_JP).",
+    "Shift_JIS": "The standard's Shift_JIS, which is Windows codepage 932: the NEC and IBM extension rows, the end-user defined area, and seven of JIS X 0208's pointers remapped.  For Shift_JIS itself see [`SHIFT_JIS`](crate::SHIFT_JIS).",
     "EUC-KR": "EUC-KR, in practice the Unified Hangul Code (Windows codepage 949).",
 }
 

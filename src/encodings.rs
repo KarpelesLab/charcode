@@ -406,7 +406,7 @@ pub static GB18030: &Encoding = &GB18030_INIT;
 
 #[cfg(feature = "big5")]
 pub(crate) const BIG5_HKSCS_INIT: Encoding = Encoding::new("Big5-HKSCS", VariantEncoding::Big5);
-/// The standard's Big5: Big5 plus the Hong Kong Supplementary Character Set and other common extensions.  For Big5 itself see [`BIG5`].
+/// The standard's Big5: Big5 plus the Hong Kong Supplementary Character Set and other common extensions.  For Big5 itself see [`BIG5`](crate::BIG5).
 #[cfg(feature = "big5")]
 pub static BIG5_HKSCS: &Encoding = &BIG5_HKSCS_INIT;
 
@@ -415,21 +415,21 @@ pub static BIG5_HKSCS: &Encoding = &BIG5_HKSCS_INIT;
 #[cfg(feature = "euc-jp")]
 pub(crate) const X_WHATWG_EUC_JP_INIT: Encoding =
     Encoding::new("x-whatwg-euc-jp", VariantEncoding::EucJp);
-/// The standard's EUC-JP, which folds the NEC and IBM extension rows into the JIS X 0208 plane and remaps six of its pointers.  Its decoder accepts JIS X 0212 via the 0x8F prefix; its encoder never writes one.  For EUC-JP itself see [`EUC_JP`].
+/// The standard's EUC-JP, which folds the NEC and IBM extension rows into the JIS X 0208 plane and remaps six of its pointers.  Its decoder accepts JIS X 0212 via the 0x8F prefix; its encoder never writes one.  For EUC-JP itself see [`EUC_JP`](crate::EUC_JP).
 #[cfg(feature = "euc-jp")]
 pub static X_WHATWG_EUC_JP: &Encoding = &X_WHATWG_EUC_JP_INIT;
 
 #[cfg(feature = "iso-2022-jp")]
 pub(crate) const X_WHATWG_ISO_2022_JP_INIT: Encoding =
     Encoding::new("x-whatwg-iso-2022-jp", VariantEncoding::Iso2022Jp);
-/// The standard's ISO-2022-JP, which adds a half-width katakana mode behind `ESC ( I`, folds the NEC and IBM extension rows into the JIS X 0208 plane, and remaps six of its pointers.  For ISO-2022-JP itself see [`ISO_2022_JP`].
+/// The standard's ISO-2022-JP, which adds a half-width katakana mode behind `ESC ( I`, folds the NEC and IBM extension rows into the JIS X 0208 plane, and remaps six of its pointers.  For ISO-2022-JP itself see [`ISO_2022_JP`](crate::ISO_2022_JP).
 #[cfg(feature = "iso-2022-jp")]
 pub static X_WHATWG_ISO_2022_JP: &Encoding = &X_WHATWG_ISO_2022_JP_INIT;
 
 #[cfg(feature = "shift-jis")]
 pub(crate) const WINDOWS_31J_INIT: Encoding =
     Encoding::new("windows-31j", VariantEncoding::ShiftJis);
-/// The standard's Shift_JIS, which is Windows codepage 932: the NEC and IBM extension rows, the end-user defined area, and seven of JIS X 0208's pointers remapped.  For Shift_JIS itself see [`SHIFT_JIS`].
+/// The standard's Shift_JIS, which is Windows codepage 932: the NEC and IBM extension rows, the end-user defined area, and seven of JIS X 0208's pointers remapped.  For Shift_JIS itself see [`SHIFT_JIS`](crate::SHIFT_JIS).
 #[cfg(feature = "shift-jis")]
 pub static WINDOWS_31J: &Encoding = &WINDOWS_31J_INIT;
 
