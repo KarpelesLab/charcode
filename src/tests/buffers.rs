@@ -79,7 +79,7 @@ fn round_trips_through_stack_buffers_with_tables() {
     let mut buffer = [0u8; 64];
     assert_eq!(decode(WINDOWS_1252, b"caf\xE9", &mut buffer).0, "caf\u{E9}");
     assert_eq!(
-        decode(SHIFT_JIS, b"\x93\xFA\x96\x7B", &mut buffer).0,
+        decode(WINDOWS_31J, b"\x93\xFA\x96\x7B", &mut buffer).0,
         "\u{65E5}\u{672C}"
     );
     assert_eq!(encode(WINDOWS_1252, "caf\u{E9}", &mut buffer).0, b"caf\xE9");
@@ -217,7 +217,7 @@ fn code_pages_resolve_and_round_trip() {
     for (number, expected) in [
         (866u32, IBM866),
         (874, WINDOWS_874),
-        (932, SHIFT_JIS),
+        (932, WINDOWS_31J),
         (936, GBK),
         (949, EUC_KR),
         (950, crate::BIG5),

@@ -573,8 +573,8 @@ pub static LABELS: &[Label] = &[
     #[cfg(feature = "shift-jis")]
     Label {
         text: "csshiftjis",
-        encoding: &e::SHIFT_JIS_INIT,
-        whatwg: true,
+        encoding: &x::SHIFT_JIS_INIT,
+        whatwg: false,
     },
     #[cfg(feature = "single-byte")]
     Label {
@@ -1386,6 +1386,12 @@ pub static LABELS: &[Label] = &[
         encoding: &x::ISO_8859_9_INIT,
         whatwg: false,
     },
+    #[cfg(feature = "shift-jis")]
+    Label {
+        text: "jis_x0208",
+        encoding: &x::SHIFT_JIS_INIT,
+        whatwg: false,
+    },
     #[cfg(feature = "single-byte")]
     Label {
         text: "koi",
@@ -1621,14 +1627,14 @@ pub static LABELS: &[Label] = &[
     #[cfg(feature = "shift-jis")]
     Label {
         text: "ms932",
-        encoding: &e::SHIFT_JIS_INIT,
+        encoding: &e::WINDOWS_31J_INIT,
         whatwg: true,
     },
     #[cfg(feature = "shift-jis")]
     Label {
         text: "ms_kanji",
-        encoding: &e::SHIFT_JIS_INIT,
-        whatwg: true,
+        encoding: &x::SHIFT_JIS_INIT,
+        whatwg: false,
     },
     #[cfg(feature = "dos")]
     Label {
@@ -1650,20 +1656,26 @@ pub static LABELS: &[Label] = &[
     #[cfg(feature = "shift-jis")]
     Label {
         text: "shift-jis",
-        encoding: &e::SHIFT_JIS_INIT,
-        whatwg: true,
+        encoding: &x::SHIFT_JIS_INIT,
+        whatwg: false,
     },
     #[cfg(feature = "shift-jis")]
     Label {
         text: "shift_jis",
-        encoding: &e::SHIFT_JIS_INIT,
-        whatwg: true,
+        encoding: &x::SHIFT_JIS_INIT,
+        whatwg: false,
+    },
+    #[cfg(feature = "shift-jis")]
+    Label {
+        text: "shift_jisx0208",
+        encoding: &x::SHIFT_JIS_INIT,
+        whatwg: false,
     },
     #[cfg(feature = "shift-jis")]
     Label {
         text: "sjis",
-        encoding: &e::SHIFT_JIS_INIT,
-        whatwg: true,
+        encoding: &x::SHIFT_JIS_INIT,
+        whatwg: false,
     },
     #[cfg(feature = "misc")]
     Label {
@@ -1870,7 +1882,7 @@ pub static LABELS: &[Label] = &[
     #[cfg(feature = "shift-jis")]
     Label {
         text: "windows-31j",
-        encoding: &e::SHIFT_JIS_INIT,
+        encoding: &e::WINDOWS_31J_INIT,
         whatwg: true,
     },
     #[cfg(feature = "single-byte")]
@@ -2044,8 +2056,8 @@ pub static LABELS: &[Label] = &[
     #[cfg(feature = "shift-jis")]
     Label {
         text: "x-sjis",
-        encoding: &e::SHIFT_JIS_INIT,
-        whatwg: true,
+        encoding: &x::SHIFT_JIS_INIT,
+        whatwg: false,
     },
     Label {
         text: "x-unicode20utf8",
@@ -2351,7 +2363,7 @@ pub static WHATWG_LABELS: &[Label] = &[
     #[cfg(feature = "shift-jis")]
     Label {
         text: "csshiftjis",
-        encoding: &e::SHIFT_JIS_INIT,
+        encoding: &e::WINDOWS_31J_INIT,
         whatwg: true,
     },
     Label {
@@ -3125,13 +3137,13 @@ pub static WHATWG_LABELS: &[Label] = &[
     #[cfg(feature = "shift-jis")]
     Label {
         text: "ms932",
-        encoding: &e::SHIFT_JIS_INIT,
+        encoding: &e::WINDOWS_31J_INIT,
         whatwg: true,
     },
     #[cfg(feature = "shift-jis")]
     Label {
         text: "ms_kanji",
-        encoding: &e::SHIFT_JIS_INIT,
+        encoding: &e::WINDOWS_31J_INIT,
         whatwg: true,
     },
     Label {
@@ -3142,19 +3154,19 @@ pub static WHATWG_LABELS: &[Label] = &[
     #[cfg(feature = "shift-jis")]
     Label {
         text: "shift-jis",
-        encoding: &e::SHIFT_JIS_INIT,
+        encoding: &e::WINDOWS_31J_INIT,
         whatwg: true,
     },
     #[cfg(feature = "shift-jis")]
     Label {
         text: "shift_jis",
-        encoding: &e::SHIFT_JIS_INIT,
+        encoding: &e::WINDOWS_31J_INIT,
         whatwg: true,
     },
     #[cfg(feature = "shift-jis")]
     Label {
         text: "sjis",
-        encoding: &e::SHIFT_JIS_INIT,
+        encoding: &e::WINDOWS_31J_INIT,
         whatwg: true,
     },
     #[cfg(feature = "single-byte")]
@@ -3298,7 +3310,7 @@ pub static WHATWG_LABELS: &[Label] = &[
     #[cfg(feature = "shift-jis")]
     Label {
         text: "windows-31j",
-        encoding: &e::SHIFT_JIS_INIT,
+        encoding: &e::WINDOWS_31J_INIT,
         whatwg: true,
     },
     #[cfg(feature = "single-byte")]
@@ -3400,7 +3412,7 @@ pub static WHATWG_LABELS: &[Label] = &[
     #[cfg(feature = "shift-jis")]
     Label {
         text: "x-sjis",
-        encoding: &e::SHIFT_JIS_INIT,
+        encoding: &e::WINDOWS_31J_INIT,
         whatwg: true,
     },
     Label {
@@ -3491,7 +3503,7 @@ pub static ALL_ENCODINGS: &[&Encoding] = &[
     #[cfg(feature = "iso-2022-jp")]
     &e::ISO_2022_JP_INIT,
     #[cfg(feature = "shift-jis")]
-    &e::SHIFT_JIS_INIT,
+    &e::WINDOWS_31J_INIT,
     #[cfg(feature = "euc-kr")]
     &e::EUC_KR_INIT,
     &e::REPLACEMENT_INIT,
@@ -3574,6 +3586,8 @@ pub static ALL_ENCODINGS: &[&Encoding] = &[
     &x::GB2312_INIT,
     #[cfg(feature = "big5")]
     &x::BIG5_INIT,
+    #[cfg(feature = "shift-jis")]
+    &x::SHIFT_JIS_INIT,
     #[cfg(feature = "iso-2022-kr")]
     &x::ISO_2022_KR_INIT,
     #[cfg(feature = "unicode-extras")]

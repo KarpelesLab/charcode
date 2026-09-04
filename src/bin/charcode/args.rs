@@ -455,7 +455,7 @@ mod tests {
     fn windows_code_pages_are_accepted() {
         for spelling in ["cp932", "CP-932", "cp_932", "windows-932", "x-cp932"] {
             let options = parse_options(&["-f", spelling]);
-            assert_eq!(options.from, charcode::SHIFT_JIS, "{spelling}");
+            assert_eq!(options.from, charcode::WINDOWS_31J, "{spelling}");
         }
         assert_eq!(
             parse_options(&["-f", "cp1252"]).from,

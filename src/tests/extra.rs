@@ -512,3 +512,155 @@ fn big5_labels_do_not_resolve_to_the_hong_kong_superset() {
     );
     assert_eq!(decode(crate::BIG5, b"\x88\x62"), None);
 }
+
+/// Shift_JIS reconstructed from the delta, checked against the decoder over the
+/// whole space it admits, and round-tripped.
+#[cfg(feature = "shift-jis")]
+#[test]
+fn shift_jis_is_jis_x_0208_and_jis_x_0201() {
+    use crate::tables::jis::JIS0208_DECODE;
+    use crate::tables::jis0208_1997::{JIS0208_1997_DECODE_DELTA, JIS0208_1997_ENCODE_CODE_POINTS};
+
+    // JIS X 0201's Roman set: ASCII but for the yen sign and the overline.
+    for byte in 0..=0x7Fu8 {
+        let expected = match byte {
+            0x5C => 0x00A5,
+            0x7E => 0x203E,
+            _ => u32::from(byte),
+        };
+        let c = char::from_u32(expected).unwrap();
+        assert_eq!(
+            decode(crate::SHIFT_JIS, &[byte]).as_deref(),
+            Some(&*String::from(c)),
+            "byte {byte:02X}"
+        );
+    }
+    // The half-width katakana, and nothing else in the single-byte range.
+    for byte in 0x80..=0xFFu8 {
+        let expected = match byte {
+            0xA1..=0xDF => Some(0xFF61 - 0xA1 + u32::from(byte)),
+            _ => None,
+        };
+        let decoded = decode(crate::SHIFT_JIS, &[byte]);
+        match expected {
+            Some(code_point) => {
+                let c = char::from_u32(code_point).unwrap();
+                assert_eq!(decoded.as_deref(), Some(&*String::from(c)), "{byte:02X}");
+            }
+            None => assert_eq!(decoded, None, "byte {byte:02X}"),
+        }
+    }
+
+    let mut mapped = 0usize;
+    for lead in (0x81..=0x9Fu8).chain(0xE0..=0xEF) {
+        for trail in 0x40..=0xFCu8 {
+            // What JIS X 0208 says, working only from the tables.
+            let expected = if trail == 0x7F {
+                None
+            } else {
+                let offset = if trail < 0x7F { 0x40 } else { 0x41 };
+                let leading_offset = if lead < 0xA0 { 0x81 } else { 0xC1 };
+                let pointer =
+                    (usize::from(lead) - leading_offset) * 188 + (usize::from(trail) - offset);
+                match JIS0208_1997_DECODE_DELTA.binary_search_by_key(&(pointer as u16), |&(p, _)| p)
+                {
+                    Ok(i) => match JIS0208_1997_DECODE_DELTA[i].1 {
+                        0xFFFF => None,
+                        code_point => Some(code_point),
+                    },
+                    Err(_) => JIS0208_DECODE
+                        .get(pointer)
+                        .copied()
+                        .filter(|&c| c != 0)
+                        .map(u32::from),
+                }
+            };
+            let bytes = [lead, trail];
+            match expected {
+                Some(code_point) => {
+                    mapped += 1;
+                    let c = char::from_u32(code_point).unwrap();
+                    assert_eq!(
+                        decode(crate::SHIFT_JIS, &bytes).as_deref(),
+                        Some(&*String::from(c)),
+                        "{bytes:02X?} should be U+{code_point:04X}"
+                    );
+                }
+                None => assert_eq!(decode(crate::SHIFT_JIS, &bytes), None, "{bytes:02X?}"),
+            }
+        }
+    }
+    // The 6879 code points JIS X 0208 defines, at one pointer each.
+    assert_eq!(mapped, 6879);
+
+    // Everything the encoder can reach comes back as itself, including the two
+    // single-byte cells JIS X 0201 does not share with ASCII.
+    for &code_point in JIS0208_1997_ENCODE_CODE_POINTS.iter() {
+        let c = char::from_u32(u32::from(code_point)).unwrap();
+        let mut out = Vec::new();
+        crate::SHIFT_JIS
+            .new_encoder()
+            .encode_from_str(&String::from(c), &mut out, true)
+            .unwrap();
+        assert_eq!(
+            decode(crate::SHIFT_JIS, &out).as_deref(),
+            Some(&*String::from(c))
+        );
+    }
+    for (c, byte) in [('\u{A5}', 0x5Cu8), ('\u{203E}', 0x7E)] {
+        let mut out = Vec::new();
+        crate::SHIFT_JIS
+            .new_encoder()
+            .encode_from_str(&String::from(c), &mut out, true)
+            .unwrap();
+        assert_eq!(out, [byte]);
+    }
+    // The backslash and the tilde are not in the charset at all.
+    for c in ['\\', '~'] {
+        let mut out = Vec::new();
+        assert!(
+            crate::SHIFT_JIS
+                .new_encoder()
+                .encode_from_str(&String::from(c), &mut out, true)
+                .is_err()
+        );
+    }
+}
+
+/// The two Shift_JISes are different charsets, and the honest lookup must give
+/// the one the label actually names.
+#[cfg(all(feature = "shift-jis", feature = "whatwg-aliases"))]
+#[test]
+fn shift_jis_labels_do_not_resolve_to_codepage_932() {
+    for label in [
+        b"shift_jis".as_slice(),
+        b"shift-jis",
+        b"sjis",
+        b"csshiftjis",
+    ] {
+        assert_eq!(Encoding::for_label(label), Some(crate::SHIFT_JIS));
+        assert_eq!(Encoding::for_whatwg_label(label), Some(crate::WINDOWS_31J));
+    }
+    // The labels that name the codepage keep it, in both lookups.
+    for label in [b"windows-31j".as_slice(), b"ms932"] {
+        assert_eq!(Encoding::for_label(label), Some(crate::WINDOWS_31J));
+        assert_eq!(Encoding::for_whatwg_label(label), Some(crate::WINDOWS_31J));
+    }
+    assert!(!crate::SHIFT_JIS.is_whatwg());
+    assert!(crate::WINDOWS_31J.is_whatwg());
+
+    // 0x5C, and one of the six pointers the standard's index remaps.
+    assert_eq!(decode(crate::SHIFT_JIS, b"\x5C").as_deref(), Some("\u{A5}"));
+    assert_eq!(decode(crate::WINDOWS_31J, b"\x5C").as_deref(), Some("\\"));
+    assert_eq!(
+        decode(crate::SHIFT_JIS, b"\x81\x60").as_deref(),
+        Some("\u{301C}")
+    );
+    assert_eq!(
+        decode(crate::WINDOWS_31J, b"\x81\x60").as_deref(),
+        Some("\u{FF5E}")
+    );
+    // The NEC row and the end-user defined area are the codepage's alone.
+    assert_eq!(decode(crate::SHIFT_JIS, b"\x87\x40"), None);
+    assert_eq!(decode(crate::SHIFT_JIS, b"\xF0\x40"), None);
+}

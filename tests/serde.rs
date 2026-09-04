@@ -3,12 +3,15 @@
 
 #![cfg(all(feature = "serde", feature = "std"))]
 
-use charcode::{Encoding, ISO_8859_1, SHIFT_JIS, UTF_8};
+use charcode::{Encoding, ISO_8859_1, UTF_8, WINDOWS_31J};
 
 #[test]
 fn serializes_as_its_name() {
     assert_eq!(serde_json::to_string(UTF_8).unwrap(), "\"UTF-8\"");
-    assert_eq!(serde_json::to_string(SHIFT_JIS).unwrap(), "\"Shift_JIS\"");
+    assert_eq!(
+        serde_json::to_string(WINDOWS_31J).unwrap(),
+        "\"windows-31j\""
+    );
 }
 
 #[test]

@@ -154,7 +154,7 @@ fn jis_round_trips() {
             .filter(|&cp| !JIS_ENCODER_EXCEPTIONS.contains(&cp)),
     );
     round_trip(
-        SHIFT_JIS,
+        WINDOWS_31J,
         SHIFT_JIS_ENCODE_CODE_POINTS
             .iter()
             .map(|&cp| u32::from(cp))
@@ -175,7 +175,7 @@ fn half_width_katakana() {
     for scalar in 0xFF61..=0xFF9Fu32 {
         let c = char::from_u32(scalar).unwrap();
         round_trip(EUC_JP, core::iter::once(scalar));
-        round_trip(SHIFT_JIS, core::iter::once(scalar));
+        round_trip(WINDOWS_31J, core::iter::once(scalar));
         let bytes = encode_char(ISO_2022_JP, c);
         let (decoded, _, _) =
             ISO_2022_JP.decode_with(&bytes, crate::DecodeOptions::new().bom(crate::Bom::Ignore));

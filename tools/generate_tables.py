@@ -197,6 +197,12 @@ EXTRA_DOCS = {
 /// official Unicode mapping, and at eleven punctuation cells this follows the
 /// Unicode Consortium rather than Microsoft's code page 950 — 0xA1E3 is U+223C
 /// TILDE OPERATOR here and U+FF5E in Microsoft's table, and so on.""",
+    "Shift_JIS": """Shift_JIS, as JIS X 0208:1997 Annex 1 defines it.
+///
+/// JIS X 0201's Roman set below 0x80 and JIS X 0208 above it, and nothing
+/// else.  The standard's encoding of the same name is Windows codepage 932;
+/// that one is [`WINDOWS_31J`](crate::WINDOWS_31J).  They disagree most
+/// visibly at 0x5C, which is U+00A5 YEN SIGN here and the backslash there.""",
     "GB2312": """GB 2312-80, in its EUC-CN form.
 ///
 /// Not the standard's `gb2312` label, which resolves to GBK: a superset, but
@@ -217,7 +223,7 @@ ENCODING_DOCS = {
     "Big5": "The standard's Big5: Big5 plus the Hong Kong Supplementary Character Set and other common extensions.  For Big5 itself see [`BIG5`].",
     "EUC-JP": "EUC-JP.  Its decoder also accepts JIS X 0212 via the 0x8F prefix.",
     "ISO-2022-JP": "ISO-2022-JP, the only stateful encoding in the standard.",
-    "Shift_JIS": "Shift_JIS, including the Windows end-user defined character range.",
+    "Shift_JIS": "The standard's Shift_JIS, which is Windows codepage 932: the NEC and IBM extension rows, the end-user defined area, and seven of JIS X 0208's pointers remapped.  For Shift_JIS itself see [`SHIFT_JIS`].",
     "EUC-KR": "EUC-KR, in practice the Unified Hangul Code (Windows codepage 949).",
 }
 
@@ -229,6 +235,7 @@ ENCODING_DOCS = {
 # `for_whatwg_label` still finds them by name.
 RENAMES = {
     "Big5": "Big5-HKSCS",
+    "Shift_JIS": "windows-31j",
 }
 
 # WHATWG encoding name -> the Cargo feature its tables live behind.  `None` means
@@ -294,9 +301,9 @@ CONST_NAMES = {
     "GBK": "GBK_INIT",
     "gb18030": "GB18030_INIT",
     "Big5": "BIG5_HKSCS_INIT",
+    "Shift_JIS": "WINDOWS_31J_INIT",
     "EUC-JP": "EUC_JP_INIT",
     "ISO-2022-JP": "ISO_2022_JP_INIT",
-    "Shift_JIS": "SHIFT_JIS_INIT",
     "EUC-KR": "EUC_KR_INIT",
     "replacement": "REPLACEMENT_INIT",
     "UTF-16BE": "UTF_16BE_INIT",
@@ -347,6 +354,10 @@ WHATWG_ONLY_LABELS = {
     "gb_2312-80", "iso-ir-58",
     # Big5 itself is not Big5 plus HKSCS: 260 pointers differ.
     "big5", "csbig5", "cn-big5", "x-x-big5",
+    # Shift_JIS itself is not codepage 932: JIS X 0201 below 0x80, no NEC or
+    # IBM rows, and seven of JIS X 0208's own pointers left alone.  `ms932`
+    # and `windows-31j` name the codepage and stay with it.
+    "shift_jis", "shift-jis", "sjis", "csshiftjis", "x-sjis", "ms_kanji",
     # Real encodings the standard neutralizes.  A caller that wants one should
     # be told this build has no such thing, not handed `replacement`.
     "csiso2022kr", "hz-gb-2312", "iso-2022-cn", "iso-2022-cn-ext",
@@ -460,6 +471,11 @@ ALGORITHMIC = [
     # Big5 as standardised, which the standard's own index extends and remaps.
     ("big5", "Big5", "BIG5", "Big5_1984", 950,
      ["big5", "csbig5", "cn-big5", "big5-1984", "x-x-big5"]),
+    # Shift_JIS as standardised, which the standard's own index extends and
+    # remaps.  Codepage 932 is the standard's, and keeps that number.
+    ("shift-jis", "Shift_JIS", "SHIFT_JIS", "ShiftJis1997", None,
+     ["shift_jis", "shift-jis", "sjis", "csshiftjis", "x-sjis", "ms_kanji",
+      "shift_jisx0208", "jis_x0208"]),
     ("iso-2022-kr", "ISO-2022-KR", "ISO_2022_KR", "Iso2022Kr", 50225,
      ["iso-2022-kr", "csiso2022kr", "iso2022kr"]),
     ("unicode-extras", "UTF-32BE", "UTF_32BE", "Utf32Be", 12001,
@@ -661,6 +677,77 @@ pub static BIG5_1984_ENCODE_DELTA: [(u16, u16); %d] = [
         "\n".join("    (0x{:04X}, 0x{:04X}),".format(a, b) for a, b in encode_delta),
     )]
     write(os.path.join(OUT, "big5_1984.rs"), "".join(parts))
+
+
+def emit_jis0208_1997(indexes):
+    """JIS X 0208 itself, expressed as a narrowing of the standard's index.
+
+    The standard's index jis0208 is JIS X 0208 with the NEC and IBM extension
+    rows folded in — row 13 and rows 89 to 92 and 115 to 119 — and it gives
+    six of JIS X 0208's own pointers a different character: the wave dash,
+    double vertical line, minus sign, cent, pound and not signs all become
+    their fullwidth or Windows lookalikes.
+
+    That is one delta, shared by Shift_JIS and EUC-JP; each restricts it further
+    to the byte range it admits.
+
+    Source: Unicode's MAPPINGS/OBSOLETE/EASTASIA/JIS/JIS0208.TXT.
+    """
+    proper = {}
+    with open(os.path.join(MAPPINGS, "JIS0208.TXT"), encoding="utf-8", errors="replace") as f:
+        for line in f:
+            line = line.split("#", 1)[0].split()
+            if len(line) < 3 or not line[0].lower().startswith("0x"):
+                continue
+            jis = int(line[1], 16)
+            row, cell = (jis >> 8) - 0x21, (jis & 0xFF) - 0x21
+            proper[row * 94 + cell] = int(line[2], 16)
+    assert len(proper) == 6879, len(proper)
+    # Row 1 cell 32 is the fullwidth reverse solidus.  JIS0208.TXT gives it
+    # U+005C, a Unicode 1.1 choice from before the fullwidth forms settled, and
+    # nothing else follows it: glibc, Python and the Encoding Standard all say
+    # U+FF3C, and U+005C is already the yen sign's old home in JIS X 0201.
+    assert proper[31] == 0x005C
+    proper[31] = 0xFF3C
+
+    index = indexes["jis0208"]
+    decode_delta = []
+    remaps = 0
+    for pointer, theirs in enumerate(index):
+        mine = proper.get(pointer)
+        if mine == theirs:
+            continue
+        if mine is None:
+            decode_delta.append((pointer, UNASSIGNED))
+        else:
+            remaps += 1
+            decode_delta.append((pointer, mine))
+    assert remaps == 6, remaps
+    assert len(decode_delta) == 851, len(decode_delta)
+    assert all(pointer <= 0xFFFF for pointer, _ in decode_delta)
+    decode_delta.sort()
+    parts = [HEADER, """
+//! JIS X 0208 itself, as a narrowing of index jis0208.
+//!
+//! The pointers where the standard's index — JIS X 0208 with the NEC and IBM
+//! extension rows — disagrees with JIS X 0208.  `0xFFFF` marks a pointer
+//! JIS X 0208 leaves undefined.  Shared by Shift_JIS and EUC-JP.
+
+/// Where JIS X 0208 differs from index jis0208.
+#[rustfmt::skip]
+pub static JIS0208_1997_DECODE_DELTA: [(u16, u32); %d] = [
+%s
+];
+
+/// `the index pointer for code point`, over JIS X 0208 alone.
+///
+/// The standard's own encode indexes cannot serve here: they hold the NEC and
+/// IBM rows, and would answer with a pointer JIS X 0208 does not define.
+""" % (
+        len(decode_delta),
+        "\n".join("    (0x{:04X}, 0x{:04X}),".format(a, b) for a, b in decode_delta),
+    ), encode_table("JIS0208_1997_ENCODE", sorted({cp: p for p, cp in sorted(proper.items(), reverse=True)}.items()), 16)]
+    write(os.path.join(OUT, "jis0208_1997.rs"), "".join(parts))
 
 
 def emit_extra(indexes):
@@ -965,6 +1052,7 @@ def main():
     extra_rows = emit_extra(indexes)
     gb2312_delta = emit_gb2312(indexes)
     emit_big5_1984(indexes)
+    emit_jis0208_1997(indexes)
     labels = []
     names = []
     for group in encodings:
@@ -1146,6 +1234,8 @@ pub mod gb18030;
 pub mod gb2312;
 #[cfg(any(feature = "euc-jp", feature = "iso-2022-jp", feature = "shift-jis"))]
 pub mod jis;
+#[cfg(any(feature = "euc-jp", feature = "iso-2022-jp", feature = "shift-jis"))]
+pub mod jis0208_1997;
 #[cfg(any(\n    feature = "dos",\n    feature = "ebcdic",\n    feature = "mac",\n    feature = "misc",\n    feature = "single-byte"\n))]
 pub mod extra;
 pub mod extra_labels;

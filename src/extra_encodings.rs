@@ -520,6 +520,18 @@ pub(crate) const BIG5_INIT: Encoding = Encoding::new("Big5", VariantEncoding::Bi
 #[cfg(feature = "big5")]
 pub static BIG5: &Encoding = &BIG5_INIT;
 
+#[cfg(feature = "shift-jis")]
+pub(crate) const SHIFT_JIS_INIT: Encoding =
+    Encoding::new("Shift_JIS", VariantEncoding::ShiftJis1997);
+/// Shift_JIS, as JIS X 0208:1997 Annex 1 defines it.
+///
+/// JIS X 0201's Roman set below 0x80 and JIS X 0208 above it, and nothing
+/// else.  The standard's encoding of the same name is Windows codepage 932;
+/// that one is [`WINDOWS_31J`](crate::WINDOWS_31J).  They disagree most
+/// visibly at 0x5C, which is U+00A5 YEN SIGN here and the backslash there.
+#[cfg(feature = "shift-jis")]
+pub static SHIFT_JIS: &Encoding = &SHIFT_JIS_INIT;
+
 #[cfg(feature = "iso-2022-kr")]
 pub(crate) const ISO_2022_KR_INIT: Encoding =
     Encoding::new("ISO-2022-KR", VariantEncoding::Iso2022Kr);

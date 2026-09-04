@@ -41,6 +41,20 @@ pub(crate) fn ascii_prefix_len_capped(bytes: &[u8], limit: usize) -> usize {
     ascii_prefix_len(&bytes[..core::cmp::min(bytes.len(), limit)])
 }
 
+/// The leading run of bytes JIS X 0201's Roman set shares with ASCII.
+///
+/// It is ASCII but for 0x5C and 0x7E, which are the yen sign and the overline,
+/// so a decoder that takes the shortcut has to stop at those two.
+#[cfg(feature = "shift-jis")]
+#[inline]
+pub(crate) fn jis_roman_prefix_len(bytes: &[u8], limit: usize) -> usize {
+    let run = ascii_prefix_len_capped(bytes, limit);
+    match bytes[..run].iter().position(|&b| b == 0x5C || b == 0x7E) {
+        Some(at) => at,
+        None => run,
+    }
+}
+
 /// Returns true if every byte is ASCII.
 #[inline]
 ///
@@ -72,6 +86,18 @@ mod tests {
         assert_eq!(ascii_prefix_len_capped(bytes, 100), 16);
         assert_eq!(ascii_prefix_len_capped(b"ab\x80cd", 100), 2);
         assert_eq!(ascii_prefix_len_capped(b"", 8), 0);
+    }
+
+    #[cfg(feature = "shift-jis")]
+    #[test]
+    fn jis_roman_stops_at_the_yen_sign_and_the_overline() {
+        assert_eq!(jis_roman_prefix_len(b"plain text", 100), 10);
+        assert_eq!(jis_roman_prefix_len(b"C:\\dir", 100), 2);
+        assert_eq!(jis_roman_prefix_len(b"a~b", 100), 1);
+        assert_eq!(jis_roman_prefix_len(b"\\", 100), 0);
+        // The cap still bounds it, and the run still stops at a high byte.
+        assert_eq!(jis_roman_prefix_len(b"abcdef", 3), 3);
+        assert_eq!(jis_roman_prefix_len(b"ab\xA1", 100), 2);
     }
 
     #[test]

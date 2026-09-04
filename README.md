@@ -40,7 +40,9 @@ defines, which is what a `Content-Type` header or a `<meta charset>` carries:
 use charcode::Encoding;
 
 let encoding = Encoding::for_whatwg_label(b"Shift-JIS").unwrap();
-assert_eq!(encoding.name(), "Shift_JIS");
+// What the standard resolves that label to is codepage 932, so that is what
+// it is called here; `Encoding::for_label` gives Shift_JIS itself.
+assert_eq!(encoding.name(), "windows-31j");
 let (text, _, _) = encoding.decode(b"\x93\xFA\x96{");
 assert_eq!(text, "日本");
 ```
@@ -135,9 +137,9 @@ Encodings can also be looked up by Microsoft code page number, which is what
 `GetACP`, a .NET `Encoding.CodePage` or an old database column reports:
 
 ```rust
-use charcode::{Encoding, SHIFT_JIS, WINDOWS_1252};
+use charcode::{Encoding, WINDOWS_31J, WINDOWS_1252};
 
-assert_eq!(Encoding::for_windows_code_page(932), Some(SHIFT_JIS));
+assert_eq!(Encoding::for_windows_code_page(932), Some(WINDOWS_31J));
 assert_eq!(Encoding::for_windows_code_page(1252), Some(WINDOWS_1252));
 assert_eq!(WINDOWS_1252.windows_code_page(), Some(1252));
 ```
@@ -190,8 +192,8 @@ overrides `-f`, and `iconv`'s `//IGNORE` suffix is accepted as a synonym for
 | Unicode | UTF-8, UTF-16BE, UTF-16LE |
 | Always present | ISO-8859-1, US-ASCII (identity maps, no tables) |
 | Single-byte | IBM866, ISO-8859-2/3/4/5/6/7/8/8-I/10/13/14/15/16, KOI8-R, KOI8-U, macintosh, windows-874, windows-1250 through windows-1258, x-mac-cyrillic |
-| Chinese | GBK, gb18030, Big5 |
-| Japanese | EUC-JP, ISO-2022-JP, Shift_JIS |
+| Chinese | GBK, gb18030, Big5-HKSCS |
+| Japanese | EUC-JP, ISO-2022-JP, windows-31j |
 | Korean | EUC-KR |
 | Other | replacement, x-user-defined |
 

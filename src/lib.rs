@@ -65,7 +65,7 @@
 //! use charcode::Encoding;
 //!
 //! assert_eq!(Encoding::for_whatwg_label(b"latin1").unwrap().name(), "windows-1252");
-//! assert_eq!(Encoding::for_whatwg_label(b"  Shift-JIS ").unwrap().name(), "Shift_JIS");
+//! assert_eq!(Encoding::for_whatwg_label(b"  Shift-JIS ").unwrap().name(), "windows-31j");
 //! assert!(Encoding::for_whatwg_label(b"not-an-encoding").is_none());
 //! # }
 //! # #[cfg(not(feature = "whatwg"))]
@@ -255,6 +255,9 @@ mod replacement;
 mod result;
 #[cfg(feature = "shift-jis")]
 mod shift_jis;
+#[cfg(feature = "shift-jis")]
+#[allow(non_camel_case_types)]
+mod shift_jis_1997;
 #[cfg(feature = "half-byte")]
 mod single_byte;
 mod sink;
@@ -332,6 +335,13 @@ impl Encoding {
     /// The encoding's name, in the exact capitalization the standard uses.
     ///
     /// Names are stable identifiers: `"UTF-8"`, `"windows-1252"`, `"Shift_JIS"`.
+    ///
+    /// Where the standard names an encoding after a charset whose table it does
+    /// not carry, the name here is the one that fits what it holds — its `Big5`
+    /// is `"Big5-HKSCS"` and its `Shift_JIS` is `"windows-31j"` — so that the
+    /// charset itself can keep its own name.  Both replacements are labels the
+    /// standard defines, so [`for_whatwg_label`](Self::for_whatwg_label) still
+    /// finds them.
     pub fn name(&self) -> &'static str {
         self.name
     }
@@ -486,9 +496,9 @@ impl Encoding {
     /// ```
     /// # #[cfg(feature = "whatwg")]
     /// # fn main() {
-    /// # use charcode::{Encoding, BIG5, SHIFT_JIS, WINDOWS_1252};
+    /// # use charcode::{Encoding, BIG5, WINDOWS_31J, WINDOWS_1252};
     /// assert_eq!(Encoding::for_windows_code_page(1252), Some(WINDOWS_1252));
-    /// assert_eq!(Encoding::for_windows_code_page(932), Some(SHIFT_JIS));
+    /// assert_eq!(Encoding::for_windows_code_page(932), Some(WINDOWS_31J));
     /// assert_eq!(Encoding::for_windows_code_page(950), Some(BIG5));
     /// // 437 is IBM437, which the off-by-default `dos` group carries.
     /// # #[cfg(not(feature = "dos"))]
@@ -516,8 +526,8 @@ impl Encoding {
     /// ```
     /// # #[cfg(feature = "whatwg")]
     /// # fn main() {
-    /// # use charcode::{Encoding, IBM866, SHIFT_JIS};
-    /// assert_eq!(Encoding::for_cp(932), Some(SHIFT_JIS));
+    /// # use charcode::{Encoding, IBM866, WINDOWS_31J};
+    /// assert_eq!(Encoding::for_cp(932), Some(WINDOWS_31J));
     /// assert_eq!(Encoding::for_cp(866), Some(IBM866));
     /// # #[cfg(not(feature = "dos"))]
     /// assert_eq!(Encoding::for_cp(437), None);
@@ -548,9 +558,9 @@ impl Encoding {
     /// ```
     /// # #[cfg(feature = "whatwg")]
     /// # fn main() {
-    /// # use charcode::{Encoding, SHIFT_JIS, WINDOWS_1252, X_USER_DEFINED};
+    /// # use charcode::{Encoding, WINDOWS_31J, WINDOWS_1252, X_USER_DEFINED};
     /// assert_eq!(WINDOWS_1252.windows_code_page(), Some(1252));
-    /// assert_eq!(SHIFT_JIS.windows_code_page(), Some(932));
+    /// assert_eq!(WINDOWS_31J.windows_code_page(), Some(932));
     /// // 28591 is ISO-8859-1, the charset Microsoft assigns it, and not what
     /// // the label `iso-8859-1` gives through the standard's own lookup.
     /// assert_eq!(Encoding::for_windows_code_page(28591), Some(charcode::ISO_8859_1));

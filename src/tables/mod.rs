@@ -28,6 +28,8 @@ pub mod gb18030;
 pub mod gb2312;
 #[cfg(any(feature = "euc-jp", feature = "iso-2022-jp", feature = "shift-jis"))]
 pub mod jis;
+#[cfg(any(feature = "euc-jp", feature = "iso-2022-jp", feature = "shift-jis"))]
+pub mod jis0208_1997;
 pub mod labels;
 #[cfg(feature = "single-byte")]
 pub mod single_byte;

@@ -426,10 +426,11 @@ pub(crate) const ISO_2022_JP_INIT: Encoding =
 pub static ISO_2022_JP: &Encoding = &ISO_2022_JP_INIT;
 
 #[cfg(feature = "shift-jis")]
-pub(crate) const SHIFT_JIS_INIT: Encoding = Encoding::new("Shift_JIS", VariantEncoding::ShiftJis);
-/// Shift_JIS, including the Windows end-user defined character range.
+pub(crate) const WINDOWS_31J_INIT: Encoding =
+    Encoding::new("windows-31j", VariantEncoding::ShiftJis);
+/// The standard's Shift_JIS, which is Windows codepage 932: the NEC and IBM extension rows, the end-user defined area, and seven of JIS X 0208's pointers remapped.  For Shift_JIS itself see [`SHIFT_JIS`].
 #[cfg(feature = "shift-jis")]
-pub static SHIFT_JIS: &Encoding = &SHIFT_JIS_INIT;
+pub static WINDOWS_31J: &Encoding = &WINDOWS_31J_INIT;
 
 // Legacy multi-byte Korean encodings
 

@@ -27,6 +27,8 @@ use crate::replacement::ReplacementDecoder;
 use crate::result::{DecoderResult, EncoderResult};
 #[cfg(feature = "shift-jis")]
 use crate::shift_jis::{ShiftJisDecoder, ShiftJisEncoder};
+#[cfg(feature = "shift-jis")]
+use crate::shift_jis_1997::{ShiftJis1997Decoder, ShiftJis1997Encoder};
 #[cfg(feature = "half-byte")]
 use crate::single_byte::{SingleByteDecoder, SingleByteEncoder};
 use crate::sink::ByteSink;
@@ -69,6 +71,8 @@ pub(crate) enum VariantEncoding {
     /// Big5 as standardised, rather than the standard's extended index.
     #[cfg(feature = "big5")]
     Big5_1984,
+    #[cfg(feature = "shift-jis")]
+    ShiftJis1997,
     #[cfg(feature = "euc-jp")]
     EucJp,
     #[cfg(feature = "iso-2022-jp")]
@@ -113,6 +117,10 @@ impl VariantEncoding {
             VariantEncoding::Big5 => VariantDecoder::Big5(Big5Decoder::new()),
             #[cfg(feature = "big5")]
             VariantEncoding::Big5_1984 => VariantDecoder::Big5_1984(Big5_1984Decoder::new()),
+            #[cfg(feature = "shift-jis")]
+            VariantEncoding::ShiftJis1997 => {
+                VariantDecoder::ShiftJis1997(ShiftJis1997Decoder::new())
+            }
             #[cfg(feature = "euc-jp")]
             VariantEncoding::EucJp => VariantDecoder::EucJp(EucJpDecoder::new()),
             #[cfg(feature = "iso-2022-jp")]
@@ -155,6 +163,8 @@ impl VariantEncoding {
             VariantEncoding::Big5 => VariantEncoder::Big5(Big5Encoder),
             #[cfg(feature = "big5")]
             VariantEncoding::Big5_1984 => VariantEncoder::Big5_1984(Big5_1984Encoder),
+            #[cfg(feature = "shift-jis")]
+            VariantEncoding::ShiftJis1997 => VariantEncoder::ShiftJis1997(ShiftJis1997Encoder),
             #[cfg(feature = "euc-jp")]
             VariantEncoding::EucJp => VariantEncoder::EucJp(EucJpEncoder),
             #[cfg(feature = "iso-2022-jp")]
@@ -208,6 +218,10 @@ impl VariantEncoding {
             // pages permute the range entirely.
             #[cfg(feature = "full-byte")]
             VariantEncoding::FullByte(..) => false,
+            // JIS X 0201's Roman set is not ASCII: 0x5C is the yen sign and
+            // 0x7E the overline.
+            #[cfg(feature = "shift-jis")]
+            VariantEncoding::ShiftJis1997 => false,
             // UTF-32 is not byte-oriented, and a run of ASCII bytes in UTF-7
             // can stand for arbitrary text.
             #[cfg(feature = "unicode-extras")]
@@ -238,6 +252,8 @@ pub(crate) enum VariantDecoder {
     Big5(Big5Decoder),
     #[cfg(feature = "big5")]
     Big5_1984(Big5_1984Decoder),
+    #[cfg(feature = "shift-jis")]
+    ShiftJis1997(ShiftJis1997Decoder),
     #[cfg(feature = "euc-jp")]
     EucJp(EucJpDecoder),
     #[cfg(feature = "iso-2022-jp")]
@@ -279,6 +295,8 @@ impl VariantDecoder {
             VariantDecoder::Big5(d) => d.decode(src, sink, last),
             #[cfg(feature = "big5")]
             VariantDecoder::Big5_1984(d) => d.decode(src, sink, last),
+            #[cfg(feature = "shift-jis")]
+            VariantDecoder::ShiftJis1997(d) => d.decode(src, sink, last),
             #[cfg(feature = "euc-jp")]
             VariantDecoder::EucJp(d) => d.decode(src, sink, last),
             #[cfg(feature = "iso-2022-jp")]
@@ -325,6 +343,8 @@ pub(crate) enum VariantEncoder {
     Big5(Big5Encoder),
     #[cfg(feature = "big5")]
     Big5_1984(Big5_1984Encoder),
+    #[cfg(feature = "shift-jis")]
+    ShiftJis1997(ShiftJis1997Encoder),
     #[cfg(feature = "euc-jp")]
     EucJp(EucJpEncoder),
     #[cfg(feature = "iso-2022-jp")]
@@ -366,6 +386,8 @@ impl VariantEncoder {
             VariantEncoder::Big5(e) => e.encode(src, sink),
             #[cfg(feature = "big5")]
             VariantEncoder::Big5_1984(e) => e.encode(src, sink),
+            #[cfg(feature = "shift-jis")]
+            VariantEncoder::ShiftJis1997(e) => e.encode(src, sink),
             #[cfg(feature = "euc-jp")]
             VariantEncoder::EucJp(e) => e.encode(src, sink),
             #[cfg(feature = "iso-2022-jp")]

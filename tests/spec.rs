@@ -407,17 +407,17 @@ fn euc_jp_decodes_jis0212_but_never_encodes_it() {
 
 #[test]
 fn shift_jis_end_user_defined_characters() {
-    assert_eq!(decode(SHIFT_JIS, b"\xF0\x40"), "\u{E000}");
-    assert_eq!(decode(SHIFT_JIS, b"\xF9\xFC"), "\u{E757}");
+    assert_eq!(decode(WINDOWS_31J, b"\xF0\x40"), "\u{E000}");
+    assert_eq!(decode(WINDOWS_31J, b"\xF9\xFC"), "\u{E757}");
     // 0x80 is a code point, not a lead byte.
-    assert_eq!(decode(SHIFT_JIS, b"\x80"), "\u{80}");
+    assert_eq!(decode(WINDOWS_31J, b"\x80"), "\u{80}");
     // 0xA0 is neither.
-    assert_eq!(decode(SHIFT_JIS, b"\xA0\x41"), "\u{FFFD}A");
+    assert_eq!(decode(WINDOWS_31J, b"\xA0\x41"), "\u{FFFD}A");
 }
 
 #[test]
 fn japanese_encoders_fold_the_yen_and_overline() {
-    assert_eq!(encode(SHIFT_JIS, "\u{A5}\u{203E}"), b"\x5C\x7E");
+    assert_eq!(encode(WINDOWS_31J, "\u{A5}\u{203E}"), b"\x5C\x7E");
     assert_eq!(encode(EUC_JP, "\u{A5}\u{203E}"), b"\x5C\x7E");
     // ISO-2022-JP has a mode in which those two bytes mean exactly that.
     assert_eq!(encode(ISO_2022_JP, "\u{A5}"), b"\x1B(J\x5C\x1B(B");
@@ -558,7 +558,7 @@ fn the_whatwg_lookup_refuses_everything_outside_the_standard() {
     assert_eq!(Encoding::for_whatwg_label(b"latin1"), Some(WINDOWS_1252));
     assert_eq!(
         Encoding::for_whatwg_label(b"\tShift-JIS\n"),
-        Some(SHIFT_JIS)
+        Some(WINDOWS_31J)
     );
     assert_eq!(Encoding::for_whatwg_label(b"hz-gb-2312"), Some(REPLACEMENT));
     assert_eq!(
@@ -595,36 +595,63 @@ fn the_whatwg_lookup_refuses_everything_outside_the_standard() {
 
 #[test]
 fn is_whatwg_marks_exactly_the_standards_encodings() {
+    // The standard's forty, under the names this crate gives them: where it
+    // names an encoding after a charset whose table it does not carry, the
+    // name here is the one that fits what it holds.
+    const STANDARD: [&str; 40] = [
+        "UTF-8",
+        "IBM866",
+        "ISO-8859-2",
+        "ISO-8859-3",
+        "ISO-8859-4",
+        "ISO-8859-5",
+        "ISO-8859-6",
+        "ISO-8859-7",
+        "ISO-8859-8",
+        "ISO-8859-8-I",
+        "ISO-8859-10",
+        "ISO-8859-13",
+        "ISO-8859-14",
+        "ISO-8859-15",
+        "ISO-8859-16",
+        "KOI8-R",
+        "KOI8-U",
+        "macintosh",
+        "windows-874",
+        "windows-1250",
+        "windows-1251",
+        "windows-1252",
+        "windows-1253",
+        "windows-1254",
+        "windows-1255",
+        "windows-1256",
+        "windows-1257",
+        "windows-1258",
+        "x-mac-cyrillic",
+        "GBK",
+        "gb18030",
+        "Big5-HKSCS",
+        "EUC-JP",
+        "ISO-2022-JP",
+        "windows-31j",
+        "EUC-KR",
+        "replacement",
+        "UTF-16BE",
+        "UTF-16LE",
+        "x-user-defined",
+    ];
     for &encoding in Encoding::all() {
-        // These are ours, not the standard's: it resolves their labels to a
-        // Windows superset instead.
-        if matches!(
-            encoding.name(),
-            "ISO-8859-1" | "ISO-8859-9" | "ISO-8859-11" | "US-ASCII" | "GB2312"
-        ) {
-            assert!(!encoding.is_whatwg(), "{}", encoding.name());
-            continue;
-        }
-        let standard = matches!(
-            encoding.name(),
-            "UTF-8" | "UTF-16BE" | "UTF-16LE" | "replacement" | "x-user-defined"
-        ) || (encoding.name().starts_with("ISO-8859")
-            && encoding.name() != "ISO-8859-1")
-            || encoding.name().starts_with("windows-")
-            || encoding.name().starts_with("KOI8")
-            || matches!(
-                encoding.name(),
-                "IBM866"
-                    | "macintosh"
-                    | "x-mac-cyrillic"
-                    | "GBK"
-                    | "gb18030"
-                    | "Big5-HKSCS"
-                    | "EUC-JP"
-                    | "ISO-2022-JP"
-                    | "Shift_JIS"
-                    | "EUC-KR"
-            );
-        assert_eq!(encoding.is_whatwg(), standard, "{}", encoding.name());
+        assert_eq!(
+            encoding.is_whatwg(),
+            STANDARD.contains(&encoding.name()),
+            "{}",
+            encoding.name()
+        );
+    }
+    // Every one of the forty is compiled in under `--all-features`, and the
+    // standard's own lookup finds each by the name it carries here.
+    for name in STANDARD {
+        let found = Encoding::for_whatwg_label(name.as_bytes());
+        assert!(found.is_some_and(|e| e.name() == name), "{name}");
     }
 }

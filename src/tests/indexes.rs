@@ -290,18 +290,22 @@ fn shift_jis_index() {
         let bytes = [lead, trail];
         if (8836..=10715).contains(&pointer) {
             // The Windows end-user defined characters, which no index covers.
-            expect_char(SHIFT_JIS, &bytes, 0xE000 - 8836 + pointer as u32);
+            expect_char(WINDOWS_31J, &bytes, 0xE000 - 8836 + pointer as u32);
         } else {
             match index::code_point(&JIS0208_DECODE, pointer) {
-                Some(code_point) => expect_char(SHIFT_JIS, &bytes, code_point),
-                None => assert_eq!(decode_strict(SHIFT_JIS, &bytes), None, "pointer {pointer}"),
+                Some(code_point) => expect_char(WINDOWS_31J, &bytes, code_point),
+                None => assert_eq!(
+                    decode_strict(WINDOWS_31J, &bytes),
+                    None,
+                    "pointer {pointer}"
+                ),
             }
         }
     }
     for byte in 0xA1..=0xDFu8 {
-        expect_char(SHIFT_JIS, &[byte], 0xFF61 - 0xA1 + u32::from(byte));
+        expect_char(WINDOWS_31J, &[byte], 0xFF61 - 0xA1 + u32::from(byte));
     }
-    expect_char(SHIFT_JIS, &[0x80], 0x80);
+    expect_char(WINDOWS_31J, &[0x80], 0x80);
 }
 
 #[cfg(feature = "iso-2022-jp")]

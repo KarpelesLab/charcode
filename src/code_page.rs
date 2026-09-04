@@ -63,7 +63,8 @@ pub(crate) static CODE_PAGES: &[CodePage] = &[
     #[cfg(feature = "single-byte")]
     cp(874, &e::WINDOWS_874_INIT),
     #[cfg(feature = "shift-jis")]
-    cp(932, &e::SHIFT_JIS_INIT),
+    // 932 is the codepage the standard's Shift_JIS reproduces byte for byte.
+    cp(932, &e::WINDOWS_31J_INIT),
     #[cfg(feature = "gb18030")]
     cp(936, &e::GBK_INIT), // named gb2312, but it is GBK
     #[cfg(feature = "euc-kr")]
