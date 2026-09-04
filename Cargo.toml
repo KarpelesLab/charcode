@@ -83,7 +83,7 @@ shift-jis = []     # ~55 KiB
 # so enabling them cannot change what an existing lookup resolves to.
 #
 # Everything below at once.
-extras = ["dos", "ebcdic", "mac", "misc"]
+extras = ["dos", "ebcdic", "mac", "misc", "unicode-extras"]
 # IBM PC / OEM code pages: 437, 737, 775, 850, 852, 855, 856, 857, 860-865, 869,
 # 1006.  About 13 KiB.
 dos = ["full-byte", "half-byte"]
@@ -94,6 +94,10 @@ ebcdic = ["full-byte"]
 mac = ["half-byte"]
 # Atari ST and KZ-1048.  About 2 KiB.
 misc = ["half-byte"]
+# UTF-32BE/LE and UTF-7.  No tables at all; these are algorithmic.  The standard
+# leaves UTF-7 out deliberately, and `Encoding::for_whatwg_label` will not return
+# it however this is set.
+unicode-extras = []
 
 [[bin]]
 name = "charcode"

@@ -23,8 +23,12 @@ use crate::shift_jis::{ShiftJisDecoder, ShiftJisEncoder};
 #[cfg(feature = "half-byte")]
 use crate::single_byte::{SingleByteDecoder, SingleByteEncoder};
 use crate::sink::ByteSink;
+#[cfg(feature = "unicode-extras")]
+use crate::utf_7::{Utf7Decoder, Utf7Encoder};
 use crate::utf_8::{Utf8Decoder, Utf8Encoder};
 use crate::utf_16::Utf16Decoder;
+#[cfg(feature = "unicode-extras")]
+use crate::utf_32::{Utf32Decoder, Utf32Encoder};
 use crate::x_user_defined::{XUserDefinedDecoder, XUserDefinedEncoder};
 
 /// Which algorithm an encoding uses, plus the index tables it needs.
@@ -39,6 +43,12 @@ pub(crate) enum VariantEncoding {
     FullByte(&'static [u16; 256], &'static [u16], &'static [u8]),
     Utf16Be,
     Utf16Le,
+    #[cfg(feature = "unicode-extras")]
+    Utf32Be,
+    #[cfg(feature = "unicode-extras")]
+    Utf32Le,
+    #[cfg(feature = "unicode-extras")]
+    Utf7,
     #[cfg(feature = "gb18030")]
     Gb18030 {
         is_gbk: bool,
@@ -71,6 +81,12 @@ impl VariantEncoding {
             }
             VariantEncoding::Utf16Be => VariantDecoder::Utf16(Utf16Decoder::new(true)),
             VariantEncoding::Utf16Le => VariantDecoder::Utf16(Utf16Decoder::new(false)),
+            #[cfg(feature = "unicode-extras")]
+            VariantEncoding::Utf32Be => VariantDecoder::Utf32(Utf32Decoder::new(true)),
+            #[cfg(feature = "unicode-extras")]
+            VariantEncoding::Utf32Le => VariantDecoder::Utf32(Utf32Decoder::new(false)),
+            #[cfg(feature = "unicode-extras")]
+            VariantEncoding::Utf7 => VariantDecoder::Utf7(Utf7Decoder::new()),
             // GBK and gb18030 share a decoder.
             #[cfg(feature = "gb18030")]
             VariantEncoding::Gb18030 { .. } => VariantDecoder::Gb18030(Gb18030Decoder::new()),
@@ -121,6 +137,12 @@ impl VariantEncoding {
             #[cfg(feature = "euc-kr")]
             VariantEncoding::EucKr => VariantEncoder::EucKr(EucKrEncoder),
             VariantEncoding::XUserDefined => VariantEncoder::XUserDefined(XUserDefinedEncoder),
+            #[cfg(feature = "unicode-extras")]
+            VariantEncoding::Utf32Be => VariantEncoder::Utf32(Utf32Encoder::new(true)),
+            #[cfg(feature = "unicode-extras")]
+            VariantEncoding::Utf32Le => VariantEncoder::Utf32(Utf32Encoder::new(false)),
+            #[cfg(feature = "unicode-extras")]
+            VariantEncoding::Utf7 => VariantEncoder::Utf7(Utf7Encoder::default()),
             VariantEncoding::Utf8
             | VariantEncoding::Utf16Be
             | VariantEncoding::Utf16Le
@@ -154,6 +176,10 @@ impl VariantEncoding {
             // pages permute the range entirely.
             #[cfg(feature = "full-byte")]
             VariantEncoding::FullByte(..) => false,
+            // UTF-32 is not byte-oriented, and a run of ASCII bytes in UTF-7
+            // can stand for arbitrary text.
+            #[cfg(feature = "unicode-extras")]
+            VariantEncoding::Utf32Be | VariantEncoding::Utf32Le | VariantEncoding::Utf7 => false,
             _ => true,
         }
     }
@@ -167,6 +193,10 @@ pub(crate) enum VariantDecoder {
     #[cfg(feature = "full-byte")]
     FullByte(FullByteDecoder),
     Utf16(Utf16Decoder),
+    #[cfg(feature = "unicode-extras")]
+    Utf32(Utf32Decoder),
+    #[cfg(feature = "unicode-extras")]
+    Utf7(Utf7Decoder),
     #[cfg(feature = "gb18030")]
     Gb18030(Gb18030Decoder),
     #[cfg(feature = "big5")]
@@ -197,6 +227,10 @@ impl VariantDecoder {
             #[cfg(feature = "full-byte")]
             VariantDecoder::FullByte(d) => d.decode(src, sink),
             VariantDecoder::Utf16(d) => d.decode(src, sink, last),
+            #[cfg(feature = "unicode-extras")]
+            VariantDecoder::Utf32(d) => d.decode(src, sink, last),
+            #[cfg(feature = "unicode-extras")]
+            VariantDecoder::Utf7(d) => d.decode(src, sink, last),
             #[cfg(feature = "gb18030")]
             VariantDecoder::Gb18030(d) => d.decode(src, sink, last),
             #[cfg(feature = "big5")]
@@ -228,6 +262,10 @@ impl VariantDecoder {
 #[derive(Debug, Clone, Copy)]
 pub(crate) enum VariantEncoder {
     Utf8(Utf8Encoder),
+    #[cfg(feature = "unicode-extras")]
+    Utf32(Utf32Encoder),
+    #[cfg(feature = "unicode-extras")]
+    Utf7(Utf7Encoder),
     #[cfg(feature = "half-byte")]
     SingleByte(SingleByteEncoder),
     #[cfg(feature = "full-byte")]
@@ -258,6 +296,10 @@ impl VariantEncoder {
         let _ = last;
         match self {
             VariantEncoder::Utf8(e) => e.encode(src, sink),
+            #[cfg(feature = "unicode-extras")]
+            VariantEncoder::Utf32(e) => e.encode(src, sink),
+            #[cfg(feature = "unicode-extras")]
+            VariantEncoder::Utf7(e) => e.encode(src, sink, last),
             #[cfg(feature = "half-byte")]
             VariantEncoder::SingleByte(e) => e.encode(src, sink),
             #[cfg(feature = "full-byte")]

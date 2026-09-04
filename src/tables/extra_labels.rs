@@ -6,7 +6,13 @@
 
 use crate::code_page::CodePage;
 // A group may have no Windows code pages of its own.
-#[cfg(any(feature = "dos", feature = "ebcdic", feature = "mac", feature = "misc"))]
+#[cfg(any(
+    feature = "dos",
+    feature = "ebcdic",
+    feature = "mac",
+    feature = "misc",
+    feature = "unicode-extras"
+))]
 #[allow(unused_imports)]
 use crate::extra_encodings as x;
 
@@ -162,10 +168,28 @@ pub static EXTRA_CODE_PAGES: &[CodePage] = &[
         encoding: &x::X_MAC_CROATIAN_INIT,
         canonical: true,
     },
+    #[cfg(feature = "unicode-extras")]
+    CodePage {
+        number: 12000,
+        encoding: &x::UTF_32LE_INIT,
+        canonical: true,
+    },
+    #[cfg(feature = "unicode-extras")]
+    CodePage {
+        number: 12001,
+        encoding: &x::UTF_32BE_INIT,
+        canonical: true,
+    },
     #[cfg(feature = "ebcdic")]
     CodePage {
         number: 20424,
         encoding: &x::IBM424_INIT,
+        canonical: true,
+    },
+    #[cfg(feature = "unicode-extras")]
+    CodePage {
+        number: 65000,
+        encoding: &x::UTF_7_INIT,
         canonical: true,
     },
 ];

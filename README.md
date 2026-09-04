@@ -197,6 +197,7 @@ UTF-8, which is what the standard's `get an output encoding` prescribes.
 - `mac` — Apple's regional variants of Mac OS Roman: Arabic, Celtic, Central
   European, Croatian, Farsi, Gaelic, Greek, Icelandic, Romanian, Turkish.
 - `misc` — Atari ST and KZ-1048.
+- `unicode-extras` — UTF-32BE/LE and UTF-7. No tables; these are algorithmic.
 
 UTF-8, UTF-16BE/LE, `replacement` and `x-user-defined` need no tables and are
 always present. Static data ranges from about 1 KiB with no table group, to
@@ -211,14 +212,16 @@ charset compiled in.
 `get an encoding`, and it answers **only** with encodings the standard
 sanctions. The standard leaves some charsets out deliberately — UTF-7 and
 HZ-GB-2312 can both be used to smuggle markup past a filter that only inspects
-the bytes — so a build that adds `dos` or `ebcdic` for local use does not
-thereby widen what a label off the network can select:
+the bytes — so a build that adds `unicode-extras` or `dos` for local use does
+not thereby widen what a label off the network can select:
 
 ```rust
 use charcode::{Encoding, WINDOWS_1252};
 
 assert_eq!(Encoding::for_whatwg_label(b"latin1"), Some(WINDOWS_1252));
-// A real encoding here when `dos` is on, but not one the standard sanctions.
+// Real encodings here when their groups are on, but not ones the standard
+// sanctions, so this lookup will not return them.
+assert_eq!(Encoding::for_whatwg_label(b"utf-7"), None);
 assert_eq!(Encoding::for_whatwg_label(b"cp437"), None);
 ```
 

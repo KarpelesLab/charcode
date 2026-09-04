@@ -130,6 +130,7 @@
 //! - `ebcdic`: IBM mainframe code pages — 037, 424, 500, 875, 1026.
 //! - `mac`: Apple's regional variants of Mac OS Roman.
 //! - `misc`: Atari ST and KZ-1048.
+//! - `unicode-extras`: UTF-32BE/LE and UTF-7.  No tables; these are algorithmic.
 //!
 //! UTF-8, UTF-16BE/LE, `replacement` and `x-user-defined` need no tables and
 //! are always present; the first three are what byte order mark sniffing
@@ -206,12 +207,22 @@ mod tables;
 #[cfg(test)]
 mod tests;
 mod utf_16;
+#[cfg(feature = "unicode-extras")]
+mod utf_32;
+#[cfg(feature = "unicode-extras")]
+mod utf_7;
 mod utf_8;
 mod variant;
 mod x_user_defined;
 
 mod encodings;
-#[cfg(any(feature = "dos", feature = "ebcdic", feature = "mac", feature = "misc"))]
+#[cfg(any(
+    feature = "dos",
+    feature = "ebcdic",
+    feature = "mac",
+    feature = "misc",
+    feature = "unicode-extras"
+))]
 mod extra_encodings;
 
 #[cfg(feature = "serde")]
@@ -223,7 +234,13 @@ use alloc::{borrow::Cow, string::String, vec::Vec};
 pub use crate::decoder::{DECODER_MIN_BUFFER, Decoder, MalformedError};
 pub use crate::encoder::{ENCODER_MIN_BUFFER, Encoder, UnmappableError};
 pub use crate::encodings::*;
-#[cfg(any(feature = "dos", feature = "ebcdic", feature = "mac", feature = "misc"))]
+#[cfg(any(
+    feature = "dos",
+    feature = "ebcdic",
+    feature = "mac",
+    feature = "misc",
+    feature = "unicode-extras"
+))]
 pub use crate::extra_encodings::*;
 pub use crate::result::{CoderResult, DecoderResult, EncoderResult};
 

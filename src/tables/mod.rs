@@ -11,7 +11,13 @@
 pub mod big5;
 #[cfg(feature = "euc-kr")]
 pub mod euc_kr;
-#[cfg(any(feature = "dos", feature = "ebcdic", feature = "mac", feature = "misc"))]
+#[cfg(any(
+    feature = "dos",
+    feature = "ebcdic",
+    feature = "mac",
+    feature = "misc",
+    feature = "unicode-extras"
+))]
 pub mod extra;
 pub mod extra_labels;
 #[cfg(feature = "gb18030")]

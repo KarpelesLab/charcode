@@ -5,6 +5,8 @@
 //! The [`Encoding`] instances for the charsets outside the standard.
 
 use crate::Encoding;
+// A build may take only the algorithmic charsets, which need no table.
+#[cfg(any(feature = "dos", feature = "ebcdic", feature = "mac", feature = "misc"))]
 use crate::tables::extra as t;
 use crate::variant::VariantEncoding;
 
@@ -444,3 +446,23 @@ pub(crate) const KZ_1048_INIT: Encoding = Encoding::new(
 /// KZ-1048
 #[cfg(feature = "misc")]
 pub static KZ_1048: &Encoding = &KZ_1048_INIT;
+
+// Algorithmic charsets, which need no table
+
+#[cfg(feature = "unicode-extras")]
+pub(crate) const UTF_32BE_INIT: Encoding = Encoding::new("UTF-32BE", VariantEncoding::Utf32Be);
+/// UTF-32BE
+#[cfg(feature = "unicode-extras")]
+pub static UTF_32BE: &Encoding = &UTF_32BE_INIT;
+
+#[cfg(feature = "unicode-extras")]
+pub(crate) const UTF_32LE_INIT: Encoding = Encoding::new("UTF-32LE", VariantEncoding::Utf32Le);
+/// UTF-32LE
+#[cfg(feature = "unicode-extras")]
+pub static UTF_32LE: &Encoding = &UTF_32LE_INIT;
+
+#[cfg(feature = "unicode-extras")]
+pub(crate) const UTF_7_INIT: Encoding = Encoding::new("UTF-7", VariantEncoding::Utf7);
+/// UTF-7
+#[cfg(feature = "unicode-extras")]
+pub static UTF_7: &Encoding = &UTF_7_INIT;

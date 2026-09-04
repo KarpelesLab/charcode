@@ -59,7 +59,7 @@ jobs:
         run: |
           set -euo pipefail
           for group in single-byte big5 euc-jp euc-kr gb18030 iso-2022-jp \
-                       shift-jis dos ebcdic mac misc; do
+                       shift-jis dos ebcdic mac misc unicode-extras; do
             echo "::group::$group"
             cargo test --no-default-features --features "alloc,$group"
             echo "::endgroup::"

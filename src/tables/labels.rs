@@ -10,7 +10,13 @@
 
 use crate::Encoding;
 use crate::encodings as e;
-#[cfg(any(feature = "dos", feature = "ebcdic", feature = "mac", feature = "misc"))]
+#[cfg(any(
+    feature = "dos",
+    feature = "ebcdic",
+    feature = "mac",
+    feature = "misc",
+    feature = "unicode-extras"
+))]
 use crate::extra_encodings as x;
 
 /// Every label of every encoding compiled in, sorted for binary search.
@@ -568,6 +574,12 @@ pub static LABELS: &[Label] = &[
         text: "csunicode",
         encoding: &e::UTF_16LE_INIT,
         whatwg: true,
+    },
+    #[cfg(feature = "unicode-extras")]
+    Label {
+        text: "csunicode11utf7",
+        encoding: &x::UTF_7_INIT,
+        whatwg: false,
     },
     #[cfg(feature = "single-byte")]
     Label {
@@ -1653,6 +1665,12 @@ pub static LABELS: &[Label] = &[
         encoding: &e::UTF_16LE_INIT,
         whatwg: true,
     },
+    #[cfg(feature = "unicode-extras")]
+    Label {
+        text: "unicode-1-1-utf-7",
+        encoding: &x::UTF_7_INIT,
+        whatwg: false,
+    },
     Label {
         text: "unicode-1-1-utf-8",
         encoding: &e::UTF_8_INIT,
@@ -1699,10 +1717,58 @@ pub static LABELS: &[Label] = &[
         encoding: &e::UTF_16LE_INIT,
         whatwg: true,
     },
+    #[cfg(feature = "unicode-extras")]
+    Label {
+        text: "utf-32",
+        encoding: &x::UTF_32LE_INIT,
+        whatwg: false,
+    },
+    #[cfg(feature = "unicode-extras")]
+    Label {
+        text: "utf-32be",
+        encoding: &x::UTF_32BE_INIT,
+        whatwg: false,
+    },
+    #[cfg(feature = "unicode-extras")]
+    Label {
+        text: "utf-32le",
+        encoding: &x::UTF_32LE_INIT,
+        whatwg: false,
+    },
+    #[cfg(feature = "unicode-extras")]
+    Label {
+        text: "utf-7",
+        encoding: &x::UTF_7_INIT,
+        whatwg: false,
+    },
     Label {
         text: "utf-8",
         encoding: &e::UTF_8_INIT,
         whatwg: true,
+    },
+    #[cfg(feature = "unicode-extras")]
+    Label {
+        text: "utf32",
+        encoding: &x::UTF_32LE_INIT,
+        whatwg: false,
+    },
+    #[cfg(feature = "unicode-extras")]
+    Label {
+        text: "utf32be",
+        encoding: &x::UTF_32BE_INIT,
+        whatwg: false,
+    },
+    #[cfg(feature = "unicode-extras")]
+    Label {
+        text: "utf32le",
+        encoding: &x::UTF_32LE_INIT,
+        whatwg: false,
+    },
+    #[cfg(feature = "unicode-extras")]
+    Label {
+        text: "utf7",
+        encoding: &x::UTF_7_INIT,
+        whatwg: false,
     },
     Label {
         text: "utf8",
@@ -2104,4 +2170,10 @@ pub static ALL_ENCODINGS: &[&Encoding] = &[
     &x::ATARI_ST_INIT,
     #[cfg(feature = "misc")]
     &x::KZ_1048_INIT,
+    #[cfg(feature = "unicode-extras")]
+    &x::UTF_32BE_INIT,
+    #[cfg(feature = "unicode-extras")]
+    &x::UTF_32LE_INIT,
+    #[cfg(feature = "unicode-extras")]
+    &x::UTF_7_INIT,
 ];

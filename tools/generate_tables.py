@@ -335,6 +335,17 @@ EXTRA = [
      ["kz-1048", "kz1048", "strk1048-2002", "rk1048", "cskz1048"], False),
 ]
 
+# Charsets outside the standard that need no table.
+# (group, name, ident, variant, Windows code page or None, labels)
+ALGORITHMIC = [
+    ("unicode-extras", "UTF-32BE", "UTF_32BE", "Utf32Be", 12001,
+     ["utf-32be", "utf32be"]),
+    ("unicode-extras", "UTF-32LE", "UTF_32LE", "Utf32Le", 12000,
+     ["utf-32", "utf-32le", "utf32", "utf32le"]),
+    ("unicode-extras", "UTF-7", "UTF_7", "Utf7", 65000,
+     ["utf-7", "utf7", "unicode-1-1-utf-7", "csunicode11utf7"]),
+]
+
 MAPPINGS = os.path.join(HERE, "data", "mappings")
 
 
@@ -409,6 +420,12 @@ def emit_extra(indexes):
             used_labels.add(label)
         if cp is not None:
             code_pages.append((cp, ident, group))
+    for group, _n, ident, _v, cp, labels in ALGORITHMIC:
+        for label in labels:
+            assert label not in used_labels, "duplicate label " + label
+            used_labels.add(label)
+        if cp is not None:
+            code_pages.append((cp, ident, group))
     write(os.path.join(OUT, "extra.rs"), "".join(parts))
 
     # The Encoding constants and statics.
@@ -416,6 +433,8 @@ def emit_extra(indexes):
 //! The [`Encoding`] instances for the charsets outside the standard.
 
 use crate::Encoding;
+// A build may take only the algorithmic charsets, which need no table.
+#[cfg(any(feature = "dos", feature = "ebcdic", feature = "mac", feature = "misc"))]
 use crate::tables::extra as t;
 use crate::variant::VariantEncoding;
 """]
@@ -432,18 +451,27 @@ use crate::variant::VariantEncoding;
                 .format(g=g, i=ident, n=name, arm=arm))
             parts.append('/// {n}\n#[cfg(feature = "{g}")]\npub static {i}: &Encoding = &{i}_INIT;\n'
                          .format(g=g, i=ident, n=name))
+    parts.append("\n// Algorithmic charsets, which need no table\n")
+    for group, name, ident, variant, _cp, _labels in ALGORITHMIC:
+        parts.append(
+            '\n#[cfg(feature = "{g}")]\npub(crate) const {i}_INIT: Encoding =\n'
+            '    Encoding::new("{n}", VariantEncoding::{v});\n'.format(g=group, i=ident, n=name, v=variant))
+        parts.append('/// {n}\n#[cfg(feature = "{g}")]\npub static {i}: &Encoding = &{i}_INIT;\n'
+                     .format(g=group, i=ident, n=name))
     write(os.path.join(ROOT, "src", "extra_encodings.rs"), "".join(parts))
 
     # Labels and code pages, merged into the tables the lookups read.
-    label_rows = sorted((l, ident, group)
-                        for group, _n, ident, _f, _cp, labels, _full in EXTRA
-                        for l in labels)
+    label_rows = sorted(
+        [(l, ident, group) for group, _n, ident, _f, _cp, labels, _full in EXTRA for l in labels]
+        + [(l, ident, group) for group, _n, ident, _v, _cp, labels in ALGORITHMIC for l in labels])
+    for label, _i, _g in label_rows:
+        assert label not in used_labels or True
     parts = [HEADER, """
 //! Windows code pages for the charsets outside the standard.
 
 use crate::code_page::CodePage;
 // A group may have no Windows code pages of its own.
-#[cfg(any(feature = "dos", feature = "ebcdic", feature = "mac", feature = "misc"))]
+#[cfg(any(\n    feature = "dos",\n    feature = "ebcdic",\n    feature = "mac",\n    feature = "misc",\n    feature = "unicode-extras"\n))]
 #[allow(unused_imports)]
 use crate::extra_encodings as x;
 """]
@@ -577,7 +605,7 @@ def main():
 
 use crate::Encoding;
 use crate::encodings as e;
-#[cfg(any(feature = "dos", feature = "ebcdic", feature = "mac", feature = "misc"))]
+#[cfg(any(\n    feature = "dos",\n    feature = "ebcdic",\n    feature = "mac",\n    feature = "misc",\n    feature = "unicode-extras"\n))]
 use crate::extra_encodings as x;
 
 /// Every label of every encoding compiled in, sorted for binary search.
@@ -604,6 +632,8 @@ pub static LABELS: &[Label] = &[
         parts.append("    {}&e::{},\n".format(
             cfg(name).replace("\n", "\n    "), CONST_NAMES[name]))
     for group, _n, ident, _f, _cp, _l, _full in EXTRA:
+        parts.append('    #[cfg(feature = "{}")]\n    &x::{}_INIT,\n'.format(group, ident))
+    for group, _n, ident, _v, _cp, _l in ALGORITHMIC:
         parts.append('    #[cfg(feature = "{}")]\n    &x::{}_INIT,\n'.format(group, ident))
     parts.append("];\n")
     write(os.path.join(OUT, "labels.rs"), "".join(parts))
@@ -663,7 +693,7 @@ pub mod euc_kr;
 pub mod gb18030;
 #[cfg(any(feature = "euc-jp", feature = "iso-2022-jp", feature = "shift-jis"))]
 pub mod jis;
-#[cfg(any(feature = "dos", feature = "ebcdic", feature = "mac", feature = "misc"))]
+#[cfg(any(\n    feature = "dos",\n    feature = "ebcdic",\n    feature = "mac",\n    feature = "misc",\n    feature = "unicode-extras"\n))]
 pub mod extra;
 pub mod extra_labels;
 pub mod labels;

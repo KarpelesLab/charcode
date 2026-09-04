@@ -8,7 +8,13 @@ mod buffers;
 
 #[cfg(all(
     feature = "alloc",
-    any(feature = "dos", feature = "ebcdic", feature = "mac", feature = "misc")
+    any(
+        feature = "dos",
+        feature = "ebcdic",
+        feature = "mac",
+        feature = "misc",
+        feature = "unicode-extras"
+    )
 ))]
 mod extra;
 #[cfg(feature = "alloc")]

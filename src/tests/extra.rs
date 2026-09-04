@@ -10,7 +10,7 @@ use alloc::vec::Vec;
 use crate::Encoding;
 
 /// Checks a 128-entry table covering bytes 0x80 to 0xFF, with 0 for unmapped.
-#[cfg(feature = "half-byte")]
+#[cfg(any(feature = "dos", feature = "mac", feature = "misc"))]
 fn check_half(encoding: &'static Encoding, table: &[u16; 128]) {
     for byte in 0..=0x7Fu8 {
         assert_eq!(
@@ -35,7 +35,7 @@ fn check_half(encoding: &'static Encoding, table: &[u16; 128]) {
 }
 
 /// Checks a 256-entry table, with 0xFFFF for unmapped.
-#[cfg(feature = "full-byte")]
+#[cfg(any(feature = "dos", feature = "ebcdic"))]
 fn check_full(encoding: &'static Encoding, table: &[u16; 256]) {
     for (byte, &code_point) in table.iter().enumerate() {
         let expected = if code_point == crate::full_byte::UNMAPPED {
@@ -47,6 +47,7 @@ fn check_full(encoding: &'static Encoding, table: &[u16; 256]) {
     }
 }
 
+#[cfg(any(feature = "dos", feature = "ebcdic", feature = "mac", feature = "misc"))]
 fn check_byte(encoding: &'static Encoding, byte: u8, expected: Option<u32>) {
     let decoded = decode(encoding, &[byte]);
     match expected {
@@ -227,4 +228,105 @@ fn extras_are_reachable_and_do_not_collide() {
             );
         }
     }
+}
+
+#[cfg(feature = "unicode-extras")]
+#[test]
+fn utf_32_both_orders() {
+    use crate::{UTF_32BE, UTF_32LE};
+
+    assert_eq!(decode(UTF_32LE, b"A\0\0\0").as_deref(), Some("A"));
+    assert_eq!(decode(UTF_32BE, b"\0\0\0A").as_deref(), Some("A"));
+    assert_eq!(
+        decode(UTF_32LE, b"\x00\xF6\x01\x00").as_deref(),
+        Some("\u{1F600}")
+    );
+    // Out of range, and a lone surrogate: neither is a scalar value.
+    assert_eq!(decode(UTF_32LE, b"\x00\x00\x11\x00"), None);
+    assert_eq!(decode(UTF_32LE, b"\x00\xD8\x00\x00"), None);
+    // A truncated code unit at the end of the stream.
+    assert_eq!(decode(UTF_32LE, b"A\0\0"), None);
+
+    let text = "a\u{E9}\u{65E5}\u{1F600}";
+    for encoding in [UTF_32LE, UTF_32BE] {
+        let mut bytes = Vec::new();
+        encoding
+            .new_encoder()
+            .encode_from_str_without_replacement(text, &mut bytes, true)
+            .expect("UTF-32 can encode anything");
+        assert_eq!(bytes.len(), text.chars().count() * 4);
+        assert_eq!(decode(encoding, &bytes).as_deref(), Some(text));
+    }
+}
+
+#[cfg(feature = "unicode-extras")]
+#[test]
+fn utf_7_matches_rfc_2152() {
+    use crate::UTF_7;
+
+    // The RFC's own examples.
+    assert_eq!(
+        decode(UTF_7, b"A+ImIDkQ.").as_deref(),
+        Some("A\u{2262}\u{391}.")
+    );
+    assert_eq!(
+        decode(UTF_7, b"Hi Mom -+Jjo--!").as_deref(),
+        Some("Hi Mom -\u{263A}-!")
+    );
+    assert_eq!(
+        decode(UTF_7, b"+ZeVnLIqe-").as_deref(),
+        Some("\u{65E5}\u{672C}\u{8A9E}")
+    );
+    assert_eq!(
+        decode(UTF_7, b"Item 3 is +AKM-1.").as_deref(),
+        Some("Item 3 is \u{A3}1.")
+    );
+    // `+-` is a literal plus sign.
+    assert_eq!(decode(UTF_7, b"1 +- 1 = 2").as_deref(), Some("1 + 1 = 2"));
+    // A run may be ended by any byte that is not base64, which is then text.
+    assert_eq!(decode(UTF_7, b"+AKM.").as_deref(), Some("\u{A3}."));
+    // A supplementary character is a surrogate pair in the base64 run.
+    assert_eq!(decode(UTF_7, b"+2D3eAA-").as_deref(), Some("\u{1F600}"));
+
+    // Malformed: a byte above 0x7F, a lone surrogate, non-zero padding bits.
+    assert_eq!(decode(UTF_7, b"\xE9"), None);
+    assert_eq!(decode(UTF_7, b"+2D0-"), None);
+    assert_eq!(decode(UTF_7, b"+AKMB-"), None);
+
+    // The encoder writes Set D and whitespace literally, and encodes the rest.
+    let encode = |text: &str| {
+        let mut bytes = Vec::new();
+        UTF_7
+            .new_encoder()
+            .encode_from_str_without_replacement(text, &mut bytes, true)
+            .expect("UTF-7 can encode anything");
+        bytes
+    };
+    assert_eq!(encode("Hi Mom -\u{263A}-!"), b"Hi Mom -+Jjo--+ACE-");
+    assert_eq!(encode("1 + 1 = 2"), b"1 +- 1 +AD0- 2");
+    assert_eq!(encode("plain"), b"plain");
+
+    // Whatever it writes has to read back as what went in.
+    for text in [
+        "a\u{E9}\u{65E5}\u{1F600}",
+        "\u{263A}\u{263A}\u{263A}",
+        "+++",
+        "mixed \u{20AC} and \u{1F600} and plain",
+        "",
+    ] {
+        let bytes = encode(text);
+        assert_eq!(decode(UTF_7, &bytes).as_deref(), Some(text), "{text:?}");
+    }
+}
+
+/// The charset the boundary exists for: reachable directly, never through the
+/// standard's lookup.
+#[cfg(all(feature = "unicode-extras", feature = "whatwg-aliases"))]
+#[test]
+fn utf_7_is_not_reachable_through_the_standards_lookup() {
+    assert_eq!(Encoding::for_label(b"utf-7"), Some(crate::UTF_7));
+    assert_eq!(Encoding::for_whatwg_label(b"utf-7"), None);
+    assert_eq!(Encoding::for_whatwg_label(b"utf-32"), None);
+    assert!(!crate::UTF_7.is_whatwg());
+    assert!(!crate::UTF_7.is_ascii_compatible());
 }

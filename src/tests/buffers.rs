@@ -264,12 +264,16 @@ fn code_pages_resolve_and_round_trip() {
     }
 
     // Code pages this crate has no encoding for.
-    for number in [0u32, 1361, 65000, 65005, 999_999] {
+    for number in [0u32, 1361, 65005, 999_999] {
         assert_eq!(Encoding::for_windows_code_page(number), None, "{number}");
     }
-    // These belong to the `dos` group rather than to the standard.
+    // These belong to the extra groups rather than to the standard.
     #[cfg(not(feature = "dos"))]
     for number in [437u32, 850] {
+        assert_eq!(Encoding::for_windows_code_page(number), None, "{number}");
+    }
+    #[cfg(not(feature = "unicode-extras"))]
+    for number in [12000u32, 12001, 65000] {
         assert_eq!(Encoding::for_windows_code_page(number), None, "{number}");
     }
     assert_eq!(X_USER_DEFINED.windows_code_page(), None);
