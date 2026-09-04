@@ -190,14 +190,19 @@ fn lookup_and_metadata_need_no_allocator() {
     assert_eq!(UTF_16BE.output_encoding(), UTF_8);
     // The standard's 40, plus ISO-8859-1 and US-ASCII, which it has no room
     // for.  The extra groups add more still.
-    #[cfg(not(any(
-        feature = "dos",
-        feature = "ebcdic",
-        feature = "mac",
-        feature = "misc",
-        feature = "unicode-extras"
-    )))]
-    assert_eq!(Encoding::all().len(), 42);
+    // The standard's 40, ISO-8859-1 and US-ASCII which it has no room for,
+    // and — with `single-byte` — the two ISO 8859 parts it resolves elsewhere.
+    #[cfg(all(
+        feature = "single-byte",
+        not(any(
+            feature = "dos",
+            feature = "ebcdic",
+            feature = "mac",
+            feature = "misc",
+            feature = "unicode-extras"
+        ))
+    ))]
+    assert_eq!(Encoding::all().len(), 44);
     assert!(Encoding::all().len() >= 42);
     assert!(IBM866.labels().any(|label| label == "cp866"));
     assert!(WINDOWS_1252.is_single_byte());
@@ -281,9 +286,13 @@ fn code_pages_resolve_and_round_trip() {
     );
     // Microsoft and the standard agree that 10017 is the Cyrillic Mac page.
     assert_eq!(Encoding::for_windows_code_page(10017), Some(X_MAC_CYRILLIC));
-    // ISO-8859-9 has no encoding here yet, so its number is absent rather than
-    // pointed at windows-1254.
-    assert_eq!(Encoding::for_windows_code_page(28599), None);
+    // 28599 is ISO-8859-9, not the windows-1254 superset the standard sends
+    // the matching label to.
+    #[cfg(feature = "single-byte")]
+    assert_eq!(
+        Encoding::for_windows_code_page(28599),
+        Some(crate::ISO_8859_9)
+    );
 
     // The neutralized ones, and the filtered variant.
     for number in [50225u32, 50227, 50229, 52936] {

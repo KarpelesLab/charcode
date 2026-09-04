@@ -189,6 +189,12 @@ pub static EXTRA_CODE_PAGES: &[CodePage] = &[
         encoding: &x::ISO_8859_1_INIT,
         canonical: true,
     },
+    #[cfg(feature = "single-byte")]
+    CodePage {
+        number: 28599,
+        encoding: &x::ISO_8859_9_INIT,
+        canonical: true,
+    },
     #[cfg(feature = "unicode-extras")]
     CodePage {
         number: 65000,

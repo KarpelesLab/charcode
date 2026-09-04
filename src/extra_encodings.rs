@@ -6,7 +6,13 @@
 
 use crate::Encoding;
 // A build may take only the charsets that need no table.
-#[cfg(any(feature = "dos", feature = "ebcdic", feature = "mac", feature = "misc"))]
+#[cfg(any(
+    feature = "dos",
+    feature = "ebcdic",
+    feature = "mac",
+    feature = "misc",
+    feature = "single-byte"
+))]
 #[allow(unused_imports)]
 use crate::tables::extra as t;
 use crate::variant::VariantEncoding;
@@ -447,6 +453,34 @@ pub(crate) const KZ_1048_INIT: Encoding = Encoding::new(
 /// KZ-1048
 #[cfg(feature = "misc")]
 pub static KZ_1048: &Encoding = &KZ_1048_INIT;
+
+// ISO 8859 parts the standard resolves elsewhere
+
+#[cfg(feature = "single-byte")]
+pub(crate) const ISO_8859_9_INIT: Encoding = Encoding::new(
+    "ISO-8859-9",
+    VariantEncoding::SingleByte(
+        &t::ISO_8859_9_DECODE,
+        &t::ISO_8859_9_ENCODE_CODE_POINTS,
+        &t::ISO_8859_9_ENCODE_BYTES,
+    ),
+);
+/// ISO-8859-9
+#[cfg(feature = "single-byte")]
+pub static ISO_8859_9: &Encoding = &ISO_8859_9_INIT;
+
+#[cfg(feature = "single-byte")]
+pub(crate) const ISO_8859_11_INIT: Encoding = Encoding::new(
+    "ISO-8859-11",
+    VariantEncoding::SingleByte(
+        &t::ISO_8859_11_DECODE,
+        &t::ISO_8859_11_ENCODE_CODE_POINTS,
+        &t::ISO_8859_11_ENCODE_BYTES,
+    ),
+);
+/// ISO-8859-11
+#[cfg(feature = "single-byte")]
+pub static ISO_8859_11: &Encoding = &ISO_8859_11_INIT;
 
 // Algorithmic charsets, which need no table
 

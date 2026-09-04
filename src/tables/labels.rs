@@ -440,6 +440,12 @@ pub static LABELS: &[Label] = &[
     },
     #[cfg(feature = "single-byte")]
     Label {
+        text: "csisolatin5",
+        encoding: &x::ISO_8859_9_INIT,
+        whatwg: false,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
         text: "csisolatin6",
         encoding: &e::ISO_8859_10_INIT,
         whatwg: true,
@@ -527,6 +533,12 @@ pub static LABELS: &[Label] = &[
         text: "csshiftjis",
         encoding: &e::SHIFT_JIS_INIT,
         whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "cstis620",
+        encoding: &x::ISO_8859_11_INIT,
+        whatwg: false,
     },
     Label {
         text: "csunicode",
@@ -814,6 +826,12 @@ pub static LABELS: &[Label] = &[
     },
     #[cfg(feature = "single-byte")]
     Label {
+        text: "iso-8859-11",
+        encoding: &x::ISO_8859_11_INIT,
+        whatwg: false,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
         text: "iso-8859-13",
         encoding: &e::ISO_8859_13_INIT,
         whatwg: true,
@@ -902,6 +920,12 @@ pub static LABELS: &[Label] = &[
         encoding: &e::ISO_8859_8_I_INIT,
         whatwg: true,
     },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "iso-8859-9",
+        encoding: &x::ISO_8859_9_INIT,
+        whatwg: false,
+    },
     Label {
         text: "iso-ir-100",
         encoding: &x::ISO_8859_1_INIT,
@@ -951,9 +975,21 @@ pub static LABELS: &[Label] = &[
     },
     #[cfg(feature = "single-byte")]
     Label {
+        text: "iso-ir-148",
+        encoding: &x::ISO_8859_9_INIT,
+        whatwg: false,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
         text: "iso-ir-157",
         encoding: &e::ISO_8859_10_INIT,
         whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "iso-ir-166",
+        encoding: &x::ISO_8859_11_INIT,
+        whatwg: false,
     },
     Label {
         text: "iso-ir-6",
@@ -975,6 +1011,12 @@ pub static LABELS: &[Label] = &[
         text: "iso8859-10",
         encoding: &e::ISO_8859_10_INIT,
         whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "iso8859-11",
+        encoding: &x::ISO_8859_11_INIT,
+        whatwg: false,
     },
     #[cfg(feature = "single-byte")]
     Label {
@@ -1036,6 +1078,12 @@ pub static LABELS: &[Label] = &[
         encoding: &e::ISO_8859_8_INIT,
         whatwg: true,
     },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "iso8859-9",
+        encoding: &x::ISO_8859_9_INIT,
+        whatwg: false,
+    },
     Label {
         text: "iso88591",
         encoding: &x::ISO_8859_1_INIT,
@@ -1046,6 +1094,12 @@ pub static LABELS: &[Label] = &[
         text: "iso885910",
         encoding: &e::ISO_8859_10_INIT,
         whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "iso885911",
+        encoding: &x::ISO_8859_11_INIT,
+        whatwg: false,
     },
     #[cfg(feature = "single-byte")]
     Label {
@@ -1107,6 +1161,12 @@ pub static LABELS: &[Label] = &[
         encoding: &e::ISO_8859_8_INIT,
         whatwg: true,
     },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "iso88599",
+        encoding: &x::ISO_8859_9_INIT,
+        whatwg: false,
+    },
     Label {
         text: "iso_646.irv:1991",
         encoding: &x::US_ASCII_INIT,
@@ -1115,6 +1175,12 @@ pub static LABELS: &[Label] = &[
     Label {
         text: "iso_8859-1",
         encoding: &x::ISO_8859_1_INIT,
+        whatwg: false,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "iso_8859-11",
+        encoding: &x::ISO_8859_11_INIT,
         whatwg: false,
     },
     #[cfg(feature = "single-byte")]
@@ -1214,6 +1280,18 @@ pub static LABELS: &[Label] = &[
     },
     #[cfg(feature = "single-byte")]
     Label {
+        text: "iso_8859-9",
+        encoding: &x::ISO_8859_9_INIT,
+        whatwg: false,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "iso_8859-9:1989",
+        encoding: &x::ISO_8859_9_INIT,
+        whatwg: false,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
         text: "koi",
         encoding: &e::KOI8_R_INIT,
         whatwg: true,
@@ -1285,6 +1363,12 @@ pub static LABELS: &[Label] = &[
     },
     #[cfg(feature = "single-byte")]
     Label {
+        text: "l5",
+        encoding: &x::ISO_8859_9_INIT,
+        whatwg: false,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
         text: "l6",
         encoding: &e::ISO_8859_10_INIT,
         whatwg: true,
@@ -1317,6 +1401,12 @@ pub static LABELS: &[Label] = &[
         text: "latin4",
         encoding: &e::ISO_8859_4_INIT,
         whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "latin5",
+        encoding: &x::ISO_8859_9_INIT,
+        whatwg: false,
     },
     #[cfg(feature = "single-byte")]
     Label {
@@ -1460,6 +1550,12 @@ pub static LABELS: &[Label] = &[
         text: "sun_eu_greek",
         encoding: &e::ISO_8859_7_INIT,
         whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "tis-620",
+        encoding: &x::ISO_8859_11_INIT,
+        whatwg: false,
     },
     Label {
         text: "ucs-2",
@@ -3270,6 +3366,10 @@ pub static ALL_ENCODINGS: &[&Encoding] = &[
     &e::UTF_16BE_INIT,
     &e::UTF_16LE_INIT,
     &e::X_USER_DEFINED_INIT,
+    #[cfg(feature = "single-byte")]
+    &x::ISO_8859_9_INIT,
+    #[cfg(feature = "single-byte")]
+    &x::ISO_8859_11_INIT,
     #[cfg(feature = "dos")]
     &x::IBM437_INIT,
     #[cfg(feature = "dos")]

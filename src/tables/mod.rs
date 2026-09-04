@@ -16,7 +16,7 @@ pub mod euc_kr;
     feature = "ebcdic",
     feature = "mac",
     feature = "misc",
-    feature = "unicode-extras"
+    feature = "single-byte"
 ))]
 pub mod extra;
 pub mod extra_labels;

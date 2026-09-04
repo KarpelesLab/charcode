@@ -58,9 +58,19 @@ fn the_two_lookups_disagree_on_purpose() {
     assert_eq!(decode(WINDOWS_1252, b"\x80"), "\u{20AC}");
     assert_eq!(decode(US_ASCII, b"\x80"), "\u{FFFD}");
 
-    // A label naming a charset this build does not have resolves to nothing,
-    // rather than quietly to a superset of it.
-    for label in [&b"gb2312"[..], b"ks_c_5601-1987", b"tis-620", b"iso-8859-9"] {
+    // ISO-8859-9 and TIS-620 exist now, and are not the Windows supersets the
+    // standard resolves their labels to.
+    assert_eq!(Encoding::for_label(b"iso-8859-9"), Some(ISO_8859_9));
+    assert_eq!(
+        Encoding::for_whatwg_label(b"iso-8859-9"),
+        Some(WINDOWS_1254)
+    );
+    assert_eq!(Encoding::for_label(b"tis-620"), Some(ISO_8859_11));
+    assert_eq!(Encoding::for_whatwg_label(b"tis-620"), Some(WINDOWS_874));
+
+    // A label naming a charset this build does not have yet resolves to
+    // nothing, rather than quietly to a superset of it.
+    for label in [&b"gb2312"[..], b"ks_c_5601-1987"] {
         assert_eq!(Encoding::for_label(label), None, "{label:?}");
         assert!(Encoding::for_whatwg_label(label).is_some(), "{label:?}");
     }
@@ -569,9 +579,12 @@ fn the_whatwg_lookup_refuses_everything_outside_the_standard() {
 #[test]
 fn is_whatwg_marks_exactly_the_standards_encodings() {
     for &encoding in Encoding::all() {
-        // ISO-8859-1 and US-ASCII are ours, not the standard's: it resolves
-        // their labels to windows-1252 instead.
-        if matches!(encoding.name(), "ISO-8859-1" | "US-ASCII") {
+        // These are ours, not the standard's: it resolves their labels to a
+        // Windows superset instead.
+        if matches!(
+            encoding.name(),
+            "ISO-8859-1" | "ISO-8859-9" | "ISO-8859-11" | "US-ASCII"
+        ) {
             assert!(!encoding.is_whatwg(), "{}", encoding.name());
             continue;
         }

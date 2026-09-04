@@ -321,6 +321,17 @@ WHATWG_ONLY_LABELS = {
 #
 # (group, name, ident, mapping file, Windows code page or None, labels, full)
 EXTRA = [
+    # The ISO 8859 parts the standard resolves to a Windows superset instead.
+    # ISO-8859-2 through -8, -10 and -13 through -16 are byte-for-byte what the
+    # standard already carries, so only these two are missing; ISO-8859-1 needs
+    # no table at all and lives with the algorithmic charsets below.
+    ("single-byte", "ISO-8859-9", "ISO_8859_9", "8859-9.TXT", 28599,
+     ["iso-8859-9", "iso8859-9", "iso88599", "iso_8859-9", "iso_8859-9:1989",
+      "iso-ir-148", "latin5", "l5", "csisolatin5"], False),
+    ("single-byte", "ISO-8859-11", "ISO_8859_11", "8859-11.TXT", None,
+     ["iso-8859-11", "iso8859-11", "iso885911", "iso_8859-11", "tis-620",
+      "iso-ir-166", "cstis620"], False),
+
     # IBM PC / OEM code pages.  437 and 874 are omitted: the standard already
     # has IBM866 and windows-874, and CP866 is byte-for-byte identical.
     ("dos", "IBM437", "IBM437", "CP437.TXT", 437,
@@ -496,7 +507,7 @@ def emit_extra(indexes):
 
 use crate::Encoding;
 // A build may take only the charsets that need no table.
-#[cfg(any(feature = "dos", feature = "ebcdic", feature = "mac", feature = "misc"))]
+#[cfg(any(\n    feature = "dos",\n    feature = "ebcdic",\n    feature = "mac",\n    feature = "misc",\n    feature = "single-byte"\n))]
 #[allow(unused_imports)]
 use crate::tables::extra as t;
 use crate::variant::VariantEncoding;
@@ -551,6 +562,7 @@ use crate::extra_encodings as x;
 
 
 GROUP_DOCS = {
+    "single-byte": "ISO 8859 parts the standard resolves elsewhere",
     "dos": "IBM PC / OEM code pages",
     "mac": "Apple's regional variants of Mac OS Roman",
     "ebcdic": "IBM mainframe EBCDIC code pages",
@@ -908,7 +920,7 @@ pub mod euc_kr;
 pub mod gb18030;
 #[cfg(any(feature = "euc-jp", feature = "iso-2022-jp", feature = "shift-jis"))]
 pub mod jis;
-#[cfg(any(\n    feature = "dos",\n    feature = "ebcdic",\n    feature = "mac",\n    feature = "misc",\n    feature = "unicode-extras"\n))]
+#[cfg(any(\n    feature = "dos",\n    feature = "ebcdic",\n    feature = "mac",\n    feature = "misc",\n    feature = "single-byte"\n))]
 pub mod extra;
 pub mod extra_labels;
 pub mod labels;
