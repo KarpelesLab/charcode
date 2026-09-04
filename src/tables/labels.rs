@@ -301,6 +301,12 @@ pub static LABELS: &[Label] = &[
         encoding: &e::BIG5_INIT,
         whatwg: true,
     },
+    #[cfg(feature = "euc-kr")]
+    Label {
+        text: "cseuckr",
+        encoding: &e::EUC_KR_INIT,
+        whatwg: true,
+    },
     #[cfg(feature = "euc-jp")]
     Label {
         text: "cseucpkdfmtjapanese",
@@ -484,6 +490,12 @@ pub static LABELS: &[Label] = &[
     Label {
         text: "cskoi8r",
         encoding: &e::KOI8_R_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "euc-kr")]
+    Label {
+        text: "csksc56011987",
+        encoding: &e::EUC_KR_INIT,
         whatwg: true,
     },
     #[cfg(feature = "misc")]
@@ -979,6 +991,12 @@ pub static LABELS: &[Label] = &[
         encoding: &x::ISO_8859_9_INIT,
         whatwg: false,
     },
+    #[cfg(feature = "euc-kr")]
+    Label {
+        text: "iso-ir-149",
+        encoding: &e::EUC_KR_INIT,
+        whatwg: true,
+    },
     #[cfg(feature = "single-byte")]
     Label {
         text: "iso-ir-157",
@@ -1324,6 +1342,36 @@ pub static LABELS: &[Label] = &[
     Label {
         text: "koi8_r",
         encoding: &e::KOI8_R_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "euc-kr")]
+    Label {
+        text: "korean",
+        encoding: &e::EUC_KR_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "euc-kr")]
+    Label {
+        text: "ks_c_5601-1987",
+        encoding: &e::EUC_KR_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "euc-kr")]
+    Label {
+        text: "ks_c_5601-1989",
+        encoding: &e::EUC_KR_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "euc-kr")]
+    Label {
+        text: "ksc5601",
+        encoding: &e::EUC_KR_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "euc-kr")]
+    Label {
+        text: "ksc_5601",
+        encoding: &e::EUC_KR_INIT,
         whatwg: true,
     },
     #[cfg(feature = "misc")]

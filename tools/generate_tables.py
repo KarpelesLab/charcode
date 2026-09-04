@@ -290,6 +290,19 @@ CONST_NAMES = {
 #
 # Where the named charset exists in this crate the general table points at it
 # instead; where it does not, the general lookup answers None.
+#
+# The test is whether the substitution *remaps*: whether some byte sequence
+# valid in the named charset decodes to a different character.  Measured
+# against the authoritative tables, windows-1252 remaps 27 of ISO-8859-1's
+# bytes, windows-1254 25 of ISO-8859-9's, windows-874 9 of TIS-620's, WHATWG's
+# Big5 260 of Big5's pointers, its jis0208 7 of JIS X 0208's, and GBK 2 of
+# GB 2312's.  Those are lies and are listed here.
+#
+# The Korean labels are deliberately absent: WHATWG's EUC-KR is the Unified
+# Hangul Code, which contains all 8224 of KS X 1001 with *zero* remapped,
+# so a caller asking for `ks_c_5601-1987` and getting it back is given the
+# same answer for every byte sequence its own charset defines.  A lenient
+# superset is not a lie.
 WHATWG_ONLY_LABELS = {
     # ISO-8859-1 and US-ASCII are not windows-1252; 0x80 is U+0080, not U+20AC.
     "ansi_x3.4-1968", "ascii", "us-ascii", "cp819", "csisolatin1", "ibm819",
@@ -303,9 +316,6 @@ WHATWG_ONLY_LABELS = {
     # GB 2312 is a subset of GBK, not GBK.
     "chinese", "csgb2312", "csiso58gb231280", "gb2312", "gb_2312",
     "gb_2312-80", "iso-ir-58",
-    # KS X 1001 is a subset of the Unified Hangul Code, not all of it.
-    "cseuckr", "csksc56011987", "iso-ir-149", "korean", "ks_c_5601-1987",
-    "ks_c_5601-1989", "ksc5601", "ksc_5601",
     # Real encodings the standard neutralizes.  A caller that wants one should
     # be told this build has no such thing, not handed `replacement`.
     "csiso2022kr", "hz-gb-2312", "iso-2022-cn", "iso-2022-cn-ext",

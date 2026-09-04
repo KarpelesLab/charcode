@@ -70,9 +70,15 @@ fn the_two_lookups_disagree_on_purpose() {
 
     // A label naming a charset this build does not have yet resolves to
     // nothing, rather than quietly to a superset of it.
-    for label in [&b"gb2312"[..], b"ks_c_5601-1987"] {
-        assert_eq!(Encoding::for_label(label), None, "{label:?}");
-        assert!(Encoding::for_whatwg_label(label).is_some(), "{label:?}");
+    assert_eq!(Encoding::for_label(b"gb2312"), None);
+    assert_eq!(Encoding::for_whatwg_label(b"gb2312"), Some(GBK));
+
+    // A *faithful* superset is a different matter.  WHATWG's EUC-KR is the
+    // Unified Hangul Code, which contains every one of KS X 1001's 8224 code
+    // points with none remapped, so a caller asking for `ks_c_5601-1987` gets
+    // the same answer for every byte sequence that charset defines.
+    for label in [&b"korean"[..], b"ks_c_5601-1987", b"ksc5601", b"iso-ir-149"] {
+        assert_eq!(Encoding::for_label(label), Some(EUC_KR), "{label:?}");
     }
 }
 
