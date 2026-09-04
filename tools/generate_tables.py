@@ -3,10 +3,10 @@
 
 Usage:  python3 tools/generate_tables.py [--offline]
 
-Downloads https://encoding.spec.whatwg.org/indexes.json and encodings.json (cached
-next to this script under .cache/) and writes the generated Rust sources.  The
-generated files are checked into the repository; this script only needs to be re-run
-when the upstream indexes change.
+Reads the upstream index data from tools/data/, downloading it there first if it is
+missing, and writes the generated Rust sources into src/tables/.  Both the data and
+the generated sources are checked in, so building the crate needs neither this
+script nor a network connection.  Re-run it only to pick up upstream changes.
 """
 
 import json
@@ -16,7 +16,7 @@ import urllib.request
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
-CACHE = os.path.join(HERE, ".cache")
+DATA = os.path.join(HERE, "data")
 OUT = os.path.join(ROOT, "src", "tables")
 
 INDEXES_URL = "https://encoding.spec.whatwg.org/indexes.json"
@@ -30,11 +30,15 @@ HEADER = """\
 
 
 def fetch(url, name):
-    os.makedirs(CACHE, exist_ok=True)
-    path = os.path.join(CACHE, name)
+    """Reads the checked-in copy of an upstream resource, downloading it if absent.
+
+    The copies live in tools/data/ so that regenerating is deterministic and works
+    offline.  Delete one and re-run to pick up upstream changes."""
+    os.makedirs(DATA, exist_ok=True)
+    path = os.path.join(DATA, name)
     if not os.path.exists(path):
         if "--offline" in sys.argv:
-            sys.exit("missing cache file {} and --offline was given".format(path))
+            sys.exit("missing {} and --offline was given".format(path))
         with urllib.request.urlopen(url) as r:
             data = r.read()
         with open(path, "wb") as f:
@@ -66,7 +70,8 @@ def decode_table(name, index, width):
     ty = "u16" if width == 16 else "u32"
     per = 16 if width == 16 else 12
     body = rows(values, per, u16_hex if width == 16 else u32_hex)
-    return "pub static {}: [{}; {}] = [\n{}\n];\n".format(name, ty, len(values), body)
+    return "#[rustfmt::skip]\npub static {}: [{}; {}] = [\n{}\n];\n".format(
+        name, ty, len(values), body)
 
 
 def encode_table(name, pairs, cp_width):
@@ -76,9 +81,9 @@ def encode_table(name, pairs, cp_width):
     assert cps == sorted(cps)
     assert all(p <= 0xFFFF for p in ptrs)
     cp_ty = "u16" if cp_width == 16 else "u32"
-    out = "pub static {}_CODE_POINTS: [{}; {}] = [\n{}\n];\n\n".format(
+    out = "#[rustfmt::skip]\npub static {}_CODE_POINTS: [{}; {}] = [\n{}\n];\n\n".format(
         name, cp_ty, len(cps), rows(cps, 16 if cp_width == 16 else 12, u32_hex))
-    out += "pub static {}_POINTERS: [u16; {}] = [\n{}\n];\n".format(
+    out += "#[rustfmt::skip]\npub static {}_POINTERS: [u16; {}] = [\n{}\n];\n".format(
         name, len(ptrs), rows(ptrs, 16, u16_hex))
     return out
 
@@ -207,9 +212,9 @@ def main():
         pairs = first_pointers(index)
         cps = [cp for cp, _ in pairs]
         ptrs = [p for _, p in pairs]
-        parts.append("\npub static {}_ENCODE_CODE_POINTS: [u16; {}] = [\n{}\n];\n".format(
+        parts.append("\n#[rustfmt::skip]\npub static {}_ENCODE_CODE_POINTS: [u16; {}] = [\n{}\n];\n".format(
             rust_name, len(cps), rows(cps, 16, u16_hex)))
-        parts.append("\npub static {}_ENCODE_BYTES: [u8; {}] = [\n{}\n];\n".format(
+        parts.append("\n#[rustfmt::skip]\npub static {}_ENCODE_BYTES: [u8; {}] = [\n{}\n];\n".format(
             rust_name, len(ptrs), rows([p + 0x80 for p in ptrs], 16, lambda v: "0x{:02X}".format(v))))
     write(os.path.join(OUT, "single_byte.rs"), "".join(parts))
 
@@ -229,7 +234,7 @@ def main():
     parts.append(encode_table("GB18030_ENCODE", first_pointers(gb), 16))
     ranges = indexes["gb18030-ranges"]
     parts.append("\n/// index gb18030 ranges: (pointer, code point) pairs, sorted by both.\n")
-    parts.append("pub static GB18030_RANGES: [(u32, u32); {}] = [\n{}\n];\n".format(
+    parts.append("#[rustfmt::skip]\npub static GB18030_RANGES: [(u32, u32); {}] = [\n{}\n];\n".format(
         len(ranges),
         "\n".join("    (0x{:05X}, 0x{:05X}),".format(p, c) for p, c in ranges)))
     write(os.path.join(OUT, "gb18030.rs"), "".join(parts))
@@ -250,7 +255,7 @@ def main():
         first_pointers(jis0208, skip=lambda p: 8272 <= p <= 8835),
         16))
     parts.append("\n/// index ISO-2022-JP katakana, indexed by `code point - 0xFF61`.\n")
-    parts.append("pub static ISO_2022_JP_KATAKANA: [u16; {}] = [\n{}\n];\n".format(
+    parts.append("#[rustfmt::skip]\npub static ISO_2022_JP_KATAKANA: [u16; {}] = [\n{}\n];\n".format(
         len(katakana), rows(katakana, 16, u16_hex)))
     write(os.path.join(OUT, "jis.rs"), "".join(parts))
 

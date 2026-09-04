@@ -95,6 +95,11 @@ extern crate alloc;
 #[cfg(feature = "std")]
 extern crate std;
 
+/// The examples in the README are compiled and run as part of the test suite.
+#[cfg(doctest)]
+#[doc = include_str!("../README.md")]
+struct Readme;
+
 mod ascii;
 mod big5;
 mod decoder;
