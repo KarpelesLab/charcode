@@ -220,6 +220,10 @@ EXTRA_DOCS = {
 /// Not the standard's `gb2312` label, which resolves to GBK: a superset, but
 /// one that gives two of GB 2312's code points a different character.""",
     "ISO-2022-KR": "ISO-2022-KR (RFC 1557), which shifts between ASCII and KS X 1001.",
+    "ISO-2022-CN": """ISO-2022-CN (RFC 1922): ASCII, GB 2312 and CNS 11643 planes 1 and 2.
+///
+/// Not ISO-2022-CN-EXT, whose ISO-IR-165 and CNS 11643 planes 3 to 7 have no
+/// authoritative published mapping; its designators are errors here.""",
 }
 
 # The one-line doc on each public static; anything absent gets its own name.
@@ -516,6 +520,8 @@ ALGORITHMIC = [
      ["iso-2022-jp", "csiso2022jp", "iso2022jp"]),
     ("iso-2022-kr", "ISO-2022-KR", "ISO_2022_KR", "Iso2022Kr", 50225,
      ["iso-2022-kr", "csiso2022kr", "iso2022kr"]),
+    ("iso-2022-cn", "ISO-2022-CN", "ISO_2022_CN", "Iso2022Cn", 50227,
+     ["iso-2022-cn", "csiso2022cn", "iso2022cn"]),
     ("unicode-extras", "UTF-32BE", "UTF_32BE", "Utf32Be", 12001,
      ["utf-32be", "utf32be"]),
     ("unicode-extras", "UTF-32LE", "UTF_32LE", "Utf32Le", 12000,
@@ -786,6 +792,56 @@ pub static JIS0208_1997_DECODE_DELTA: [(u16, u32); %d] = [
         "\n".join("    (0x{:04X}, 0x{:04X}),".format(a, b) for a, b in decode_delta),
     ), encode_table("JIS0208_1997_ENCODE", sorted({cp: p for p, cp in sorted(proper.items(), reverse=True)}.items()), 16)]
     write(os.path.join(OUT, "jis0208_1997.rs"), "".join(parts))
+
+
+def emit_cns11643():
+    """CNS 11643 planes 1 and 2, which ISO-2022-CN designates into G1 and G2.
+
+    Source: Unicode's MAPPINGS/OBSOLETE/EASTASIA/OTHER/CNS11643.TXT, which
+    covers planes 1, 2 and 14 of CNS 11643-1986.  ISO-2022-CN uses the first
+    two; plane 14 and planes 3 to 7 belong to ISO-2022-CN-EXT, which this crate
+    does not carry.
+
+    The file declines three cells of plane 1's KangXi radical block, where the
+    radical is a duplicate of an ideograph elsewhere in the plane.  glibc maps
+    them, and so does this: refusing to decode a byte pair costs more than a
+    second pointer for one code point does.
+    """
+    planes = {1: {}, 2: {}}
+    with open(os.path.join(MAPPINGS, "CNS11643.TXT"), encoding="utf-8", errors="replace") as f:
+        for line in f:
+            line = line.split("#", 1)[0].split()
+            if len(line) < 2 or not line[0].lower().startswith("0x"):
+                continue
+            code, uni = int(line[0], 16), int(line[1], 16)
+            plane, row, cell = code >> 16, (code >> 8) & 0xFF, code & 0xFF
+            if plane not in planes or uni == 0xFFFD:
+                continue
+            planes[plane][(row - 0x21) * 94 + (cell - 0x21)] = uni
+    # The three KangXi radicals, at plane 1 rows 7 and 8.
+    for code, uni in ((0x12728, 0x4EA0), (0x1272F, 0x51AB), (0x12734, 0x52F9)):
+        row, cell = (code >> 8) & 0xFF, code & 0xFF
+        pointer = (row - 0x21) * 94 + (cell - 0x21)
+        assert pointer not in planes[1]
+        planes[1][pointer] = uni
+    assert len(planes[1]) == 5867, len(planes[1])
+    assert len(planes[2]) == 7650, len(planes[2])
+
+    parts = [HEADER, """
+//! CNS 11643 planes 1 and 2, for ISO-2022-CN.
+//!
+//! Generated from the Unicode Consortium's CNS11643.TXT.  A decode table holds
+//! one entry per pointer, `(row - 1) * 94 + (cell - 1)`, with 0 for a cell the
+//! plane leaves undefined.
+"""]
+    for plane in (1, 2):
+        index = [planes[plane].get(p) for p in range(94 * 94)]
+        assert all(v != 0 for v in index if v is not None)
+        parts.append("\n/// CNS 11643 plane {}.\n".format(plane))
+        parts.append(decode_table("CNS_PLANE{}_DECODE".format(plane), index, 16))
+        parts.append("\n/// `the pointer for code point` in plane {}.\n".format(plane))
+        parts.append(encode_table("CNS_PLANE{}_ENCODE".format(plane), first_pointers(index), 16))
+    write(os.path.join(OUT, "cns11643.rs"), "".join(parts))
 
 
 def emit_extra(indexes):
@@ -1094,6 +1150,7 @@ def main():
     gb2312_delta = emit_gb2312(indexes)
     emit_big5_1984(indexes)
     emit_jis0208_1997(indexes)
+    emit_cns11643()
     labels = []
     names = []
     for group in encodings:
@@ -1272,6 +1329,8 @@ pub static DATA: &str = %s;
 pub mod big5;
 #[cfg(feature = "big5")]
 pub mod big5_1984;
+#[cfg(feature = "iso-2022-cn")]
+pub mod cns11643;
 #[cfg(feature = "euc-kr")]
 pub mod euc_kr;
 #[cfg(feature = "gb18030")]

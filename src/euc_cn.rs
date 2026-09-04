@@ -50,6 +50,49 @@ fn decode_delta(pointer: usize) -> Option<Option<u32>> {
         })
 }
 
+/// `the code point for a byte pair` in GB 2312, in its EUC-CN form.
+///
+/// Shared with ISO-2022-CN, whose G1 holds the same set with the high bits
+/// cleared.
+#[inline]
+pub(crate) fn code_point(lead: u8, trail: u8) -> Option<u32> {
+    if !LEAD.contains(&lead) || !TRAIL.contains(&trail) {
+        return None;
+    }
+    let pointer = pointer_of(lead, trail);
+    match decode_delta(pointer) {
+        Some(overridden) => overridden,
+        None => index::code_point(&GB18030_DECODE, pointer),
+    }
+}
+
+/// The EUC-CN byte pair for a code point, if GB 2312 has one.
+#[inline]
+pub(crate) fn bytes(scalar: u32) -> Option<(u8, u8)> {
+    // The corrected pointers first: index gb18030 has these code points
+    // elsewhere, or not at all.
+    let pointer = if scalar <= u32::from(u16::MAX)
+        && let Ok(i) = GB2312_ENCODE_DELTA.binary_search_by_key(&(scalar as u16), |&(cp, _)| cp)
+    {
+        usize::from(GB2312_ENCODE_DELTA[i].1)
+    } else {
+        let pointer = usize::from(index::pointer(
+            &GB18030_ENCODE_CODE_POINTS,
+            &GB18030_ENCODE_POINTERS,
+            &GB18030_ENCODE_BUCKETS,
+            scalar,
+        )?);
+        // A pointer GB 2312 reads differently cannot be used for the code
+        // point index gb18030 puts there.
+        if decode_delta(pointer).is_some() {
+            return None;
+        }
+        pointer
+    };
+    let (lead, trail) = ((pointer / 190 + 0x81) as u8, (pointer % 190 + 0x41) as u8);
+    (LEAD.contains(&lead) && TRAIL.contains(&trail)).then_some((lead, trail))
+}
+
 #[derive(Debug, Clone, Copy, Default)]
 pub(crate) struct Gb2312Decoder {
     leading: u8,
@@ -99,12 +142,7 @@ impl Gb2312Decoder {
                     }
                     return (DecoderResult::Malformed(2), read);
                 }
-                let pointer = pointer_of(lead, byte);
-                let code_point = match decode_delta(pointer) {
-                    Some(overridden) => overridden,
-                    None => index::code_point(&GB18030_DECODE, pointer),
-                };
-                match code_point {
+                match code_point(lead, byte) {
                     Some(code_point) => sink.write_code_point(code_point),
                     None => return (DecoderResult::Malformed(2), read),
                 }
@@ -145,35 +183,9 @@ impl Gb2312Encoder {
             read += c.len_utf8();
             let scalar = u32::from(c);
 
-            // The corrected pointers first: index gb18030 has these code points
-            // elsewhere, or not at all.
-            let pointer = if scalar <= u32::from(u16::MAX)
-                && let Ok(i) =
-                    GB2312_ENCODE_DELTA.binary_search_by_key(&(scalar as u16), |&(cp, _)| cp)
-            {
-                usize::from(GB2312_ENCODE_DELTA[i].1)
-            } else {
-                let Some(pointer) = index::pointer(
-                    &GB18030_ENCODE_CODE_POINTS,
-                    &GB18030_ENCODE_POINTERS,
-                    &GB18030_ENCODE_BUCKETS,
-                    scalar,
-                ) else {
-                    return (EncoderResult::Unmappable(c), read);
-                };
-                let pointer = usize::from(pointer);
-                // A pointer GB 2312 reads differently cannot be used for the
-                // code point index gb18030 puts there.
-                if decode_delta(pointer).is_some() {
-                    return (EncoderResult::Unmappable(c), read);
-                }
-                pointer
-            };
-
-            let (lead, trail) = ((pointer / 190 + 0x81) as u8, (pointer % 190 + 0x41) as u8);
-            if !LEAD.contains(&lead) || !TRAIL.contains(&trail) {
+            let Some((lead, trail)) = bytes(scalar) else {
                 return (EncoderResult::Unmappable(c), read);
-            }
+            };
             sink.write_slice(&[lead, trail]);
         }
     }

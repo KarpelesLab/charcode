@@ -562,6 +562,16 @@ pub(crate) const ISO_2022_KR_INIT: Encoding =
 #[cfg(feature = "iso-2022-kr")]
 pub static ISO_2022_KR: &Encoding = &ISO_2022_KR_INIT;
 
+#[cfg(feature = "iso-2022-cn")]
+pub(crate) const ISO_2022_CN_INIT: Encoding =
+    Encoding::new("ISO-2022-CN", VariantEncoding::Iso2022Cn);
+/// ISO-2022-CN (RFC 1922): ASCII, GB 2312 and CNS 11643 planes 1 and 2.
+///
+/// Not ISO-2022-CN-EXT, whose ISO-IR-165 and CNS 11643 planes 3 to 7 have no
+/// authoritative published mapping; its designators are errors here.
+#[cfg(feature = "iso-2022-cn")]
+pub static ISO_2022_CN: &Encoding = &ISO_2022_CN_INIT;
+
 #[cfg(feature = "unicode-extras")]
 pub(crate) const UTF_32BE_INIT: Encoding = Encoding::new("UTF-32BE", VariantEncoding::Utf32Be);
 /// UTF-32BE

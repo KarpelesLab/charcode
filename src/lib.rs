@@ -248,6 +248,8 @@ mod identity;
     feature = "shift-jis"
 ))]
 mod index;
+#[cfg(feature = "iso-2022-cn")]
+mod iso_2022_cn;
 #[cfg(feature = "iso-2022-jp")]
 mod iso_2022_jp;
 #[cfg(feature = "iso-2022-jp")]

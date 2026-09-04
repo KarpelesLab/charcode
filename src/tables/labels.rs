@@ -409,6 +409,12 @@ pub static LABELS: &[Label] = &[
         encoding: &x::IBM869_INIT,
         whatwg: false,
     },
+    #[cfg(feature = "iso-2022-cn")]
+    Label {
+        text: "csiso2022cn",
+        encoding: &x::ISO_2022_CN_INIT,
+        whatwg: false,
+    },
     #[cfg(feature = "iso-2022-jp")]
     Label {
         text: "csiso2022jp",
@@ -897,6 +903,12 @@ pub static LABELS: &[Label] = &[
         encoding: &e::UTF_16LE_INIT,
         whatwg: true,
     },
+    #[cfg(feature = "iso-2022-cn")]
+    Label {
+        text: "iso-2022-cn",
+        encoding: &x::ISO_2022_CN_INIT,
+        whatwg: false,
+    },
     #[cfg(feature = "iso-2022-jp")]
     Label {
         text: "iso-2022-jp",
@@ -1102,6 +1114,12 @@ pub static LABELS: &[Label] = &[
     Label {
         text: "iso-ir-6",
         encoding: &x::US_ASCII_INIT,
+        whatwg: false,
+    },
+    #[cfg(feature = "iso-2022-cn")]
+    Label {
+        text: "iso2022cn",
+        encoding: &x::ISO_2022_CN_INIT,
         whatwg: false,
     },
     #[cfg(feature = "iso-2022-jp")]
@@ -3642,6 +3660,8 @@ pub static ALL_ENCODINGS: &[&Encoding] = &[
     &x::ISO_2022_JP_INIT,
     #[cfg(feature = "iso-2022-kr")]
     &x::ISO_2022_KR_INIT,
+    #[cfg(feature = "iso-2022-cn")]
+    &x::ISO_2022_CN_INIT,
     #[cfg(feature = "unicode-extras")]
     &x::UTF_32BE_INIT,
     #[cfg(feature = "unicode-extras")]

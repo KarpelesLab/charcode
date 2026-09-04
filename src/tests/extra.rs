@@ -839,3 +839,130 @@ fn the_japanese_labels_name_the_charsets_they_say() {
         assert_eq!(Encoding::for_whatwg_label(label), Some(expected));
     }
 }
+
+/// ISO-2022-CN's three sets, reconstructed from the tables and checked against
+/// the decoder over every sequence they admit.
+#[cfg(feature = "iso-2022-cn")]
+#[test]
+fn iso_2022_cn_designates_gb2312_and_two_cns_planes() {
+    use crate::tables::cns11643::{CNS_PLANE1_DECODE, CNS_PLANE2_DECODE};
+
+    let (mut gb, mut cns1, mut cns2) = (0usize, 0usize, 0usize);
+    for lead in 0x21..=0x7Eu8 {
+        for trail in 0x21..=0x7Eu8 {
+            let pointer = (usize::from(lead) - 0x21) * 94 + (usize::from(trail) - 0x21);
+
+            // GB 2312 in G1, whose bytes are EUC-CN's with the high bit off.
+            let mut bytes = alloc::vec![0x1B, 0x24, 0x29, 0x41, 0x0E, lead, trail, 0x0F];
+            match crate::euc_cn::code_point(lead | 0x80, trail | 0x80) {
+                Some(code_point) => {
+                    gb += 1;
+                    let c = char::from_u32(code_point).unwrap();
+                    assert_eq!(
+                        decode(crate::ISO_2022_CN, &bytes).as_deref(),
+                        Some(&*String::from(c))
+                    );
+                }
+                None => assert_eq!(decode(crate::ISO_2022_CN, &bytes), None, "gb {pointer}"),
+            }
+
+            // CNS 11643 plane 1, also in G1.
+            bytes[3] = 0x47;
+            match CNS_PLANE1_DECODE.get(pointer).copied().filter(|&c| c != 0) {
+                Some(code_point) => {
+                    cns1 += 1;
+                    let c = char::from_u32(u32::from(code_point)).unwrap();
+                    assert_eq!(
+                        decode(crate::ISO_2022_CN, &bytes).as_deref(),
+                        Some(&*String::from(c))
+                    );
+                }
+                None => assert_eq!(decode(crate::ISO_2022_CN, &bytes), None, "cns1 {pointer}"),
+            }
+
+            // CNS 11643 plane 2, in G2, one character per single shift.
+            let bytes = [0x1B, 0x24, 0x2A, 0x48, 0x1B, 0x4E, lead, trail];
+            match CNS_PLANE2_DECODE.get(pointer).copied().filter(|&c| c != 0) {
+                Some(code_point) => {
+                    cns2 += 1;
+                    let c = char::from_u32(u32::from(code_point)).unwrap();
+                    assert_eq!(
+                        decode(crate::ISO_2022_CN, &bytes).as_deref(),
+                        Some(&*String::from(c))
+                    );
+                }
+                None => assert_eq!(decode(crate::ISO_2022_CN, &bytes), None, "cns2 {pointer}"),
+            }
+        }
+    }
+    assert_eq!((gb, cns1, cns2), (7445, 5867, 7650));
+}
+
+/// The structural rules: designations expire with the line, a single shift is
+/// single, and nothing may be used before it is designated.
+#[cfg(feature = "iso-2022-cn")]
+#[test]
+fn iso_2022_cn_scopes_its_designations_to_the_line() {
+    let cn = crate::ISO_2022_CN;
+    // GB 2312 for U+4E2D, once designated.
+    assert_eq!(
+        decode(cn, b"\x1B$)A\x0EVP\x0F").as_deref(),
+        Some("\u{4E2D}")
+    );
+    // Shifting out with nothing in G1 is an error, and so is the same text on
+    // a second line after the first has ended.
+    assert_eq!(decode(cn, b"\x0EVP\x0F"), None);
+    assert_eq!(decode(cn, b"\x1B$)A\x0EVP\x0F\n\x0EVP\x0F"), None);
+    // A single shift covers one character; the pair after it is ASCII again.
+    assert_eq!(
+        decode(cn, b"\x1B$*H\x1BN\x21\x21\x21\x22").as_deref(),
+        Some("\u{4E42}!\"")
+    );
+    // ...and it needs G2 designated first.
+    assert_eq!(decode(cn, b"\x1BN\x21\x21"), None);
+    // ISO-2022-CN-EXT's designators are not this encoding's.
+    for escape in [b"\x1B$)E".as_slice(), b"\x1B$+I", b"\x1B$+M", b"\x1BO"] {
+        assert_eq!(decode(cn, escape), None, "{escape:02X?}");
+    }
+
+    // The encoder names its sets again on every line, and returns to ASCII.
+    let mut out = Vec::new();
+    cn.new_encoder()
+        .encode_from_str("\u{4E2D}\n\u{4E2D}", &mut out, true)
+        .unwrap();
+    assert_eq!(out, b"\x1B$)A\x0EVP\x0F\n\x1B$)A\x0EVP\x0F");
+    // Everything it writes reads back as itself.
+    assert_eq!(decode(cn, &out).as_deref(), Some("\u{4E2D}\n\u{4E2D}"));
+
+    // It refuses the codes its own structure is made of.
+    for c in ['\u{0E}', '\u{0F}', '\u{1B}'] {
+        let mut out = Vec::new();
+        assert!(
+            cn.new_encoder()
+                .encode_from_str(&String::from(c), &mut out, true)
+                .is_err()
+        );
+    }
+}
+
+/// The standard refuses this label; compiling the encoding in must not change
+/// that, or a build that wants it for a news archive would widen what a label
+/// off the network can select.
+#[cfg(all(feature = "iso-2022-cn", feature = "whatwg-aliases"))]
+#[test]
+fn iso_2022_cn_is_not_reachable_through_the_standards_lookup() {
+    assert_eq!(
+        Encoding::for_label(b"iso-2022-cn"),
+        Some(crate::ISO_2022_CN)
+    );
+    for label in [b"iso-2022-cn".as_slice(), b"iso-2022-cn-ext"] {
+        assert_eq!(
+            Encoding::for_whatwg_label(label),
+            Some(crate::REPLACEMENT),
+            "{label:?}"
+        );
+    }
+    // ISO-2022-CN-EXT is a different encoding, and this crate does not have it.
+    assert_eq!(Encoding::for_label(b"iso-2022-cn-ext"), None);
+    assert!(!crate::ISO_2022_CN.is_whatwg());
+}

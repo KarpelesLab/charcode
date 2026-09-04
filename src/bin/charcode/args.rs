@@ -479,7 +479,7 @@ mod tests {
         assert_eq!(parse_options(&["-f", "cp437"]).from, charcode::IBM437);
         // A number for a charset this build does not have is unknown, not
         // pointed at something adjacent.
-        assert!(parse_args(&["-f", "cp50227"]).is_err());
+        assert!(parse_args(&["-f", "cp50229"]).is_err());
     }
 
     #[test]

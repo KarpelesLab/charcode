@@ -295,10 +295,19 @@ fn code_pages_resolve_and_round_trip() {
         Some(crate::ISO_2022_KR)
     );
 
+    // 50227 is ISO-2022-CN, on the same footing.
+    #[cfg(feature = "iso-2022-cn")]
+    assert_eq!(
+        Encoding::for_windows_code_page(50227),
+        Some(crate::ISO_2022_CN)
+    );
+    #[cfg(not(feature = "iso-2022-cn"))]
+    assert_eq!(Encoding::for_windows_code_page(50227), None);
+
     // A number naming a charset this crate does not have is absent, rather
     // than pointed at `replacement`: these name real charsets in Microsoft's
     // registry whatever the standard makes of the matching labels.
-    for number in [50227u32, 50229, 52936] {
+    for number in [50229u32, 52936] {
         assert_eq!(Encoding::for_windows_code_page(number), None, "{number}");
     }
     #[cfg(not(feature = "iso-2022-kr"))]

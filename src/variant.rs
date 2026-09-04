@@ -21,6 +21,8 @@ use crate::full_byte::{FullByteDecoder, FullByteEncoder};
 #[cfg(feature = "gb18030")]
 use crate::gb18030::{Gb18030Decoder, Gb18030Encoder};
 use crate::identity::Identity;
+#[cfg(feature = "iso-2022-cn")]
+use crate::iso_2022_cn::{Iso2022CnDecoder, Iso2022CnEncoder};
 #[cfg(feature = "iso-2022-jp")]
 use crate::iso_2022_jp::{Iso2022JpDecoder, Iso2022JpEncoder};
 #[cfg(feature = "iso-2022-jp")]
@@ -87,6 +89,8 @@ pub(crate) enum VariantEncoding {
     Iso2022Jp,
     #[cfg(feature = "iso-2022-kr")]
     Iso2022Kr,
+    #[cfg(feature = "iso-2022-cn")]
+    Iso2022Cn,
     #[cfg(feature = "shift-jis")]
     ShiftJis,
     #[cfg(feature = "euc-kr")]
@@ -141,6 +145,8 @@ impl VariantEncoding {
             VariantEncoding::Iso2022Jp => VariantDecoder::Iso2022Jp(Iso2022JpDecoder::new()),
             #[cfg(feature = "iso-2022-kr")]
             VariantEncoding::Iso2022Kr => VariantDecoder::Iso2022Kr(Iso2022KrDecoder::new()),
+            #[cfg(feature = "iso-2022-cn")]
+            VariantEncoding::Iso2022Cn => VariantDecoder::Iso2022Cn(Iso2022CnDecoder::new()),
             #[cfg(feature = "shift-jis")]
             VariantEncoding::ShiftJis => VariantDecoder::ShiftJis(ShiftJisDecoder::new()),
             #[cfg(feature = "euc-kr")]
@@ -191,6 +197,8 @@ impl VariantEncoding {
             VariantEncoding::Iso2022Jp => VariantEncoder::Iso2022Jp(Iso2022JpEncoder::default()),
             #[cfg(feature = "iso-2022-kr")]
             VariantEncoding::Iso2022Kr => VariantEncoder::Iso2022Kr(Iso2022KrEncoder::default()),
+            #[cfg(feature = "iso-2022-cn")]
+            VariantEncoding::Iso2022Cn => VariantEncoder::Iso2022Cn(Iso2022CnEncoder::default()),
             #[cfg(feature = "shift-jis")]
             VariantEncoding::ShiftJis => VariantEncoder::ShiftJis(ShiftJisEncoder),
             #[cfg(feature = "euc-kr")]
@@ -234,6 +242,8 @@ impl VariantEncoding {
             VariantEncoding::Iso2022Jp | VariantEncoding::Iso2022Jp1468 => false,
             #[cfg(feature = "iso-2022-kr")]
             VariantEncoding::Iso2022Kr => false,
+            #[cfg(feature = "iso-2022-cn")]
+            VariantEncoding::Iso2022Cn => false,
             // A full-byte table may reassign bytes below 0x80, and the EBCDIC
             // pages permute the range entirely.
             #[cfg(feature = "full-byte")]
@@ -284,6 +294,8 @@ pub(crate) enum VariantDecoder {
     Iso2022Jp(Iso2022JpDecoder),
     #[cfg(feature = "iso-2022-kr")]
     Iso2022Kr(Iso2022KrDecoder),
+    #[cfg(feature = "iso-2022-cn")]
+    Iso2022Cn(Iso2022CnDecoder),
     #[cfg(feature = "shift-jis")]
     ShiftJis(ShiftJisDecoder),
     #[cfg(feature = "euc-kr")]
@@ -331,6 +343,8 @@ impl VariantDecoder {
             VariantDecoder::Iso2022Jp(d) => d.decode(src, sink, last),
             #[cfg(feature = "iso-2022-kr")]
             VariantDecoder::Iso2022Kr(d) => d.decode(src, sink, last),
+            #[cfg(feature = "iso-2022-cn")]
+            VariantDecoder::Iso2022Cn(d) => d.decode(src, sink, last),
             #[cfg(feature = "shift-jis")]
             VariantDecoder::ShiftJis(d) => d.decode(src, sink, last),
             #[cfg(feature = "euc-kr")]
@@ -383,6 +397,8 @@ pub(crate) enum VariantEncoder {
     Iso2022Jp(Iso2022JpEncoder),
     #[cfg(feature = "iso-2022-kr")]
     Iso2022Kr(Iso2022KrEncoder),
+    #[cfg(feature = "iso-2022-cn")]
+    Iso2022Cn(Iso2022CnEncoder),
     #[cfg(feature = "shift-jis")]
     ShiftJis(ShiftJisEncoder),
     #[cfg(feature = "euc-kr")]
@@ -430,6 +446,8 @@ impl VariantEncoder {
             VariantEncoder::Iso2022Jp(e) => e.encode(src, sink, last),
             #[cfg(feature = "iso-2022-kr")]
             VariantEncoder::Iso2022Kr(e) => e.encode(src, sink, last),
+            #[cfg(feature = "iso-2022-cn")]
+            VariantEncoder::Iso2022Cn(e) => e.encode(src, sink, last),
             #[cfg(feature = "shift-jis")]
             VariantEncoder::ShiftJis(e) => e.encode(src, sink),
             #[cfg(feature = "euc-kr")]
@@ -453,6 +471,10 @@ impl VariantEncoder {
             // shift back.
             #[cfg(feature = "iso-2022-kr")]
             VariantEncoder::Iso2022Kr(_) => byte_length.checked_mul(2)?.checked_add(5),
+            // Three sets to designate rather than one, and a single shift
+            // before every character taken from G2.
+            #[cfg(feature = "iso-2022-cn")]
+            VariantEncoder::Iso2022Cn(_) => byte_length.checked_mul(8)?.checked_add(8),
             // A two-byte UTF-8 character can need a four-byte gb18030 sequence.
             #[cfg(feature = "gb18030")]
             VariantEncoder::Gb18030(_) => byte_length.checked_mul(2)?.checked_add(4),
