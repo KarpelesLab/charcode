@@ -1,7 +1,9 @@
 # charcode
 
+[![CI](https://github.com/KarpelesLab/charcode/actions/workflows/ci.yml/badge.svg)](https://github.com/KarpelesLab/charcode/actions/workflows/ci.yml)
 [![crates.io](https://img.shields.io/crates/v/charcode.svg)](https://crates.io/crates/charcode)
-[![docs.rs](https://docs.rs/charcode/badge.svg)](https://docs.rs/charcode)
+[![docs.rs](https://img.shields.io/docsrs/charcode)](https://docs.rs/charcode)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 Character encoding conversion for Rust, implementing the
 [WHATWG Encoding Standard][spec] — the set of encodings, labels and error
