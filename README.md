@@ -5,15 +5,20 @@
 [![docs.rs](https://img.shields.io/docsrs/charcode)](https://docs.rs/charcode)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-Character encoding conversion for Rust, implementing the
+Character encoding conversion for Rust. It implements the
 [WHATWG Encoding Standard][spec] — the set of encodings, labels and error
-behaviours that browsers actually use.
+behaviours that browsers actually use — and, separately, the charsets those
+labels actually name.
 
 - **No dependencies.** Nothing outside the standard library. `serde` is optional
   and off by default.
 - **No `unsafe`.** The crate is `#![forbid(unsafe_code)]`.
 - **`no_std`.** Works with an allocator, or without one.
-- **Complete.** All 40 encodings in the standard and all 228 of their labels.
+- **Complete.** All 40 encodings in the standard and all 228 of their labels,
+  plus 46 charsets from outside it.
+- **Honest.** A label resolves to the charset it names. The standard's
+  substitutions live behind their own lookup, where a browser can ask for
+  them — see [Two lookups, on purpose](#two-lookups-on-purpose).
 
 ```toml
 [dependencies]
@@ -200,6 +205,37 @@ overrides `-f`, and `iconv`'s `//IGNORE` suffix is accepted as a synonym for
 UTF-16BE, UTF-16LE and `replacement` decode only; asking them to encode gives
 UTF-8, which is what the standard's `get an output encoding` prescribes.
 
+Four of the standard's encodings are named after a charset whose table they do
+not carry, so they are named here after what they hold. Its `Big5` is Big5 plus
+the Hong Kong Supplementary Character Set, which remaps 260 of Big5's own
+pointers; its `Shift_JIS` is Windows codepage 932 exactly; its `EUC-JP` and
+`ISO-2022-JP` alter JIS X 0208 the same way and add more besides. `Big5-HKSCS`,
+`windows-31j`, `x-whatwg-euc-jp` and `x-whatwg-iso-2022-jp` are all labels
+`Encoding::for_whatwg_label` accepts, so a browser's lookups are unchanged.
+
+### Outside the standard
+
+These carry the names the standard leaves free, so `for_label` can answer with
+the charset a label names. All are off by default.
+
+| Group | Charsets |
+| --- | --- |
+| The four above, as standardised | Big5 (`BIG5.TXT`), Shift_JIS (JIS X 0208:1997 Annex 1), EUC-JP, ISO-2022-JP (RFC 1468) |
+| Chinese | GB2312 (GB 2312-80), ISO-2022-CN (RFC 1922) |
+| Korean | ISO-2022-KR (RFC 1557) |
+| Single-byte | ISO-8859-9, ISO-8859-11 |
+| DOS / OEM | 437, 737, 775, 850, 852, 855, 856, 857, 860–865, 869, 1006 |
+| EBCDIC | 037, 424, 500, 875, 1026 |
+| Mac | Arabic, Celtic, Central European, Croatian, Farsi, Gaelic, Greek, Icelandic, Romanian, Turkish |
+| Misc | Atari ST, KZ-1048 |
+| Unicode | UTF-32BE, UTF-32LE, UTF-7 |
+
+The Japanese and Chinese ones are byte for byte what glibc's `iconv` gives,
+checked over every sequence each admits. ISO-2022-KR and ISO-2022-CN are
+stateful 7-bit encodings the standard refuses outright, and that refusal stands:
+`for_whatwg_label` still answers `replacement` for their labels, so compiling
+them in cannot widen what a label off the network selects.
+
 ## Features
 
 ### Capabilities
@@ -219,8 +255,13 @@ UTF-8, which is what the standard's `get an output encoding` prescribes.
 - `whatwg` *(default)* — the standard's 40 encodings, plus `whatwg-aliases`.
 - `single-byte` — the standard's 28 legacy single-byte encodings.
 - `big5`, `euc-jp`, `euc-kr`, `gb18030`, `iso-2022-jp`, `shift-jis` — one per
-  legacy multi-byte encoding, because theirs are the large tables. `gb18030`
-  also provides GBK.
+  legacy multi-byte encoding, because theirs are the large tables. Each also
+  brings the charset the standard names it after: `gb18030` provides GBK and
+  GB2312, `big5` provides Big5, and the three Japanese groups share one delta
+  back to JIS X 0208.
+- `iso-2022-kr` — RFC 1557, on the EUC-KR table. Needs `euc-kr`.
+- `iso-2022-cn` — RFC 1922, with CNS 11643 planes 1 and 2 of its own. Needs
+  `gb18030`.
 - `extras` — the four groups below at once.
 - `dos` — IBM PC / OEM code pages: 437, 737, 775, 850, 852, 855, 856, 857,
   860–865, 869, 1006.
@@ -230,9 +271,10 @@ UTF-8, which is what the standard's `get an output encoding` prescribes.
 - `misc` — Atari ST and KZ-1048.
 - `unicode-extras` — UTF-32BE/LE and UTF-7. No tables; these are algorithmic.
 
-UTF-8, UTF-16BE/LE, `replacement` and `x-user-defined` need no tables and are
-always present. Static data ranges from about 1 KiB with no table group, to
-540 KiB for the whole standard, to 560 KiB for everything.
+UTF-8, UTF-16BE/LE, ISO-8859-1, US-ASCII, `replacement` and `x-user-defined`
+need no tables and are always present. Static data runs from about 4 KiB with no
+table group, to 640 KiB for the whole standard, to 750 KiB for every charset
+here.
 
 ### Two lookups, on purpose
 
@@ -255,9 +297,20 @@ assert_eq!(WINDOWS_1252.decode(b"\x80").0, "€");
 ```
 
 The same goes for `ascii`, `us-ascii`, `iso-8859-9`, `tis-620`, `gb2312`,
-`ks_c_5601-1987` and the rest. `for_label` never substitutes: a label naming a
-charset this build does not carry gives `None` rather than something close to
-it.
+`big5`, `shift_jis`, `euc-jp`, `iso-2022-jp` and the rest. `for_label` never
+substitutes: a label naming a charset this build does not carry gives `None`
+rather than something close to it.
+
+The test for whether a substitution is a lie is whether it **remaps**: whether
+some byte sequence valid in the named charset decodes to a different character.
+Measured against the authoritative tables, windows-1252 remaps 27 of
+ISO-8859-1's bytes, windows-1254 25 of ISO-8859-9's, windows-874 9 of
+TIS-620's, the standard's Big5 260 of Big5's pointers, its jis0208 6 of
+JIS X 0208's, and GBK 2 of GB 2312's. Those are the labels `for_label` keeps.
+The Korean labels are not among them: the standard's EUC-KR is the Unified
+Hangul Code, which holds all 8224 of KS X 1001 with none remapped, so a caller
+asking for `ks_c_5601-1987` gets the same answer for every byte sequence its own
+charset defines. A lenient superset is not a lie.
 
 The standard's lookup is also a boundary in the other direction — it answers
 **only** with encodings the standard sanctions. It leaves some charsets out

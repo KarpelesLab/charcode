@@ -2,9 +2,12 @@
 //!
 //! `charcode` converts between UTF-8 and the encodings the web actually uses:
 //! UTF-16, the 28 legacy single-byte encodings, and the legacy Chinese, Japanese
-//! and Korean multi-byte encodings.  It has no dependencies outside the standard
-//! library, contains no `unsafe` code, and works on `no_std` targets that have an
-//! allocator.
+//! and Korean multi-byte encodings.  It also carries the charsets those labels
+//! actually name, which is not always the same thing — see [Two lookups].  It
+//! has no dependencies outside the standard library, contains no `unsafe` code,
+//! and works on `no_std` targets that have an allocator.
+//!
+//! [Two lookups]: #two-lookups
 //!
 //! # Converting a whole buffer
 //!
@@ -54,6 +57,12 @@
 //! # #[cfg(not(all(feature = "whatwg", feature = "alloc")))]
 //! # fn main() {}
 //! ```
+//!
+//! Where the standard names an encoding after a charset whose table it does not
+//! carry, the name here is the one that fits what it holds — its `Big5` is
+//! `"Big5-HKSCS"`, its `Shift_JIS` is `"windows-31j"` — so that the charset
+//! itself can keep its own name.  Every replacement is a label the standard
+//! defines, so [`Encoding::for_whatwg_label`] still finds them.
 //!
 //! Use the second for anything that came off the network — a `Content-Type`
 //! charset parameter, an HTML `<meta charset>` — where matching browsers is
@@ -166,8 +175,13 @@
 //! - `whatwg` (default): the standard's 40 encodings and `whatwg-aliases`.
 //! - `single-byte`: the standard's 28 legacy single-byte encodings.
 //! - `big5`, `euc-jp`, `euc-kr`, `gb18030`, `iso-2022-jp`, `shift-jis`: one per
-//!   legacy multi-byte encoding, because theirs are the large tables.
-//!   `gb18030` also provides [`GBK`].
+//!   legacy multi-byte encoding, because theirs are the large tables.  Each
+//!   also brings the charset the standard names it after: `gb18030` provides
+//!   [`GBK`] and [`GB2312`], `big5` provides [`BIG5`], and the three Japanese
+//!   groups share one delta back to JIS X 0208.
+//! - `iso-2022-kr`: [`ISO_2022_KR`] (RFC 1557), on the EUC-KR table.
+//! - `iso-2022-cn`: [`ISO_2022_CN`] (RFC 1922), with CNS 11643 planes 1 and 2
+//!   of its own.
 //! - `extras`: everything below at once.
 //! - `dos`: IBM PC / OEM code pages — 437, 737, 775, 850, 852, 855, 856, 857,
 //!   860 to 865, 869, 1006.
@@ -176,10 +190,11 @@
 //! - `misc`: Atari ST and KZ-1048.
 //! - `unicode-extras`: UTF-32BE/LE and UTF-7.  No tables; these are algorithmic.
 //!
-//! UTF-8, UTF-16BE/LE, `replacement` and `x-user-defined` need no tables and
-//! are always present; the first three are what byte order mark sniffing
-//! resolves to.  A build with no table group at all is about 1 KiB of static
-//! data; the whole standard is about 540 KiB, and everything is about 560 KiB.
+//! UTF-8, UTF-16BE/LE, [`ISO_8859_1`], [`US_ASCII`], `replacement` and
+//! `x-user-defined` need no tables and are always present; the first three are
+//! what byte order mark sniffing resolves to.  A build with no table group at
+//! all is about 4 KiB of static data; the whole standard is about 640 KiB, and
+//! every charset here is about 750 KiB.
 //!
 //! Separately, `whatwg-aliases` adds [`Encoding::for_whatwg_label`], the
 //! standard's `get an encoding`.  It is independent of which tables you take,
