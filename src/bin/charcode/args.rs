@@ -41,9 +41,9 @@ a clean conversion from a lossy one.
 
 A NAME may be any label from the WHATWG Encoding Standard, so \"latin1\",
 \"ISO-8859-1\" and \"windows-1252\" all name the same encoding.  A Windows code
-page number also works, bare or with the usual prefixes: 932, cp932, ibm866,
-x-cp20936.  For compatibility with iconv, a \"//IGNORE\" suffix on either NAME
-is accepted and means the same as -c.
+page number also works, written with its usual prefix: cp932, windows-1252,
+ibm866, x-cp20936.  For compatibility with iconv, a \"//IGNORE\" suffix on
+either NAME is accepted and means the same as -c.
 ";
 
 /// What to do about input that cannot be decoded, or characters the output
@@ -145,19 +145,22 @@ fn resolve(kind: &str, value: &str) -> Result<(&'static Encoding, bool), ParseEr
     error(format!("unknown {kind} '{name}'"))
 }
 
-/// Resolves a Windows code page written the way iconv and ODBC spell them:
-/// `932`, `cp932`, `CP-932`, `ibm866`, `windows-932`, `x-cp20936`.
+/// Resolves a code page written the way iconv and ODBC spell them: `cp932`,
+/// `CP-932`, `windows-932`, `x-cp20936`.
+///
+/// A prefix is required.  A bare number is not a charset name — `-f 932` is far
+/// more likely to be a mistake than a request for Shift_JIS — so it stays an
+/// error.
 ///
 /// This is a courtesy for scripts written against iconv; the library's label
 /// lookup stays exactly what the standard defines, and is tried first.
 fn code_page(name: &str) -> Option<&'static Encoding> {
     let lower = name.to_ascii_lowercase();
-    let digits = ["cp", "ibm", "windows", "ms", "x-cp", "dos"]
+    let rest = ["x-cp", "cp", "ibm", "windows", "ms", "dos"]
         .iter()
-        .find_map(|prefix| lower.strip_prefix(prefix))
-        .map(|rest| rest.strip_prefix(['-', '_']).unwrap_or(rest))
-        .unwrap_or(lower.as_str());
-    Encoding::for_windows_code_page(digits.parse().ok()?)
+        .find_map(|prefix| lower.strip_prefix(prefix))?;
+    let digits = rest.strip_prefix(['-', '_']).unwrap_or(rest);
+    Encoding::for_cp(digits.parse().ok()?)
 }
 
 /// Parses the arguments after `argv[0]`.
@@ -360,24 +363,30 @@ mod tests {
 
     #[test]
     fn windows_code_pages_are_accepted() {
-        for spelling in ["932", "cp932", "CP-932", "cp_932", "windows-932", "x-cp932"] {
+        for spelling in ["cp932", "CP-932", "cp_932", "windows-932", "x-cp932"] {
             let options = parse_options(&["-f", spelling]);
             assert_eq!(options.from, charcode::SHIFT_JIS, "{spelling}");
         }
-        assert_eq!(parse_options(&["-f", "1252"]).from, charcode::WINDOWS_1252);
+        assert_eq!(
+            parse_options(&["-f", "cp1252"]).from,
+            charcode::WINDOWS_1252
+        );
         assert_eq!(parse_options(&["-f", "cp949"]).from, charcode::EUC_KR);
         assert_eq!(parse_options(&["-f", "ibm866"]).from, charcode::IBM866);
-        assert_eq!(parse_options(&["-f", "65001"]).from, charcode::UTF_8);
+        assert_eq!(parse_options(&["-f", "cp65001"]).from, charcode::UTF_8);
         // A label always wins over a number that would mean something else.
         assert_eq!(
             parse_options(&["-f", "latin1"]).from,
             charcode::WINDOWS_1252
         );
+        // A bare number is not a charset name.
+        for bare in ["932", "1252", "65001", "0"] {
+            assert!(parse_args(&["-f", bare]).is_err(), "{bare}");
+        }
         // Code pages for charsets this crate does not have stay unknown.
         assert!(parse_args(&["-f", "cp437"]).is_err());
-        assert!(parse_args(&["-f", "437"]).is_err());
         // And the neutralized ones are refused with the same explanation.
-        let message = parse_args(&["-f", "50225"]).unwrap_err().0;
+        let message = parse_args(&["-f", "cp50225"]).unwrap_err().0;
         assert!(message.contains("replacement"), "{message}");
     }
 

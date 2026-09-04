@@ -293,8 +293,26 @@ impl Encoding {
             .map(|i| CODE_PAGES[i].encoding)
     }
 
-    /// Like [`Encoding::for_windows_code_page`], but treats the numbers that
-    /// map to [`REPLACEMENT`] — 50225, 50227, 50229 and 52936 — as unknown.
+    /// Looks up an encoding by code page number written the `cpNNN` way.
+    ///
+    /// `cp932` and `windows-932` name the same entry in the same registry, so
+    /// this reads the same table as [`Encoding::for_windows_code_page`]; it
+    /// exists so that a call site spelled after `cp1252` or `cp866` does not
+    /// have to say "windows" to mean IBM's or DOS's numbering.
+    ///
+    /// ```
+    /// # use charcode::{Encoding, IBM866, SHIFT_JIS};
+    /// assert_eq!(Encoding::for_cp(932), Some(SHIFT_JIS));
+    /// assert_eq!(Encoding::for_cp(866), Some(IBM866));
+    /// assert_eq!(Encoding::for_cp(437), None);
+    /// ```
+    pub fn for_cp(code_page: u32) -> Option<&'static Encoding> {
+        Encoding::for_windows_code_page(code_page)
+    }
+
+    /// Like [`Encoding::for_windows_code_page`] and [`Encoding::for_cp`], but
+    /// treats the numbers that map to [`REPLACEMENT`] — 50225, 50227, 50229
+    /// and 52936 — as unknown.
     pub fn for_windows_code_page_no_replacement(code_page: u32) -> Option<&'static Encoding> {
         match Encoding::for_windows_code_page(code_page) {
             Some(encoding) if encoding.variant == VariantEncoding::Replacement => None,

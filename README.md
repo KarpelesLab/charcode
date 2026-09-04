@@ -116,8 +116,10 @@ assert_eq!(WINDOWS_1252.windows_code_page(), Some(1252));
 
 A number for an encoding the standard folds into a superset resolves to that
 superset, exactly as the equivalent label does — 28591 (ISO-8859-1) and 20127
-(US-ASCII) both give windows-1252. The CLI accepts these too, bare or prefixed:
-`charcode -f cp932`, `-f 932` and `-f x-cp20936` all work.
+(US-ASCII) both give windows-1252. `Encoding::for_cp` is the same lookup under
+the name a `cp932`-style spelling suggests. The CLI accepts those spellings too
+— `charcode -f cp932`, `-f windows-932`, `-f x-cp20936` — though a bare number
+is not a charset name and stays an error.
 
 ## Command-line tool
 
