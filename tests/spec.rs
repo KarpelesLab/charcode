@@ -137,8 +137,10 @@ fn replacement_labels_can_be_filtered_out() {
     // ISO-2022-JP is a real encoding and survives the filter.
     assert_eq!(
         Encoding::for_whatwg_label_no_replacement(b"iso-2022-jp"),
-        Some(ISO_2022_JP)
+        Some(X_WHATWG_ISO_2022_JP)
     );
+    // ...and the general lookup gives the charset the label names.
+    #[cfg(feature = "iso-2022-jp")]
     assert_eq!(Encoding::for_label(b"iso-2022-jp"), Some(ISO_2022_JP));
 }
 
@@ -398,11 +400,11 @@ fn big5_restores_an_ascii_trail_byte() {
 
 #[test]
 fn euc_jp_decodes_jis0212_but_never_encodes_it() {
-    assert_eq!(decode(EUC_JP, b"\x8F\xA2\xC2"), "\u{A1}");
-    assert_eq!(encode(EUC_JP, "\u{A1}"), b"&#161;");
+    assert_eq!(decode(X_WHATWG_EUC_JP, b"\x8F\xA2\xC2"), "\u{A1}");
+    assert_eq!(encode(X_WHATWG_EUC_JP, "\u{A1}"), b"&#161;");
     // Half-width katakana uses the 0x8E prefix in both directions.
-    assert_eq!(decode(EUC_JP, b"\x8E\xB1"), "\u{FF71}");
-    assert_eq!(encode(EUC_JP, "\u{FF71}"), b"\x8E\xB1");
+    assert_eq!(decode(X_WHATWG_EUC_JP, b"\x8E\xB1"), "\u{FF71}");
+    assert_eq!(encode(X_WHATWG_EUC_JP, "\u{FF71}"), b"\x8E\xB1");
 }
 
 #[test]
@@ -418,42 +420,54 @@ fn shift_jis_end_user_defined_characters() {
 #[test]
 fn japanese_encoders_fold_the_yen_and_overline() {
     assert_eq!(encode(WINDOWS_31J, "\u{A5}\u{203E}"), b"\x5C\x7E");
-    assert_eq!(encode(EUC_JP, "\u{A5}\u{203E}"), b"\x5C\x7E");
+    assert_eq!(encode(X_WHATWG_EUC_JP, "\u{A5}\u{203E}"), b"\x5C\x7E");
     // ISO-2022-JP has a mode in which those two bytes mean exactly that.
-    assert_eq!(encode(ISO_2022_JP, "\u{A5}"), b"\x1B(J\x5C\x1B(B");
+    assert_eq!(encode(X_WHATWG_ISO_2022_JP, "\u{A5}"), b"\x1B(J\x5C\x1B(B");
 }
 
 #[test]
 fn iso_2022_jp_concatenation_hazard_from_the_standard() {
     // The standard's own example: encoding U+00A5 twice and concatenating the
     // results does not decode back to two yen signs.
-    let once = encode(ISO_2022_JP, "\u{A5}");
+    let once = encode(X_WHATWG_ISO_2022_JP, "\u{A5}");
     let twice: Vec<u8> = once.iter().chain(once.iter()).copied().collect();
-    assert_eq!(decode(ISO_2022_JP, &twice), "\u{A5}\u{FFFD}\u{A5}");
+    assert_eq!(decode(X_WHATWG_ISO_2022_JP, &twice), "\u{A5}\u{FFFD}\u{A5}");
 }
 
 #[test]
 fn iso_2022_jp_rejects_back_to_back_escapes() {
     // Two escapes with no output in between is an error, which is what stops an
     // escape sequence from being smuggled past a filter.
-    assert_eq!(decode(ISO_2022_JP, b"\x1B(B\x1B(B"), "\u{FFFD}");
-    assert_eq!(decode(ISO_2022_JP, b"\x1B(BA\x1B(B"), "A");
+    assert_eq!(decode(X_WHATWG_ISO_2022_JP, b"\x1B(B\x1B(B"), "\u{FFFD}");
+    assert_eq!(decode(X_WHATWG_ISO_2022_JP, b"\x1B(BA\x1B(B"), "A");
     // An escape that names no mode is an error, and its bytes are decoded again.
-    assert_eq!(decode(ISO_2022_JP, b"\x1B(Z"), "\u{FFFD}(Z");
-    assert_eq!(decode(ISO_2022_JP, b"\x1BA"), "\u{FFFD}A");
-    assert_eq!(decode(ISO_2022_JP, b"\x1B"), "\u{FFFD}");
+    assert_eq!(decode(X_WHATWG_ISO_2022_JP, b"\x1B(Z"), "\u{FFFD}(Z");
+    assert_eq!(decode(X_WHATWG_ISO_2022_JP, b"\x1BA"), "\u{FFFD}A");
+    assert_eq!(decode(X_WHATWG_ISO_2022_JP, b"\x1B"), "\u{FFFD}");
 }
 
 #[test]
 fn iso_2022_jp_encoder_returns_to_ascii_at_the_end() {
-    assert_eq!(encode(ISO_2022_JP, "\u{65E5}"), b"\x1B$B\x46\x7C\x1B(B");
-    assert_eq!(encode(ISO_2022_JP, "a\u{65E5}b"), b"a\x1B$B\x46\x7C\x1B(Bb");
+    assert_eq!(
+        encode(X_WHATWG_ISO_2022_JP, "\u{65E5}"),
+        b"\x1B$B\x46\x7C\x1B(B"
+    );
+    assert_eq!(
+        encode(X_WHATWG_ISO_2022_JP, "a\u{65E5}b"),
+        b"a\x1B$B\x46\x7C\x1B(Bb"
+    );
     // The escape-introducing characters can never be encoded.
-    assert_eq!(encode(ISO_2022_JP, "\x1B"), b"&#65533;");
-    assert_eq!(encode(ISO_2022_JP, "\x0E\x0F"), b"&#65533;&#65533;");
+    assert_eq!(encode(X_WHATWG_ISO_2022_JP, "\x1B"), b"&#65533;");
+    assert_eq!(
+        encode(X_WHATWG_ISO_2022_JP, "\x0E\x0F"),
+        b"&#65533;&#65533;"
+    );
     // Half-width katakana has no ISO-2022-JP form and folds to full-width.
     assert_eq!(
-        decode(ISO_2022_JP, &encode(ISO_2022_JP, "\u{FF71}")),
+        decode(
+            X_WHATWG_ISO_2022_JP,
+            &encode(X_WHATWG_ISO_2022_JP, "\u{FF71}")
+        ),
         "\u{30A2}"
     );
 }
@@ -546,7 +560,7 @@ fn encodings_compare_and_print_by_name() {
     assert!(!BIG5_HKSCS.is_single_byte());
     assert!(WINDOWS_1252.is_ascii_compatible());
     assert!(!UTF_16LE.is_ascii_compatible());
-    assert!(!ISO_2022_JP.is_ascii_compatible());
+    assert!(!X_WHATWG_ISO_2022_JP.is_ascii_compatible());
     assert!(!REPLACEMENT.is_ascii_compatible());
 }
 
@@ -631,8 +645,8 @@ fn is_whatwg_marks_exactly_the_standards_encodings() {
         "GBK",
         "gb18030",
         "Big5-HKSCS",
-        "EUC-JP",
-        "ISO-2022-JP",
+        "x-whatwg-euc-jp",
+        "x-whatwg-iso-2022-jp",
         "windows-31j",
         "EUC-KR",
         "replacement",

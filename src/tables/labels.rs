@@ -322,8 +322,8 @@ pub static LABELS: &[Label] = &[
     #[cfg(feature = "euc-jp")]
     Label {
         text: "cseucpkdfmtjapanese",
-        encoding: &e::EUC_JP_INIT,
-        whatwg: true,
+        encoding: &x::EUC_JP_INIT,
+        whatwg: false,
     },
     #[cfg(feature = "gb18030")]
     Label {
@@ -412,8 +412,8 @@ pub static LABELS: &[Label] = &[
     #[cfg(feature = "iso-2022-jp")]
     Label {
         text: "csiso2022jp",
-        encoding: &e::ISO_2022_JP_INIT,
-        whatwg: true,
+        encoding: &x::ISO_2022_JP_INIT,
+        whatwg: false,
     },
     #[cfg(feature = "iso-2022-kr")]
     Label {
@@ -674,14 +674,32 @@ pub static LABELS: &[Label] = &[
     #[cfg(feature = "euc-jp")]
     Label {
         text: "euc-jp",
-        encoding: &e::EUC_JP_INIT,
-        whatwg: true,
+        encoding: &x::EUC_JP_INIT,
+        whatwg: false,
     },
     #[cfg(feature = "euc-kr")]
     Label {
         text: "euc-kr",
         encoding: &e::EUC_KR_INIT,
         whatwg: true,
+    },
+    #[cfg(feature = "euc-jp")]
+    Label {
+        text: "euc_jp",
+        encoding: &x::EUC_JP_INIT,
+        whatwg: false,
+    },
+    #[cfg(feature = "euc-jp")]
+    Label {
+        text: "eucjp",
+        encoding: &x::EUC_JP_INIT,
+        whatwg: false,
+    },
+    #[cfg(feature = "euc-jp")]
+    Label {
+        text: "extended_unix_code_packed_format_for_japanese",
+        encoding: &x::EUC_JP_INIT,
+        whatwg: false,
     },
     #[cfg(feature = "gb18030")]
     Label {
@@ -882,8 +900,8 @@ pub static LABELS: &[Label] = &[
     #[cfg(feature = "iso-2022-jp")]
     Label {
         text: "iso-2022-jp",
-        encoding: &e::ISO_2022_JP_INIT,
-        whatwg: true,
+        encoding: &x::ISO_2022_JP_INIT,
+        whatwg: false,
     },
     #[cfg(feature = "iso-2022-kr")]
     Label {
@@ -1084,6 +1102,12 @@ pub static LABELS: &[Label] = &[
     Label {
         text: "iso-ir-6",
         encoding: &x::US_ASCII_INIT,
+        whatwg: false,
+    },
+    #[cfg(feature = "iso-2022-jp")]
+    Label {
+        text: "iso2022jp",
+        encoding: &x::ISO_2022_JP_INIT,
         whatwg: false,
     },
     #[cfg(feature = "iso-2022-kr")]
@@ -1960,8 +1984,8 @@ pub static LABELS: &[Label] = &[
     #[cfg(feature = "euc-jp")]
     Label {
         text: "x-euc-jp",
-        encoding: &e::EUC_JP_INIT,
-        whatwg: true,
+        encoding: &x::EUC_JP_INIT,
+        whatwg: false,
     },
     #[cfg(feature = "gb18030")]
     Label {
@@ -2067,6 +2091,18 @@ pub static LABELS: &[Label] = &[
     Label {
         text: "x-user-defined",
         encoding: &e::X_USER_DEFINED_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "euc-jp")]
+    Label {
+        text: "x-whatwg-euc-jp",
+        encoding: &e::X_WHATWG_EUC_JP_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "iso-2022-jp")]
+    Label {
+        text: "x-whatwg-iso-2022-jp",
+        encoding: &e::X_WHATWG_ISO_2022_JP_INIT,
         whatwg: true,
     },
     #[cfg(feature = "big5")]
@@ -2220,7 +2256,7 @@ pub static WHATWG_LABELS: &[Label] = &[
     #[cfg(feature = "euc-jp")]
     Label {
         text: "cseucpkdfmtjapanese",
-        encoding: &e::EUC_JP_INIT,
+        encoding: &e::X_WHATWG_EUC_JP_INIT,
         whatwg: true,
     },
     #[cfg(feature = "gb18030")]
@@ -2238,7 +2274,7 @@ pub static WHATWG_LABELS: &[Label] = &[
     #[cfg(feature = "iso-2022-jp")]
     Label {
         text: "csiso2022jp",
-        encoding: &e::ISO_2022_JP_INIT,
+        encoding: &e::X_WHATWG_ISO_2022_JP_INIT,
         whatwg: true,
     },
     Label {
@@ -2404,7 +2440,7 @@ pub static WHATWG_LABELS: &[Label] = &[
     #[cfg(feature = "euc-jp")]
     Label {
         text: "euc-jp",
-        encoding: &e::EUC_JP_INIT,
+        encoding: &e::X_WHATWG_EUC_JP_INIT,
         whatwg: true,
     },
     #[cfg(feature = "euc-kr")]
@@ -2496,7 +2532,7 @@ pub static WHATWG_LABELS: &[Label] = &[
     #[cfg(feature = "iso-2022-jp")]
     Label {
         text: "iso-2022-jp",
-        encoding: &e::ISO_2022_JP_INIT,
+        encoding: &e::X_WHATWG_ISO_2022_JP_INIT,
         whatwg: true,
     },
     Label {
@@ -3382,7 +3418,7 @@ pub static WHATWG_LABELS: &[Label] = &[
     #[cfg(feature = "euc-jp")]
     Label {
         text: "x-euc-jp",
-        encoding: &e::EUC_JP_INIT,
+        encoding: &e::X_WHATWG_EUC_JP_INIT,
         whatwg: true,
     },
     #[cfg(feature = "gb18030")]
@@ -3423,6 +3459,18 @@ pub static WHATWG_LABELS: &[Label] = &[
     Label {
         text: "x-user-defined",
         encoding: &e::X_USER_DEFINED_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "euc-jp")]
+    Label {
+        text: "x-whatwg-euc-jp",
+        encoding: &e::X_WHATWG_EUC_JP_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "iso-2022-jp")]
+    Label {
+        text: "x-whatwg-iso-2022-jp",
+        encoding: &e::X_WHATWG_ISO_2022_JP_INIT,
         whatwg: true,
     },
     #[cfg(feature = "big5")]
@@ -3499,9 +3547,9 @@ pub static ALL_ENCODINGS: &[&Encoding] = &[
     #[cfg(feature = "big5")]
     &e::BIG5_HKSCS_INIT,
     #[cfg(feature = "euc-jp")]
-    &e::EUC_JP_INIT,
+    &e::X_WHATWG_EUC_JP_INIT,
     #[cfg(feature = "iso-2022-jp")]
-    &e::ISO_2022_JP_INIT,
+    &e::X_WHATWG_ISO_2022_JP_INIT,
     #[cfg(feature = "shift-jis")]
     &e::WINDOWS_31J_INIT,
     #[cfg(feature = "euc-kr")]
@@ -3588,6 +3636,10 @@ pub static ALL_ENCODINGS: &[&Encoding] = &[
     &x::BIG5_INIT,
     #[cfg(feature = "shift-jis")]
     &x::SHIFT_JIS_INIT,
+    #[cfg(feature = "euc-jp")]
+    &x::EUC_JP_INIT,
+    #[cfg(feature = "iso-2022-jp")]
+    &x::ISO_2022_JP_INIT,
     #[cfg(feature = "iso-2022-kr")]
     &x::ISO_2022_KR_INIT,
     #[cfg(feature = "unicode-extras")]

@@ -101,8 +101,8 @@ pub(crate) static CODE_PAGES: &[CodePage] = &[
     #[cfg(feature = "single-byte")]
     #[cfg(feature = "single-byte")]
     cp(20866, &e::KOI8_R_INIT),
-    #[cfg(feature = "euc-jp")]
-    alias(20932, &e::EUC_JP_INIT), // JIS X 0208-1990 and 0212-1990
+    // 20932 is JIS X 0208-1990 and 0212-1990, which is EUC-JP itself; it
+    // lives with that table rather than here.
     #[cfg(feature = "gb18030")]
     alias(20936, &e::GBK_INIT), // GB2312-80
     #[cfg(feature = "euc-kr")]
@@ -131,14 +131,14 @@ pub(crate) static CODE_PAGES: &[CodePage] = &[
     cp(28605, &e::ISO_8859_15_INIT),
     #[cfg(feature = "single-byte")]
     cp(38598, &e::ISO_8859_8_I_INIT),
+    // 50220 is ISO-2022-JP without the half-width katakana mode, which is
+    // RFC 1468's; it lives with that table rather than here.
     #[cfg(feature = "iso-2022-jp")]
-    cp(50220, &e::ISO_2022_JP_INIT),
+    alias(50221, &e::X_WHATWG_ISO_2022_JP_INIT), // allows half-width katakana
     #[cfg(feature = "iso-2022-jp")]
-    alias(50221, &e::ISO_2022_JP_INIT), // allows half-width katakana
-    #[cfg(feature = "iso-2022-jp")]
-    alias(50222, &e::ISO_2022_JP_INIT), // allows SO/SI
+    alias(50222, &e::X_WHATWG_ISO_2022_JP_INIT), // allows SO/SI
     #[cfg(feature = "euc-jp")]
-    cp(51932, &e::EUC_JP_INIT),
+    cp(51932, &e::X_WHATWG_EUC_JP_INIT),
     #[cfg(feature = "gb18030")]
     alias(51936, &e::GBK_INIT), // EUC-CN
     #[cfg(feature = "euc-kr")]

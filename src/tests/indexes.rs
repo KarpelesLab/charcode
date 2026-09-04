@@ -256,18 +256,30 @@ fn euc_jp_indexes() {
     for pointer in 0..8836usize {
         let bytes = [(pointer / 94 + 0xA1) as u8, (pointer % 94 + 0xA1) as u8];
         match index::code_point(&JIS0208_DECODE, pointer) {
-            Some(code_point) => expect_char(EUC_JP, &bytes, code_point),
-            None => assert_eq!(decode_strict(EUC_JP, &bytes), None, "jis0208 {pointer}"),
+            Some(code_point) => expect_char(X_WHATWG_EUC_JP, &bytes, code_point),
+            None => assert_eq!(
+                decode_strict(X_WHATWG_EUC_JP, &bytes),
+                None,
+                "jis0208 {pointer}"
+            ),
         }
         let bytes = [0x8F, bytes[0], bytes[1]];
         match index::code_point(&JIS0212_DECODE, pointer) {
-            Some(code_point) => expect_char(EUC_JP, &bytes, code_point),
-            None => assert_eq!(decode_strict(EUC_JP, &bytes), None, "jis0212 {pointer}"),
+            Some(code_point) => expect_char(X_WHATWG_EUC_JP, &bytes, code_point),
+            None => assert_eq!(
+                decode_strict(X_WHATWG_EUC_JP, &bytes),
+                None,
+                "jis0212 {pointer}"
+            ),
         }
     }
     // Half-width katakana through the 0x8E prefix.
     for byte in 0xA1..=0xDFu8 {
-        expect_char(EUC_JP, &[0x8E, byte], 0xFF61 - 0xA1 + u32::from(byte));
+        expect_char(
+            X_WHATWG_EUC_JP,
+            &[0x8E, byte],
+            0xFF61 - 0xA1 + u32::from(byte),
+        );
     }
 }
 
@@ -322,9 +334,9 @@ fn iso_2022_jp_index() {
             (pointer % 94 + 0x21) as u8,
         ];
         match index::code_point(&JIS0208_DECODE, pointer) {
-            Some(code_point) => expect_char(ISO_2022_JP, &bytes, code_point),
+            Some(code_point) => expect_char(X_WHATWG_ISO_2022_JP, &bytes, code_point),
             None => assert_eq!(
-                decode_strict(ISO_2022_JP, &bytes),
+                decode_strict(X_WHATWG_ISO_2022_JP, &bytes),
                 None,
                 "pointer {pointer}"
             ),
@@ -333,14 +345,14 @@ fn iso_2022_jp_index() {
     // The half-width katakana escape.
     for byte in 0x21..=0x5Fu8 {
         expect_char(
-            ISO_2022_JP,
+            X_WHATWG_ISO_2022_JP,
             &[0x1B, 0x28, 0x49, byte],
             0xFF61 - 0x21 + u32::from(byte),
         );
     }
     // The Roman escape remaps two ASCII bytes.
-    expect_char(ISO_2022_JP, &[0x1B, 0x28, 0x4A, 0x5C], 0x00A5);
-    expect_char(ISO_2022_JP, &[0x1B, 0x28, 0x4A, 0x7E], 0x203E);
+    expect_char(X_WHATWG_ISO_2022_JP, &[0x1B, 0x28, 0x4A, 0x5C], 0x00A5);
+    expect_char(X_WHATWG_ISO_2022_JP, &[0x1B, 0x28, 0x4A, 0x7E], 0x203E);
 }
 
 #[test]

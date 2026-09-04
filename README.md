@@ -193,7 +193,7 @@ overrides `-f`, and `iconv`'s `//IGNORE` suffix is accepted as a synonym for
 | Always present | ISO-8859-1, US-ASCII (identity maps, no tables) |
 | Single-byte | IBM866, ISO-8859-2/3/4/5/6/7/8/8-I/10/13/14/15/16, KOI8-R, KOI8-U, macintosh, windows-874, windows-1250 through windows-1258, x-mac-cyrillic |
 | Chinese | GBK, gb18030, Big5-HKSCS |
-| Japanese | EUC-JP, ISO-2022-JP, windows-31j |
+| Japanese | x-whatwg-euc-jp, x-whatwg-iso-2022-jp, windows-31j |
 | Korean | EUC-KR |
 | Other | replacement, x-user-defined |
 

@@ -664,3 +664,178 @@ fn shift_jis_labels_do_not_resolve_to_codepage_932() {
     assert_eq!(decode(crate::SHIFT_JIS, b"\x87\x40"), None);
     assert_eq!(decode(crate::SHIFT_JIS, b"\xF0\x40"), None);
 }
+
+/// EUC-JP reconstructed from the tables, checked against the decoder over every
+/// sequence it admits, and round-tripped.
+#[cfg(feature = "euc-jp")]
+#[test]
+fn euc_jp_is_jis_x_0208_and_jis_x_0212() {
+    use crate::tables::jis::{JIS0212_DECODE, JIS0212_ENCODE_CODE_POINTS};
+    use crate::tables::jis0208_1997::JIS0208_1997_ENCODE_CODE_POINTS;
+
+    // GL is ASCII; CR is the C1 controls, less the two single shifts.
+    for byte in 0..=0xFFu8 {
+        let expected = match byte {
+            0x00..=0x7F => Some(u32::from(byte)),
+            0x80..=0x8D | 0x90..=0x9F => Some(u32::from(byte)),
+            _ => None,
+        };
+        let decoded = decode(crate::EUC_JP, &[byte]);
+        match expected {
+            Some(code_point) => {
+                let c = char::from_u32(code_point).unwrap();
+                assert_eq!(
+                    decoded.as_deref(),
+                    Some(&*String::from(c)),
+                    "byte {byte:02X}"
+                );
+            }
+            None => assert_eq!(decoded, None, "byte {byte:02X}"),
+        }
+    }
+    // SS2 selects JIS X 0201's katakana.
+    for byte in 0xA1..=0xDFu8 {
+        let c = char::from_u32(0xFF61 - 0xA1 + u32::from(byte)).unwrap();
+        assert_eq!(
+            decode(crate::EUC_JP, &[0x8E, byte]).as_deref(),
+            Some(&*String::from(c))
+        );
+    }
+
+    let (mut plane0208, mut plane0212) = (0usize, 0usize);
+    for lead in 0xA1..=0xFEu8 {
+        for trail in 0xA1..=0xFEu8 {
+            let pointer = (usize::from(lead) - 0xA1) * 94 + (usize::from(trail) - 0xA1);
+            // JIS X 0208, in GR.
+            match crate::jis0208_1997::code_point(pointer) {
+                Some(code_point) => {
+                    plane0208 += 1;
+                    let c = char::from_u32(code_point).unwrap();
+                    assert_eq!(
+                        decode(crate::EUC_JP, &[lead, trail]).as_deref(),
+                        Some(&*String::from(c))
+                    );
+                }
+                None => assert_eq!(decode(crate::EUC_JP, &[lead, trail]), None, "{pointer}"),
+            }
+            // JIS X 0212, behind SS3.
+            match JIS0212_DECODE.get(pointer).copied().filter(|&c| c != 0) {
+                Some(code_point) => {
+                    plane0212 += 1;
+                    let c = char::from_u32(u32::from(code_point)).unwrap();
+                    assert_eq!(
+                        decode(crate::EUC_JP, &[0x8F, lead, trail]).as_deref(),
+                        Some(&*String::from(c))
+                    );
+                }
+                None => assert_eq!(
+                    decode(crate::EUC_JP, &[0x8F, lead, trail]),
+                    None,
+                    "{pointer}"
+                ),
+            }
+        }
+    }
+    assert_eq!(plane0208, 6879);
+    assert_eq!(plane0212, 6067);
+
+    // Both planes round-trip, the supplementary one behind the single shift.
+    for table in [
+        &JIS0208_1997_ENCODE_CODE_POINTS[..],
+        &JIS0212_ENCODE_CODE_POINTS[..],
+    ] {
+        for &code_point in table {
+            let c = char::from_u32(u32::from(code_point)).unwrap();
+            let mut out = Vec::new();
+            crate::EUC_JP
+                .new_encoder()
+                .encode_from_str(&String::from(c), &mut out, true)
+                .unwrap();
+            assert_eq!(
+                decode(crate::EUC_JP, &out).as_deref(),
+                Some(&*String::from(c))
+            );
+        }
+    }
+}
+
+/// ISO-2022-JP has only the three sets RFC 1468 gives it.
+#[cfg(feature = "iso-2022-jp")]
+#[test]
+fn iso_2022_jp_has_no_katakana_mode() {
+    // `ESC ( I` is the standard's addition, and not an escape RFC 1468 knows.
+    assert_eq!(decode(crate::ISO_2022_JP, b"\x1B(I1\x1B(B"), None);
+    assert_eq!(
+        decode(crate::X_WHATWG_ISO_2022_JP, b"\x1B(I1\x1B(B").as_deref(),
+        Some("\u{FF71}")
+    );
+    // Both JIS X 0208 designators work, and give JIS X 0208.
+    for escape in [b"\x1B$@".as_slice(), b"\x1B$B"] {
+        let mut bytes = escape.to_vec();
+        bytes.extend_from_slice(b"\x21\x41\x1B(B");
+        assert_eq!(
+            decode(crate::ISO_2022_JP, &bytes).as_deref(),
+            Some("\u{301C}"),
+            "{escape:02X?}"
+        );
+    }
+    // JIS X 0201's Roman set, and the NEC row the standard's index folds in.
+    assert_eq!(
+        decode(crate::ISO_2022_JP, b"\x1B(J\x5C\x7E\x1B(B").as_deref(),
+        Some("\u{A5}\u{203E}")
+    );
+    assert_eq!(decode(crate::ISO_2022_JP, b"\x1B$B\x2D\x21\x1B(B"), None);
+
+    // The encoder refuses the half-width katakana rather than reaching for the
+    // fullwidth forms, and writes U+2212 where JIS X 0208 puts it.
+    let mut out = Vec::new();
+    assert!(
+        crate::ISO_2022_JP
+            .new_encoder()
+            .encode_from_str("\u{FF71}", &mut out, true)
+            .is_err()
+    );
+    out.clear();
+    crate::ISO_2022_JP
+        .new_encoder()
+        .encode_from_str("\u{2212}", &mut out, true)
+        .unwrap();
+    assert_eq!(out, b"\x1B$B\x21\x5D\x1B(B");
+}
+
+/// Neither Japanese label may resolve to the standard's altered encoding.
+#[cfg(all(
+    feature = "euc-jp",
+    feature = "iso-2022-jp",
+    feature = "whatwg-aliases"
+))]
+#[test]
+fn the_japanese_labels_name_the_charsets_they_say() {
+    for (label, ours, theirs) in [
+        (b"euc-jp".as_slice(), crate::EUC_JP, crate::X_WHATWG_EUC_JP),
+        (b"x-euc-jp", crate::EUC_JP, crate::X_WHATWG_EUC_JP),
+        (
+            b"iso-2022-jp",
+            crate::ISO_2022_JP,
+            crate::X_WHATWG_ISO_2022_JP,
+        ),
+        (
+            b"csiso2022jp",
+            crate::ISO_2022_JP,
+            crate::X_WHATWG_ISO_2022_JP,
+        ),
+    ] {
+        assert_eq!(Encoding::for_label(label), Some(ours), "{label:?}");
+        assert_eq!(Encoding::for_whatwg_label(label), Some(theirs), "{label:?}");
+        assert!(!ours.is_whatwg());
+        assert!(theirs.is_whatwg());
+    }
+    // The coined names reach the standard's own, in both lookups.
+    for (label, expected) in [
+        (b"x-whatwg-euc-jp".as_slice(), crate::X_WHATWG_EUC_JP),
+        (b"x-whatwg-iso-2022-jp", crate::X_WHATWG_ISO_2022_JP),
+    ] {
+        assert_eq!(Encoding::for_label(label), Some(expected));
+        assert_eq!(Encoding::for_whatwg_label(label), Some(expected));
+    }
+}

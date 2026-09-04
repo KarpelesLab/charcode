@@ -413,17 +413,18 @@ pub static BIG5_HKSCS: &Encoding = &BIG5_HKSCS_INIT;
 // Legacy multi-byte Japanese encodings
 
 #[cfg(feature = "euc-jp")]
-pub(crate) const EUC_JP_INIT: Encoding = Encoding::new("EUC-JP", VariantEncoding::EucJp);
-/// EUC-JP.  Its decoder also accepts JIS X 0212 via the 0x8F prefix.
+pub(crate) const X_WHATWG_EUC_JP_INIT: Encoding =
+    Encoding::new("x-whatwg-euc-jp", VariantEncoding::EucJp);
+/// The standard's EUC-JP, which folds the NEC and IBM extension rows into the JIS X 0208 plane and remaps six of its pointers.  Its decoder accepts JIS X 0212 via the 0x8F prefix; its encoder never writes one.  For EUC-JP itself see [`EUC_JP`].
 #[cfg(feature = "euc-jp")]
-pub static EUC_JP: &Encoding = &EUC_JP_INIT;
+pub static X_WHATWG_EUC_JP: &Encoding = &X_WHATWG_EUC_JP_INIT;
 
 #[cfg(feature = "iso-2022-jp")]
-pub(crate) const ISO_2022_JP_INIT: Encoding =
-    Encoding::new("ISO-2022-JP", VariantEncoding::Iso2022Jp);
-/// ISO-2022-JP, the only stateful encoding in the standard.
+pub(crate) const X_WHATWG_ISO_2022_JP_INIT: Encoding =
+    Encoding::new("x-whatwg-iso-2022-jp", VariantEncoding::Iso2022Jp);
+/// The standard's ISO-2022-JP, which adds a half-width katakana mode behind `ESC ( I`, folds the NEC and IBM extension rows into the JIS X 0208 plane, and remaps six of its pointers.  For ISO-2022-JP itself see [`ISO_2022_JP`].
 #[cfg(feature = "iso-2022-jp")]
-pub static ISO_2022_JP: &Encoding = &ISO_2022_JP_INIT;
+pub static X_WHATWG_ISO_2022_JP: &Encoding = &X_WHATWG_ISO_2022_JP_INIT;
 
 #[cfg(feature = "shift-jis")]
 pub(crate) const WINDOWS_31J_INIT: Encoding =

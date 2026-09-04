@@ -140,14 +140,14 @@ const GB18030_ENCODER_EXCEPTIONS: &[u32] = &[];
 fn jis_round_trips() {
     use crate::tables::jis::{JIS0208_ENCODE_CODE_POINTS, SHIFT_JIS_ENCODE_CODE_POINTS};
     round_trip(
-        EUC_JP,
+        X_WHATWG_EUC_JP,
         JIS0208_ENCODE_CODE_POINTS
             .iter()
             .map(|&cp| u32::from(cp))
             .filter(|&cp| !JIS_ENCODER_EXCEPTIONS.contains(&cp)),
     );
     round_trip(
-        ISO_2022_JP,
+        X_WHATWG_ISO_2022_JP,
         JIS0208_ENCODE_CODE_POINTS
             .iter()
             .map(|&cp| u32::from(cp))
@@ -174,11 +174,11 @@ const JIS_ENCODER_EXCEPTIONS: &[u32] = &[0x2212];
 fn half_width_katakana() {
     for scalar in 0xFF61..=0xFF9Fu32 {
         let c = char::from_u32(scalar).unwrap();
-        round_trip(EUC_JP, core::iter::once(scalar));
+        round_trip(X_WHATWG_EUC_JP, core::iter::once(scalar));
         round_trip(WINDOWS_31J, core::iter::once(scalar));
-        let bytes = encode_char(ISO_2022_JP, c);
-        let (decoded, _, _) =
-            ISO_2022_JP.decode_with(&bytes, crate::DecodeOptions::new().bom(crate::Bom::Ignore));
+        let bytes = encode_char(X_WHATWG_ISO_2022_JP, c);
+        let (decoded, _, _) = X_WHATWG_ISO_2022_JP
+            .decode_with(&bytes, crate::DecodeOptions::new().bom(crate::Bom::Ignore));
         assert_ne!(decoded, alloc::string::String::from(c));
     }
 }

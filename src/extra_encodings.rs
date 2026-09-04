@@ -532,6 +532,29 @@ pub(crate) const SHIFT_JIS_INIT: Encoding =
 #[cfg(feature = "shift-jis")]
 pub static SHIFT_JIS: &Encoding = &SHIFT_JIS_INIT;
 
+#[cfg(feature = "euc-jp")]
+pub(crate) const EUC_JP_INIT: Encoding = Encoding::new("EUC-JP", VariantEncoding::EucJp1997);
+/// EUC-JP: ASCII, JIS X 0201's katakana, JIS X 0208 and JIS X 0212.
+///
+/// The standard's encoding of the same name folds the NEC and IBM extension
+/// rows into the JIS X 0208 plane and remaps six of its pointers, and never
+/// writes the JIS X 0212 plane; that one is
+/// [`X_WHATWG_EUC_JP`](crate::X_WHATWG_EUC_JP).
+#[cfg(feature = "euc-jp")]
+pub static EUC_JP: &Encoding = &EUC_JP_INIT;
+
+#[cfg(feature = "iso-2022-jp")]
+pub(crate) const ISO_2022_JP_INIT: Encoding =
+    Encoding::new("ISO-2022-JP", VariantEncoding::Iso2022Jp1468);
+/// ISO-2022-JP, as RFC 1468 defines it: ASCII, JIS X 0201's Roman set and JIS X 0208.
+///
+/// The standard's encoding of the same name adds a half-width katakana mode
+/// behind `ESC ( I`, folds the NEC and IBM extension rows into the JIS X 0208
+/// plane and remaps six of its pointers; that one is
+/// [`X_WHATWG_ISO_2022_JP`](crate::X_WHATWG_ISO_2022_JP).
+#[cfg(feature = "iso-2022-jp")]
+pub static ISO_2022_JP: &Encoding = &ISO_2022_JP_INIT;
+
 #[cfg(feature = "iso-2022-kr")]
 pub(crate) const ISO_2022_KR_INIT: Encoding =
     Encoding::new("ISO-2022-KR", VariantEncoding::Iso2022Kr);

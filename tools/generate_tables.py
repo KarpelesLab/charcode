@@ -197,6 +197,18 @@ EXTRA_DOCS = {
 /// official Unicode mapping, and at eleven punctuation cells this follows the
 /// Unicode Consortium rather than Microsoft's code page 950 — 0xA1E3 is U+223C
 /// TILDE OPERATOR here and U+FF5E in Microsoft's table, and so on.""",
+    "ISO-2022-JP": """ISO-2022-JP, as RFC 1468 defines it: ASCII, JIS X 0201's Roman set and JIS X 0208.
+///
+/// The standard's encoding of the same name adds a half-width katakana mode
+/// behind `ESC ( I`, folds the NEC and IBM extension rows into the JIS X 0208
+/// plane and remaps six of its pointers; that one is
+/// [`X_WHATWG_ISO_2022_JP`](crate::X_WHATWG_ISO_2022_JP).""",
+    "EUC-JP": """EUC-JP: ASCII, JIS X 0201's katakana, JIS X 0208 and JIS X 0212.
+///
+/// The standard's encoding of the same name folds the NEC and IBM extension
+/// rows into the JIS X 0208 plane and remaps six of its pointers, and never
+/// writes the JIS X 0212 plane; that one is
+/// [`X_WHATWG_EUC_JP`](crate::X_WHATWG_EUC_JP).""",
     "Shift_JIS": """Shift_JIS, as JIS X 0208:1997 Annex 1 defines it.
 ///
 /// JIS X 0201's Roman set below 0x80 and JIS X 0208 above it, and nothing
@@ -221,8 +233,8 @@ ENCODING_DOCS = {
     "UTF-16LE": "UTF-16LE.  Decode only; encoding to it yields UTF-8, per `get an output encoding`.",
     "x-user-defined": "x-user-defined, which maps bytes 0x80 to 0xFF into the private use area.",
     "Big5": "The standard's Big5: Big5 plus the Hong Kong Supplementary Character Set and other common extensions.  For Big5 itself see [`BIG5`].",
-    "EUC-JP": "EUC-JP.  Its decoder also accepts JIS X 0212 via the 0x8F prefix.",
-    "ISO-2022-JP": "ISO-2022-JP, the only stateful encoding in the standard.",
+    "EUC-JP": "The standard's EUC-JP, which folds the NEC and IBM extension rows into the JIS X 0208 plane and remaps six of its pointers.  Its decoder accepts JIS X 0212 via the 0x8F prefix; its encoder never writes one.  For EUC-JP itself see [`EUC_JP`].",
+    "ISO-2022-JP": "The standard's ISO-2022-JP, which adds a half-width katakana mode behind `ESC ( I`, folds the NEC and IBM extension rows into the JIS X 0208 plane, and remaps six of its pointers.  For ISO-2022-JP itself see [`ISO_2022_JP`].",
     "Shift_JIS": "The standard's Shift_JIS, which is Windows codepage 932: the NEC and IBM extension rows, the end-user defined area, and seven of JIS X 0208's pointers remapped.  For Shift_JIS itself see [`SHIFT_JIS`].",
     "EUC-KR": "EUC-KR, in practice the Unified Hangul Code (Windows codepage 949).",
 }
@@ -236,6 +248,20 @@ ENCODING_DOCS = {
 RENAMES = {
     "Big5": "Big5-HKSCS",
     "Shift_JIS": "windows-31j",
+    # These two the standard alters without there being an established name for
+    # the result, so they take one that says whose they are.  It is a label in
+    # both lookups, so each stays reachable by its own name.
+    "EUC-JP": "x-whatwg-euc-jp",
+    "ISO-2022-JP": "x-whatwg-iso-2022-jp",
+}
+
+# Labels this crate coins, for the encodings RENAMES leaves without one.  They
+# go into both label tables: the standard's, so `for_whatwg_label` finds the
+# encoding by the name it now carries, and the general one, since no other
+# charset has any claim on them.
+COINED_LABELS = {
+    "EUC-JP": ["x-whatwg-euc-jp"],
+    "ISO-2022-JP": ["x-whatwg-iso-2022-jp"],
 }
 
 # WHATWG encoding name -> the Cargo feature its tables live behind.  `None` means
@@ -302,8 +328,8 @@ CONST_NAMES = {
     "gb18030": "GB18030_INIT",
     "Big5": "BIG5_HKSCS_INIT",
     "Shift_JIS": "WINDOWS_31J_INIT",
-    "EUC-JP": "EUC_JP_INIT",
-    "ISO-2022-JP": "ISO_2022_JP_INIT",
+    "EUC-JP": "X_WHATWG_EUC_JP_INIT",
+    "ISO-2022-JP": "X_WHATWG_ISO_2022_JP_INIT",
     "EUC-KR": "EUC_KR_INIT",
     "replacement": "REPLACEMENT_INIT",
     "UTF-16BE": "UTF_16BE_INIT",
@@ -355,9 +381,13 @@ WHATWG_ONLY_LABELS = {
     # Big5 itself is not Big5 plus HKSCS: 260 pointers differ.
     "big5", "csbig5", "cn-big5", "x-x-big5",
     # Shift_JIS itself is not codepage 932: JIS X 0201 below 0x80, no NEC or
-    # IBM rows, and seven of JIS X 0208's own pointers left alone.  `ms932`
+    # IBM rows, and six of JIS X 0208's own pointers left alone.  `ms932`
     # and `windows-31j` name the codepage and stay with it.
     "shift_jis", "shift-jis", "sjis", "csshiftjis", "x-sjis", "ms_kanji",
+    # EUC-JP's JIS X 0208 plane is JIS X 0208, without the NEC and IBM rows.
+    "euc-jp", "x-euc-jp", "cseucpkdfmtjapanese",
+    # RFC 1468 has no `ESC ( I` mode, and the same JIS X 0208 plane.
+    "iso-2022-jp", "csiso2022jp",
     # Real encodings the standard neutralizes.  A caller that wants one should
     # be told this build has no such thing, not handed `replacement`.
     "csiso2022kr", "hz-gb-2312", "iso-2022-cn", "iso-2022-cn-ext",
@@ -476,6 +506,14 @@ ALGORITHMIC = [
     ("shift-jis", "Shift_JIS", "SHIFT_JIS", "ShiftJis1997", None,
      ["shift_jis", "shift-jis", "sjis", "csshiftjis", "x-sjis", "ms_kanji",
       "shift_jisx0208", "jis_x0208"]),
+    # EUC-JP as standardised, which reuses index jis0212 unchanged and index
+    # jis0208 through the shared JIS X 0208 delta.
+    ("euc-jp", "EUC-JP", "EUC_JP", "EucJp1997", 20932,
+     ["euc-jp", "eucjp", "x-euc-jp", "cseucpkdfmtjapanese", "euc_jp",
+      "extended_unix_code_packed_format_for_japanese"]),
+    # ISO-2022-JP as RFC 1468 defines it, on the same shared delta.
+    ("iso-2022-jp", "ISO-2022-JP", "ISO_2022_JP", "Iso2022Jp1468", 50220,
+     ["iso-2022-jp", "csiso2022jp", "iso2022jp"]),
     ("iso-2022-kr", "ISO-2022-KR", "ISO_2022_KR", "Iso2022Kr", 50225,
      ["iso-2022-kr", "csiso2022kr", "iso2022kr"]),
     ("unicode-extras", "UTF-32BE", "UTF_32BE", "Utf32Be", 12001,
@@ -1024,6 +1062,9 @@ def main():
     parts.append("\n/// Read only by EUC-JP, through the 0x8F prefix.\n")
     parts.append("#[cfg({})]\n".format(ej))
     parts.append(decode_table("JIS0212_DECODE", jis0212, 16))
+    parts.append("\n/// `index pointer for code point in index jis0212`, which EUC-JP alone writes.\n")
+    parts.append("#[cfg({})]\n".format(ej))
+    parts.append(encode_table("JIS0212_ENCODE", first_pointers(jis0212), 16, gate=ej))
     parts.append("\n/// `index pointer for code point in index jis0208`, used by EUC-JP and ISO-2022-JP.\n")
     parts.append("#[cfg(any({}, {}))]\n".format(ej, jp))
     parts.append(encode_table("JIS0208_ENCODE", first_pointers(jis0208), 16, gate="any({}, {})".format(ej, jp)))
@@ -1058,7 +1099,7 @@ def main():
     for group in encodings:
         for enc in group["encodings"]:
             names.append(enc["name"])
-            for label in enc["labels"]:
+            for label in enc["labels"] + COINED_LABELS.get(enc["name"], []):
                 labels.append((label, CONST_NAMES[enc["name"]]))
     by_const = {CONST_NAMES[n]: n for n in names}
     # The standard's own table keeps every label it defines, reassignments and
@@ -1073,6 +1114,11 @@ def main():
     all_labels = [r for r in whatwg_labels if r[0] not in WHATWG_ONLY_LABELS]
     all_labels += [(label, ident + "_INIT", group, "x") for label, ident, group in extra_rows]
     all_labels.sort(key=lambda r: r[0])
+    # `Encoding::for_label` lowercases into a fixed buffer, and refuses
+    # anything longer outright.
+    MAX_LABEL_LEN = 48
+    too_long = [r[0] for r in all_labels + whatwg_labels if len(r[0]) > MAX_LABEL_LEN]
+    assert not too_long, "labels longer than MAX_LABEL_LEN: {}".format(sorted(set(too_long)))
     duplicates = [r[0] for r in all_labels
                   if sum(1 for x in all_labels if x[0] == r[0]) > 1]
     assert not duplicates, "duplicate label in the general table: {}".format(sorted(set(duplicates)))

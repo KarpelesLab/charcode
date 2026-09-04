@@ -228,6 +228,8 @@ mod encoder;
 mod euc_cn;
 #[cfg(feature = "euc-jp")]
 mod euc_jp;
+#[cfg(feature = "euc-jp")]
+mod euc_jp_1997;
 #[cfg(feature = "euc-kr")]
 mod euc_kr;
 #[cfg(feature = "full-byte")]
@@ -248,8 +250,12 @@ mod identity;
 mod index;
 #[cfg(feature = "iso-2022-jp")]
 mod iso_2022_jp;
+#[cfg(feature = "iso-2022-jp")]
+mod iso_2022_jp_1468;
 #[cfg(feature = "iso-2022-kr")]
 mod iso_2022_kr;
+#[cfg(any(feature = "euc-jp", feature = "iso-2022-jp", feature = "shift-jis"))]
+mod jis0208_1997;
 mod options;
 mod replacement;
 mod result;
@@ -299,8 +305,10 @@ use crate::tables::labels::WHATWG_LABELS;
 use crate::tables::labels::{ALL_ENCODINGS, LABELS, Label};
 use crate::variant::VariantEncoding;
 
-/// The longest label in the standard is 19 bytes.
-const MAX_LABEL_LEN: usize = 24;
+/// The longest label in the standard is 19 bytes; the longest this crate carries
+/// is IANA's name for EUC-JP, `extended_unix_code_packed_format_for_japanese`,
+/// at 44.  The generator checks no label outgrows this.
+const MAX_LABEL_LEN: usize = 48;
 
 /// A character encoding.
 ///

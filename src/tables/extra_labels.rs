@@ -190,6 +190,12 @@ pub static EXTRA_CODE_PAGES: &[CodePage] = &[
         encoding: &x::IBM424_INIT,
         canonical: true,
     },
+    #[cfg(feature = "euc-jp")]
+    CodePage {
+        number: 20932,
+        encoding: &x::EUC_JP_INIT,
+        canonical: true,
+    },
     #[cfg(feature = "gb18030")]
     CodePage {
         number: 20936,
@@ -205,6 +211,12 @@ pub static EXTRA_CODE_PAGES: &[CodePage] = &[
     CodePage {
         number: 28599,
         encoding: &x::ISO_8859_9_INIT,
+        canonical: true,
+    },
+    #[cfg(feature = "iso-2022-jp")]
+    CodePage {
+        number: 50220,
+        encoding: &x::ISO_2022_JP_INIT,
         canonical: true,
     },
     #[cfg(feature = "iso-2022-kr")]

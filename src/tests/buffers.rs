@@ -84,7 +84,7 @@ fn round_trips_through_stack_buffers_with_tables() {
     );
     assert_eq!(encode(WINDOWS_1252, "caf\u{E9}", &mut buffer).0, b"caf\xE9");
     assert_eq!(
-        encode(ISO_2022_JP, "\u{65E5}", &mut buffer).0,
+        encode(X_WHATWG_ISO_2022_JP, "\u{65E5}", &mut buffer).0,
         b"\x1B$B\x46\x7C\x1B(B"
     );
 }
@@ -199,7 +199,7 @@ fn lookup_and_metadata_need_no_allocator() {
     assert!(Encoding::all().len() >= 42);
     assert!(IBM866.labels().any(|label| label == "cp866"));
     assert!(WINDOWS_1252.is_single_byte());
-    assert!(!ISO_2022_JP.is_ascii_compatible());
+    assert!(!X_WHATWG_ISO_2022_JP.is_ascii_compatible());
 }
 
 #[cfg(feature = "whatwg")]
@@ -230,8 +230,8 @@ fn code_pages_resolve_and_round_trip() {
         (21866, KOI8_U),
         (28592, ISO_8859_2),
         (38598, ISO_8859_8_I),
-        (50220, ISO_2022_JP),
-        (51932, EUC_JP),
+        (50221, X_WHATWG_ISO_2022_JP),
+        (51932, X_WHATWG_EUC_JP),
         (54936, GB18030),
         (65001, UTF_8),
     ] {
