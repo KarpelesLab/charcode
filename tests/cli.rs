@@ -5,7 +5,7 @@
 
 #![cfg(feature = "cli")]
 
-use std::io::Write;
+use std::io::{self, Write};
 use std::process::{Command, Output, Stdio};
 
 fn run(args: &[&str], stdin: &[u8]) -> Output {
@@ -16,12 +16,16 @@ fn run(args: &[&str], stdin: &[u8]) -> Output {
         .stderr(Stdio::piped())
         .spawn()
         .expect("the binary was built");
-    child
-        .stdin
-        .take()
-        .expect("stdin is piped")
-        .write_all(stdin)
-        .expect("the child accepts input");
+    let mut pipe = child.stdin.take().expect("stdin is piped");
+    match pipe.write_all(stdin) {
+        Ok(()) => {}
+        // The child is entitled to exit before reading its input — rejecting
+        // its arguments is exactly that — so losing the race is not a failure.
+        Err(e) if e.kind() == io::ErrorKind::BrokenPipe => {}
+        Err(e) => panic!("writing to charcode {args:?} failed: {e}"),
+    }
+    // Closing the pipe is what tells the child the input has ended.
+    drop(pipe);
     child.wait_with_output().expect("the child exits")
 }
 
@@ -173,13 +177,18 @@ fn listings_cover_the_whole_standard() {
 
 #[test]
 fn bad_usage_is_diagnosed_and_exits_non_zero() {
+    // The input is deliberately larger than a pipe buffer.  A run rejected for
+    // its arguments exits before reading any of it, so the write gets
+    // `BrokenPipe`; feeding it a payload this size makes that happen every
+    // time rather than whenever the scheduler feels like it.
+    let unread = vec![b'x'; 1 << 20];
     for args in [
         &["-f", "bogus"][..],
         &["--nope"],
         &["-t", "utf-8//NOPE"],
         &["--bom=sideways"],
     ] {
-        let output = run(args, b"");
+        let output = run(args, &unread);
         assert!(!output.status.success(), "{args:?}");
         assert!(!output.stderr.is_empty(), "{args:?}");
     }
