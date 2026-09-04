@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.3](https://github.com/KarpelesLab/charcode/compare/v0.1.2...v0.1.3) - 2026-09-04
+
+### Fixed
+
+- *(test)* stop racing the CLI's own exit when writing its input
+
+### Other
+
+- inline the hot helpers and bucket the encode tables
+- stop rescanning the whole input on every streaming call
+
 ## [0.1.2](https://github.com/KarpelesLab/charcode/compare/v0.1.1...v0.1.2) - 2026-09-04
 
 ### Added
