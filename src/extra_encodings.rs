@@ -572,6 +572,17 @@ pub(crate) const ISO_2022_CN_INIT: Encoding =
 #[cfg(feature = "iso-2022-cn")]
 pub static ISO_2022_CN: &Encoding = &ISO_2022_CN_INIT;
 
+#[cfg(feature = "iso-2022-jp-2")]
+pub(crate) const ISO_2022_JP_2_INIT: Encoding =
+    Encoding::new("ISO-2022-JP-2", VariantEncoding::Iso2022Jp2);
+/// ISO-2022-JP-2 (RFC 1554), which designates six sets rather than three.
+///
+/// ISO-2022-JP plus GB 2312-80, KS X 1001, JIS X 0212 and the right halves of
+/// ISO 8859-1 and ISO 8859-7, which is what lets a 7-bit mail transport carry
+/// Latin, Greek, Japanese, Chinese and Korean in one message.
+#[cfg(feature = "iso-2022-jp-2")]
+pub static ISO_2022_JP_2: &Encoding = &ISO_2022_JP_2_INIT;
+
 #[cfg(feature = "unicode-extras")]
 pub(crate) const UTF_32BE_INIT: Encoding = Encoding::new("UTF-32BE", VariantEncoding::Utf32Be);
 /// UTF-32BE

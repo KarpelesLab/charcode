@@ -83,6 +83,9 @@ iso-2022-kr = ["euc-kr"]
 # Brings its own CNS 11643 planes 1 and 2, about 90 KiB, and takes GB 2312 from
 # the gb18030 group.  Refused by the standard in the same way.
 iso-2022-cn = ["gb18030"]  # ~90 KiB
+# RFC 1554, which designates six sets: it needs the tables of all of them, and
+# brings none of its own.
+iso-2022-jp-2 = ["euc-jp", "euc-kr", "gb18030", "single-byte"]
 shift-jis = []     # ~55 KiB
 
 # --- charsets outside the standard ------------------------------------------

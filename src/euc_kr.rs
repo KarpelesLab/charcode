@@ -8,6 +8,45 @@ use crate::tables::euc_kr::{
     EUC_KR_DECODE, EUC_KR_ENCODE_BUCKETS, EUC_KR_ENCODE_CODE_POINTS, EUC_KR_ENCODE_POINTERS,
 };
 
+/// `the code point for a byte pair` in KS X 1001, whose bytes here are the
+/// 7-bit ones the ISO-2022 encodings shift in.
+///
+/// The standard's index EUC-KR is the Unified Hangul Code, which holds all
+/// 8224 of KS X 1001 with none remapped, so the subset needs no table of its
+/// own — only the byte range that marks where it ends.
+#[cfg(any(feature = "iso-2022-kr", feature = "iso-2022-jp-2"))]
+#[inline]
+pub(crate) fn ksx1001_code_point(lead: u8, trail: u8) -> Option<u32> {
+    if !(0x21..=0x7E).contains(&lead) || !(0x21..=0x7E).contains(&trail) {
+        return None;
+    }
+    // The EUC-KR pointer for the same pair with the high bits set.
+    index::code_point(
+        &EUC_KR_DECODE,
+        (usize::from(lead) - 0x01) * 190 + usize::from(trail) + 0x3F,
+    )
+}
+
+/// The KS X 1001 byte pair for a code point, in the same 7-bit form.
+#[cfg(any(feature = "iso-2022-kr", feature = "iso-2022-jp-2"))]
+#[inline]
+pub(crate) fn ksx1001_bytes(scalar: u32) -> Option<(u8, u8)> {
+    let pointer = usize::from(index::pointer(
+        &EUC_KR_ENCODE_CODE_POINTS,
+        &EUC_KR_ENCODE_POINTERS,
+        &EUC_KR_ENCODE_BUCKETS,
+        scalar,
+    )?);
+    // The Unified Hangul Code extension area is not KS X 1001, so it has no
+    // ISO-2022 form.  The check has to come first: below 0xA1 the shift back
+    // to seven bits would go negative.
+    let (lead, trail) = (pointer / 190 + 0x81, pointer % 190 + 0x41);
+    if !(0xA1..=0xFE).contains(&lead) || !(0xA1..=0xFE).contains(&trail) {
+        return None;
+    }
+    Some(((lead - 0x80) as u8, (trail - 0x80) as u8))
+}
+
 #[derive(Debug, Clone, Copy, Default)]
 pub(crate) struct EucKrDecoder {
     leading: u8,

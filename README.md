@@ -15,7 +15,7 @@ labels actually name.
 - **No `unsafe`.** The crate is `#![forbid(unsafe_code)]`.
 - **`no_std`.** Works with an allocator, or without one.
 - **Complete.** All 40 encodings in the standard and all 228 of their labels,
-  plus 47 charsets from outside it.
+  plus 48 charsets from outside it.
 - **Honest.** A label resolves to the charset it names. The standard's
   substitutions live behind their own lookup, where a browser can ask for
   them — see [Two lookups, on purpose](#two-lookups-on-purpose).
@@ -223,6 +223,7 @@ the charset a label names. All are off by default.
 | The four above, as standardised | Big5 (`BIG5.TXT`), Shift_JIS (JIS X 0208:1997 Annex 1), EUC-JP, ISO-2022-JP (RFC 1468) |
 | Chinese | GB2312 (GB 2312-80), ISO-2022-CN (RFC 1922) |
 | Korean | ISO-2022-KR (RFC 1557) |
+| Multilingual mail | ISO-2022-JP-2 (RFC 1554) — six sets in one message |
 | Single-byte | ISO-8859-9, ISO-8859-11 |
 | DOS / OEM | 437, 737, 775, 850, 852, 855, 856, 857, 860–865, 869, 1006 |
 | EBCDIC | 037, 424, 500, 875, 1026 |
@@ -262,6 +263,9 @@ them in cannot widen what a label off the network selects.
 - `iso-2022-kr` — RFC 1557, on the EUC-KR table. Needs `euc-kr`.
 - `iso-2022-cn` — RFC 1922, with CNS 11643 planes 1 and 2 of its own. Needs
   `gb18030`.
+- `iso-2022-jp-2` — RFC 1554. Brings no tables: it designates six sets that
+  other groups already carry, so it needs `euc-jp`, `euc-kr`, `gb18030` and
+  `single-byte`.
 - `extras` — the four groups below at once.
 - `dos` — IBM PC / OEM code pages: 437, 737, 775, 850, 852, 855, 856, 857,
   860–865, 869, 1006.

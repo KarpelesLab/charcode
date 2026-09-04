@@ -182,6 +182,8 @@
 //! - `iso-2022-kr`: [`ISO_2022_KR`] (RFC 1557), on the EUC-KR table.
 //! - `iso-2022-cn`: [`ISO_2022_CN`] (RFC 1922), with CNS 11643 planes 1 and 2
 //!   of its own.
+//! - `iso-2022-jp-2`: [`ISO_2022_JP_2`] (RFC 1554), which brings no tables of
+//!   its own — it designates six sets the groups above already carry.
 //! - `extras`: everything below at once.
 //! - `dos`: IBM PC / OEM code pages — 437, 737, 775, 850, 852, 855, 856, 857,
 //!   860 to 865, 869, 1006.
@@ -269,6 +271,8 @@ mod iso_2022_cn;
 mod iso_2022_jp;
 #[cfg(feature = "iso-2022-jp")]
 mod iso_2022_jp_1468;
+#[cfg(feature = "iso-2022-jp-2")]
+mod iso_2022_jp_2;
 #[cfg(feature = "iso-2022-kr")]
 mod iso_2022_kr;
 #[cfg(any(feature = "euc-jp", feature = "iso-2022-jp", feature = "shift-jis"))]

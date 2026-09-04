@@ -15,28 +15,18 @@
 //! bytes, which is the leniency the attack relies on.
 //!
 //! No table of its own — the doubly-shifted bytes are EUC-KR's with the high
-//! bit cleared, so [`EUC_KR_DECODE`] answers directly.
+//! bit cleared, so the KS X 1001 accessors in [`crate::euc_kr`] answer directly.
 
 use crate::ascii::ascii_prefix_len_capped;
-use crate::index;
+use crate::euc_kr::{ksx1001_bytes, ksx1001_code_point};
 use crate::result::{DecoderResult, EncoderResult};
 use crate::sink::{ByteSink, DECODER_HEADROOM, ENCODER_HEADROOM, Pushback};
-use crate::tables::euc_kr::{
-    EUC_KR_DECODE, EUC_KR_ENCODE_BUCKETS, EUC_KR_ENCODE_CODE_POINTS, EUC_KR_ENCODE_POINTERS,
-};
 
 /// `ESC $ ) C`, the only escape the encoding has.
 const DESIGNATOR: [u8; 4] = [0x1B, 0x24, 0x29, 0x43];
 const SO: u8 = 0x0E;
 const SI: u8 = 0x0F;
 const ESC: u8 = 0x1B;
-
-/// The EUC-KR pointer for a doubly-shifted pair, whose bytes are EUC-KR's with
-/// the high bit cleared.
-#[inline]
-fn pointer_of(lead: u8, trail: u8) -> usize {
-    (usize::from(lead) - 0x01) * 190 + usize::from(trail) + 0x3F
-}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum State {
@@ -153,7 +143,7 @@ impl Iso2022KrDecoder {
                 }
                 (State::Trail(lead), Some(b @ 0x21..=0x7E)) => {
                     self.state = State::Ground;
-                    match index::code_point(&EUC_KR_DECODE, pointer_of(lead, b)) {
+                    match ksx1001_code_point(lead, b) {
                         Some(code_point) => sink.write_code_point(code_point),
                         None => return (DecoderResult::Malformed(2), read),
                     }
@@ -238,20 +228,7 @@ impl Iso2022KrEncoder {
                 continue;
             }
 
-            let pointer = index::pointer(
-                &EUC_KR_ENCODE_CODE_POINTS,
-                &EUC_KR_ENCODE_POINTERS,
-                &EUC_KR_ENCODE_BUCKETS,
-                u32::from(c),
-            )
-            .map(usize::from)
-            .filter(|&p| {
-                // The Unified Hangul Code extension area is not KS X 1001, so
-                // it has no ISO-2022-KR form.
-                let (lead, trail) = (p / 190 + 0x81, p % 190 + 0x41);
-                (0xA1..=0xFE).contains(&lead) && (0xA1..=0xFE).contains(&trail)
-            });
-            let Some(pointer) = pointer else {
+            let Some((lead, trail)) = ksx1001_bytes(u32::from(c)) else {
                 if self.shifted {
                     sink.write_byte(SI);
                     self.shifted = false;
@@ -271,10 +248,7 @@ impl Iso2022KrEncoder {
                 self.shifted = true;
                 continue;
             }
-            sink.write_slice(&[
-                (pointer / 190 + 0x81 - 0x80) as u8,
-                (pointer % 190 + 0x41 - 0x80) as u8,
-            ]);
+            sink.write_slice(&[lead, trail]);
             read += width;
         }
     }

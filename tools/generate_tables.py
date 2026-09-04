@@ -220,6 +220,11 @@ EXTRA_DOCS = {
 /// Not the standard's `gb2312` label, which resolves to GBK: a superset, but
 /// one that gives two of GB 2312's code points a different character.""",
     "ISO-2022-KR": "ISO-2022-KR (RFC 1557), which shifts between ASCII and KS X 1001.",
+    "ISO-2022-JP-2": """ISO-2022-JP-2 (RFC 1554), which designates six sets rather than three.
+///
+/// ISO-2022-JP plus GB 2312-80, KS X 1001, JIS X 0212 and the right halves of
+/// ISO 8859-1 and ISO 8859-7, which is what lets a 7-bit mail transport carry
+/// Latin, Greek, Japanese, Chinese and Korean in one message.""",
     "ISO-2022-CN": """ISO-2022-CN (RFC 1922): ASCII, GB 2312 and CNS 11643 planes 1 and 2.
 ///
 /// Not ISO-2022-CN-EXT, whose ISO-IR-165 and CNS 11643 planes 3 to 7 have no
@@ -522,6 +527,8 @@ ALGORITHMIC = [
      ["iso-2022-kr", "csiso2022kr", "iso2022kr"]),
     ("iso-2022-cn", "ISO-2022-CN", "ISO_2022_CN", "Iso2022Cn", 50227,
      ["iso-2022-cn", "csiso2022cn", "iso2022cn"]),
+    ("iso-2022-jp-2", "ISO-2022-JP-2", "ISO_2022_JP_2", "Iso2022Jp2", None,
+     ["iso-2022-jp-2", "csiso2022jp2", "iso2022jp2"]),
     ("unicode-extras", "UTF-32BE", "UTF_32BE", "Utf32Be", 12001,
      ["utf-32be", "utf32be"]),
     ("unicode-extras", "UTF-32LE", "UTF_32LE", "Utf32Le", 12000,

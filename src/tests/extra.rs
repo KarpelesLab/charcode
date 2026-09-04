@@ -966,3 +966,195 @@ fn iso_2022_cn_is_not_reachable_through_the_standards_lookup() {
     assert_eq!(Encoding::for_label(b"iso-2022-cn-ext"), None);
     assert!(!crate::ISO_2022_CN.is_whatwg());
 }
+
+/// ISO-2022-JP-2's six sets, each reconstructed from the tables the other
+/// encodings own and checked against the decoder over every cell.
+#[cfg(feature = "iso-2022-jp-2")]
+#[test]
+fn iso_2022_jp_2_designates_six_sets() {
+    use crate::tables::jis::JIS0212_DECODE;
+    use crate::tables::single_byte::ISO_8859_7_DECODE;
+
+    let jp2 = crate::ISO_2022_JP_2;
+    let decode_in = |escape: &[u8], bytes: &[u8]| {
+        let mut input = escape.to_vec();
+        input.extend_from_slice(bytes);
+        input.extend_from_slice(b"\x1B(B");
+        decode(jp2, &input)
+    };
+
+    // ASCII and JIS X 0201's Roman set, which differ at exactly two bytes.
+    for byte in 0..=0x7Fu8 {
+        let ascii = decode_in(b"\x1B(B", &[byte]);
+        let roman = decode_in(b"\x1B(J", &[byte]);
+        // The codes the structure is made of are refused in both.
+        if matches!(byte, 0x0E | 0x0F | 0x1B) {
+            assert_eq!(ascii, None, "{byte:02X}");
+            assert_eq!(roman, None, "{byte:02X}");
+            continue;
+        }
+        assert_eq!(ascii.as_deref(), Some(&*String::from(byte as char)));
+        let expected = match byte {
+            0x5C => '\u{A5}',
+            0x7E => '\u{203E}',
+            _ => byte as char,
+        };
+        assert_eq!(
+            roman.as_deref(),
+            Some(&*String::from(expected)),
+            "{byte:02X}"
+        );
+    }
+
+    let (mut jis0208, mut jis0212, mut gb, mut ks) = (0usize, 0, 0, 0);
+    for lead in 0x21..=0x7Eu8 {
+        for trail in 0x21..=0x7Eu8 {
+            let pointer = (usize::from(lead) - 0x21) * 94 + (usize::from(trail) - 0x21);
+            let pair = [lead, trail];
+            let cases: [(&[u8], Option<u32>, &mut usize); 4] = [
+                (
+                    b"\x1B$B",
+                    crate::jis0208_1997::code_point(pointer),
+                    &mut jis0208,
+                ),
+                (
+                    b"\x1B$(D",
+                    JIS0212_DECODE
+                        .get(pointer)
+                        .copied()
+                        .filter(|&c| c != 0)
+                        .map(u32::from),
+                    &mut jis0212,
+                ),
+                (
+                    b"\x1B$A",
+                    crate::euc_cn::code_point(lead | 0x80, trail | 0x80),
+                    &mut gb,
+                ),
+                (
+                    b"\x1B$(C",
+                    crate::euc_kr::ksx1001_code_point(lead, trail),
+                    &mut ks,
+                ),
+            ];
+            for (escape, expected, count) in cases {
+                match expected {
+                    Some(code_point) => {
+                        *count += 1;
+                        let c = char::from_u32(code_point).unwrap();
+                        assert_eq!(
+                            decode_in(escape, &pair).as_deref(),
+                            Some(&*String::from(c)),
+                            "{escape:02X?} {pair:02X?}"
+                        );
+                    }
+                    None => assert_eq!(decode_in(escape, &pair), None, "{escape:02X?} {pair:02X?}"),
+                }
+            }
+        }
+    }
+    // JIS X 0208-1978 designates the same set as JIS X 0208-1983.
+    assert_eq!(
+        decode_in(b"\x1B$@", b"\x46\x7C").as_deref(),
+        decode_in(b"\x1B$B", b"\x46\x7C").as_deref()
+    );
+    // KS X 1001 fills rows 1 to 12, 16 to 40 and 42 to 93; the standard's
+    // index EUC-KR maps 8226 of those cells and remaps none of them.
+    assert_eq!((jis0208, jis0212, gb, ks), (6879, 6067, 7445, 8226));
+
+    // The two 96-sets in G2, one character per single shift.
+    for byte in 0x20..=0x7Fu8 {
+        let latin1 = char::from_u32(u32::from(byte) + 0x80).unwrap();
+        assert_eq!(
+            decode_in(b"\x1B.A", &[0x1B, 0x4E, byte]).as_deref(),
+            Some(&*String::from(latin1)),
+            "{byte:02X}"
+        );
+        let greek = decode_in(b"\x1B.F", &[0x1B, 0x4E, byte]);
+        match ISO_8859_7_DECODE[usize::from(byte)] {
+            0 => assert_eq!(greek, None, "{byte:02X}"),
+            code_point => {
+                let c = char::from_u32(u32::from(code_point)).unwrap();
+                assert_eq!(greek.as_deref(), Some(&*String::from(c)), "{byte:02X}");
+            }
+        }
+    }
+    // A single shift with nothing in G2, and one that covers only its own
+    // character: the pair after it is read in G0 again.
+    assert_eq!(decode(jp2, b"\x1BN\x21"), None);
+    assert_eq!(
+        decode(jp2, b"\x1B.A\x1BN\x69\x1B$B\x46\x7C").as_deref(),
+        Some("\u{E9}\u{65E5}")
+    );
+
+    // RFC 1554 has no half-width katakana mode; that is the standard's.
+    assert_eq!(decode(jp2, b"\x1B(I1\x1B(B"), None);
+    // Space and delete stay themselves inside a double-byte set.
+    assert_eq!(
+        decode(jp2, b"\x1B$B\x46\x7C \x7F\x1B(B").as_deref(),
+        Some("\u{65E5} \u{7F}")
+    );
+}
+
+/// One message carrying five scripts, and the choices the encoder makes.
+#[cfg(feature = "iso-2022-jp-2")]
+#[test]
+fn iso_2022_jp_2_carries_five_scripts_in_one_message() {
+    let jp2 = crate::ISO_2022_JP_2;
+    let text = "a\u{65E5}\u{6C49}\u{D55C}\u{E9}\u{3B1}\u{A5}";
+    let mut out = Vec::new();
+    jp2.new_encoder()
+        .encode_from_str(text, &mut out, true)
+        .unwrap();
+    assert_eq!(
+        out,
+        // ASCII, JIS X 0208 for the kanji and the Greek alpha, GB 2312 for the
+        // simplified form, KS X 1001 for the hangul, JIS X 0212 for the
+        // e-acute, JIS X 0201's Roman set for the yen sign, back to ASCII.
+        b"a\x1B$B\x46\x7C\x1B$A\x3A\x3A\x1B$(C\x47\x51\x1B$(D\x2B\x31\
+          \x1B$B\x26\x41\x1B(J\x5C\x1B(B"
+    );
+    assert_eq!(decode(jp2, &out).as_deref(), Some(text));
+
+    // A Latin-1 character no Japanese set has goes to G2, not to the Chinese
+    // or Korean set that also carries it.
+    let mut out = Vec::new();
+    jp2.new_encoder()
+        .encode_from_str("\u{B7}", &mut out, true)
+        .unwrap();
+    assert_eq!(out, b"\x1B.A\x1BN\x37");
+    assert_eq!(decode(jp2, &out).as_deref(), Some("\u{B7}"));
+
+    // Every line ends in ASCII, and the encoder refuses the codes its own
+    // structure is made of.
+    let mut out = Vec::new();
+    jp2.new_encoder()
+        .encode_from_str("\u{65E5}\n\u{65E5}", &mut out, true)
+        .unwrap();
+    assert_eq!(out, b"\x1B$B\x46\x7C\x1B(B\n\x1B$B\x46\x7C\x1B(B");
+    for c in ['\u{0E}', '\u{0F}', '\u{1B}'] {
+        let mut out = Vec::new();
+        assert!(
+            jp2.new_encoder()
+                .encode_from_str(&String::from(c), &mut out, true)
+                .is_err()
+        );
+    }
+}
+
+/// It is not a label the standard defines, so neither lookup can be surprised.
+#[cfg(all(feature = "iso-2022-jp-2", feature = "whatwg-aliases"))]
+#[test]
+fn iso_2022_jp_2_is_ours_alone() {
+    assert_eq!(
+        Encoding::for_label(b"iso-2022-jp-2"),
+        Some(crate::ISO_2022_JP_2)
+    );
+    assert_eq!(Encoding::for_whatwg_label(b"iso-2022-jp-2"), None);
+    assert!(!crate::ISO_2022_JP_2.is_whatwg());
+    // ...and it does not shadow ISO-2022-JP, which is a different encoding.
+    assert_eq!(
+        Encoding::for_label(b"iso-2022-jp"),
+        Some(crate::ISO_2022_JP)
+    );
+}
