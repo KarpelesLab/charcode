@@ -90,7 +90,6 @@
 #![no_std]
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
-#![cfg_attr(docsrs, feature(doc_cfg))]
 
 extern crate alloc;
 #[cfg(feature = "std")]
@@ -111,12 +110,14 @@ mod shift_jis;
 mod single_byte;
 mod sink;
 mod tables;
+#[cfg(test)]
+mod tests;
 mod utf_16;
 mod utf_8;
 mod variant;
 mod x_user_defined;
 
-pub mod encodings;
+mod encodings;
 
 #[cfg(feature = "serde")]
 mod serde_impl;

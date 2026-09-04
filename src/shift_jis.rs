@@ -80,8 +80,11 @@ impl ShiftJisDecoder {
                 return (DecoderResult::Malformed(2), read);
             }
 
-            if byte.is_ascii() || byte == 0x80 {
+            if byte.is_ascii() {
                 sink.write_byte(byte);
+            } else if byte == 0x80 {
+                // U+0080, which is two bytes in UTF-8 rather than a copy of 0x80.
+                sink.write_code_point(0x80);
             } else if (0xA1..=0xDF).contains(&byte) {
                 sink.write_code_point(0xFF61 - 0xA1 + u32::from(byte));
             } else if (0x81..=0x9F).contains(&byte) || (0xE0..=0xFC).contains(&byte) {
