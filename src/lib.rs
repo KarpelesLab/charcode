@@ -184,6 +184,22 @@ impl Encoding {
         &ALL_ENCODINGS
     }
 
+    /// Every label the standard defines for this encoding, in sorted order.
+    ///
+    /// The name itself is always among them, ASCII-lowercased.
+    ///
+    /// ```
+    /// # use charcode::IBM866;
+    /// let labels: Vec<_> = IBM866.labels().collect();
+    /// assert_eq!(labels, ["866", "cp866", "csibm866", "ibm866"]);
+    /// ```
+    pub fn labels(&'static self) -> impl Iterator<Item = &'static str> {
+        LABELS
+            .iter()
+            .filter(move |(_, encoding)| *encoding == self)
+            .map(|(label, _)| *label)
+    }
+
     /// Looks up an encoding by label, implementing `get an encoding`.
     ///
     /// Leading and trailing ASCII whitespace is ignored and the comparison is

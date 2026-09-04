@@ -99,6 +99,40 @@ assert_eq!(error.character, '一');
 assert_eq!(bytes, b"ab");
 ```
 
+## Command-line tool
+
+The `cli` feature builds `charcode`, an `iconv`-style converter that adds no
+dependencies of its own:
+
+```sh
+cargo install charcode --features cli
+```
+
+```console
+$ printf 'caf\xe9' | charcode -f latin1 -t utf-8
+café
+$ charcode -f shift_jis -t utf-8 notes.txt > notes.utf8.txt
+$ charcode --list-labels | grep 'windows-1252$'
+```
+
+Like `iconv`, it stops at the first byte it cannot convert, `-c` omits the
+offending input instead, and either way a lossy run exits non-zero so a script
+can tell the difference. `--substitute` asks for the standard's web behaviour
+instead — U+FFFD for malformed input, a numeric character reference for a
+character the output encoding cannot represent:
+
+```console
+$ printf 'a\xffb' | charcode
+charcode: (standard input): malformed byte sequence of 1 byte(s) at offset 1
+Use -c to omit it, or --substitute to replace it with U+FFFD.
+$ printf 'a\xffb' | charcode --substitute
+a<U+FFFD>b
+```
+
+Any label works wherever an encoding is named, a leading byte order mark
+overrides `-f`, and `iconv`'s `//IGNORE` suffix is accepted as a synonym for
+`-c`. `charcode --help` lists the rest.
+
 ## Supported encodings
 
 | Group | Encodings |
@@ -118,6 +152,8 @@ UTF-8, which is what the standard's `get an output encoding` prescribes.
 - `std` *(default)* — implements `std::error::Error` for the error types.
   Without it the crate is `no_std`, but still needs `alloc`.
 - `serde` — an encoding serializes as its name and deserializes from any label.
+- `cli` — builds the `charcode` command-line tool described above. Adds no
+  dependencies; it needs `std`.
 
 ## Relation to `encoding_rs`
 
