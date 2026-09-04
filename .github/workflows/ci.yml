@@ -139,7 +139,17 @@ jobs:
           bin=target/release/charcode
           printf 'caf\xe9' | "$bin" -f latin1 -t utf-8 | diff - <(printf 'caf\xc3\xa9')
           printf '\xe6\x97\xa5' | "$bin" -t iso-2022-jp | diff - <(printf '\x1b$BF|\x1b(B')
-          test "$("$bin" --list | wc -l)" -eq 40
+          "$bin" --list | grep -qx 'windows-1252'
+          "$bin" --list | grep -qx 'ISO-8859-1'
+          # `latin1` names ISO-8859-1 here, so 0x80 is a C1 control and not the
+          # euro sign the WHATWG Encoding Standard would give it.
+          printf '\x80' | "$bin" -f latin1 | diff - <(printf '\xc2\x80')
+          printf '\x80' | "$bin" -f windows-1252 | diff - <(printf '\xe2\x82\xac')
+          # A label the standard reassigns is refused, and the diagnostic says
+          # what it would have meant there.
+          ! "$bin" -f gb2312 </dev/null 2>/dev/null
+          "$bin" -f gb2312 </dev/null 2>&1 | grep -q 'WHATWG'
+          "$bin" -f gb2312 </dev/null 2>&1 | grep -q 'GBK' 
           # A lossy conversion must report itself in the exit status.
           if printf 'a\xff' | "$bin" -c > /dev/null 2>&1; then
             echo "expected a non-zero exit for a lossy conversion" >&2
