@@ -1,5 +1,6 @@
 //! The streaming encoder.
 
+#[cfg(feature = "alloc")]
 use alloc::vec::Vec;
 
 use crate::Encoding;
@@ -23,6 +24,8 @@ const MAX_NUMERIC_REFERENCE: usize = 10;
 /// # Examples
 ///
 /// ```
+/// # #[cfg(feature = "alloc")]
+/// # fn main() {
 /// use charcode::WINDOWS_1252;
 ///
 /// let mut encoder = WINDOWS_1252.new_encoder();
@@ -32,6 +35,9 @@ const MAX_NUMERIC_REFERENCE: usize = 10;
 /// // The euro sign is in windows-1252; the ideograph is not, so it becomes a
 /// // numeric character reference.
 /// assert_eq!(bytes, b" \x80 &#19968;");
+/// # }
+/// # #[cfg(not(feature = "alloc"))]
+/// # fn main() {}
 /// ```
 #[derive(Debug, Clone)]
 pub struct Encoder {
@@ -141,6 +147,7 @@ impl Encoder {
         }
     }
 
+    #[cfg(feature = "alloc")]
     /// Encodes all of `src`, appending to `dst` and replacing each unmappable
     /// character with a numeric character reference.  Returns true if at least one
     /// character was replaced.
@@ -160,6 +167,7 @@ impl Encoder {
         }
     }
 
+    #[cfg(feature = "alloc")]
     /// Encodes all of `src`, appending to `dst` and stopping at the first
     /// character the encoding cannot represent, which is returned as `Err`.
     pub fn encode_from_str_without_replacement(

@@ -12,7 +12,7 @@ behaviours that browsers actually use.
 - **No dependencies.** Nothing outside the standard library. `serde` is optional
   and off by default.
 - **No `unsafe`.** The crate is `#![forbid(unsafe_code)]`.
-- **`no_std`.** Needs an allocator, nothing else.
+- **`no_std`.** Works with an allocator, or without one.
 - **Complete.** All 40 encodings in the standard and all 228 of their labels.
 
 ```toml
@@ -152,10 +152,35 @@ UTF-8, which is what the standard's `get an output encoding` prescribes.
 ## Features
 
 - `std` *(default)* — implements `std::error::Error` for the error types.
-  Without it the crate is `no_std`, but still needs `alloc`.
+  Implies `alloc`.
+- `alloc` *(default, via `std`)* — the conveniences that hand back an owned
+  `String`, `Vec` or `Cow`: `Encoding::decode` and `encode`,
+  `Decoder::decode_to_string`, `Encoder::encode_from_str`.
 - `serde` — an encoding serializes as its name and deserializes from any label.
+  Needs neither `std` nor `alloc`.
 - `cli` — builds the `charcode` command-line tool described above. Adds no
   dependencies; it needs `std`.
+
+With `default-features = false` and no `alloc`, what remains is the whole
+conversion engine plus encoding lookup — everything in the [Converting a
+stream](#converting-a-stream) section — converting into buffers you provide and
+never touching a heap:
+
+```toml
+[dependencies]
+charcode = { version = "0.1", default-features = false }
+```
+
+```rust
+use charcode::{CoderResult, WINDOWS_1252};
+
+let mut decoder = WINDOWS_1252.new_decoder_without_bom_handling();
+let mut buffer = [0u8; 64];
+let (result, _read, written, _had_errors) =
+    decoder.decode_to_utf8_with_replacement(b"caf\xE9", &mut buffer, true);
+assert_eq!(result, CoderResult::InputEmpty);
+assert_eq!(core::str::from_utf8(&buffer[..written]).unwrap(), "café");
+```
 
 ## Relation to `encoding_rs`
 

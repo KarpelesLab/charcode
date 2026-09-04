@@ -1,7 +1,7 @@
 //! Serialization round-trips through the encoding's name, and deserialization
 //! accepts any of the standard's labels.
 
-#![cfg(feature = "serde")]
+#![cfg(all(feature = "serde", feature = "std"))]
 
 use charcode::{Encoding, SHIFT_JIS, UTF_8, WINDOWS_1252};
 

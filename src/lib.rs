@@ -13,6 +13,8 @@
 //! malformed sequences the way a browser does:
 //!
 //! ```
+//! # #[cfg(feature = "alloc")]
+//! # fn main() {
 //! use charcode::{Encoding, WINDOWS_1252};
 //!
 //! let (text, encoding, had_errors) = WINDOWS_1252.decode(b"caf\xE9");
@@ -24,6 +26,9 @@
 //! let (text, encoding, _) = WINDOWS_1252.decode(b"\xEF\xBB\xBFcaf\xC3\xA9");
 //! assert_eq!(text, "caf\u{E9}");
 //! assert_eq!(encoding.name(), "UTF-8");
+//! # }
+//! # #[cfg(not(feature = "alloc"))]
+//! # fn main() {}
 //! ```
 //!
 //! Encodings are looked up by any of the labels the standard defines, which is
@@ -41,12 +46,17 @@
 //! HTML numeric character references, matching form submission:
 //!
 //! ```
+//! # #[cfg(feature = "alloc")]
+//! # fn main() {
 //! use charcode::EUC_KR;
 //!
 //! let (bytes, encoding, had_unmappable) = EUC_KR.encode("\u{D55C}\u{1F600}");
 //! assert_eq!(&bytes[..], b"\xC7\xD1&#128512;");
 //! assert_eq!(encoding, EUC_KR);
 //! assert!(had_unmappable);
+//! # }
+//! # #[cfg(not(feature = "alloc"))]
+//! # fn main() {}
 //! ```
 //!
 //! Both return a [`Cow`], borrowed when the input is already the answer, so
@@ -60,6 +70,8 @@
 //! a truncated sequence is reported rather than dropped:
 //!
 //! ```
+//! # #[cfg(feature = "alloc")]
+//! # fn main() {
 //! use charcode::BIG5;
 //!
 //! let mut decoder = BIG5.new_decoder();
@@ -67,6 +79,9 @@
 //! decoder.decode_to_string(&[0xA4], &mut text, false);
 //! decoder.decode_to_string(&[0x40], &mut text, true);
 //! assert_eq!(text, "\u{4E00}");
+//! # }
+//! # #[cfg(not(feature = "alloc"))]
+//! # fn main() {}
 //! ```
 //!
 //! [`Decoder::decode_to_utf8`] and [`Encoder::encode_from_utf8`] are the
@@ -82,8 +97,16 @@
 //! # Features
 //!
 //! - `std` (default): implements [`std::error::Error`] for the error types.
-//!   Turning it off leaves a `no_std` crate that still needs `alloc`.
-//! - `serde`: serializes an encoding as its name.
+//!   Implies `alloc`.
+//! - `alloc` (default, through `std`): the conveniences that hand back an owned
+//!   `String`, `Vec` or `Cow` — [`Encoding::decode`] and [`Encoding::encode`],
+//!   [`Decoder::decode_to_string`], [`Encoder::encode_from_str`] and their
+//!   variants.  Without it the crate never allocates: what remains is encoding
+//!   lookup plus the streaming API, which converts into buffers the caller
+//!   provides.
+//! - `serde`: serializes an encoding as its name.  Needs neither `std` nor
+//!   `alloc`.
+//! - `cli`: builds the `charcode` command-line tool.  Needs `std`.
 //!
 //! [WHATWG Encoding Standard]: https://encoding.spec.whatwg.org/
 
@@ -91,12 +114,16 @@
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
 
+#[cfg(feature = "alloc")]
 extern crate alloc;
 #[cfg(feature = "std")]
 extern crate std;
 
 /// The examples in the README are compiled and run as part of the test suite.
-#[cfg(doctest)]
+///
+/// They use the owned-output API, so they are only checked when `alloc` is on;
+/// hidden `cfg` lines are not an option here because GitHub renders them.
+#[cfg(all(doctest, feature = "alloc"))]
 #[doc = include_str!("../README.md")]
 struct Readme;
 
@@ -127,9 +154,8 @@ mod encodings;
 #[cfg(feature = "serde")]
 mod serde_impl;
 
-use alloc::borrow::Cow;
-use alloc::string::String;
-use alloc::vec::Vec;
+#[cfg(feature = "alloc")]
+use alloc::{borrow::Cow, string::String, vec::Vec};
 
 pub use crate::decoder::{DECODER_MIN_BUFFER, Decoder, MalformedError};
 pub use crate::encoder::{ENCODER_MIN_BUFFER, Encoder, UnmappableError};
@@ -312,6 +338,7 @@ impl Encoding {
         Encoder::new(self.output_encoding())
     }
 
+    #[cfg(feature = "alloc")]
     /// Decodes `bytes`, honouring a leading byte order mark.
     ///
     /// Implements the standard's `decode` hook: a byte order mark takes priority
@@ -323,6 +350,7 @@ impl Encoding {
         (text, encoding, had_errors)
     }
 
+    #[cfg(feature = "alloc")]
     /// Decodes `bytes`, first removing this encoding's own byte order mark if it
     /// is there.  A mark belonging to another encoding is decoded as content.
     pub fn decode_with_bom_removal<'a>(&'static self, bytes: &'a [u8]) -> (Cow<'a, str>, bool) {
@@ -333,6 +361,7 @@ impl Encoding {
         self.decode_without_bom_handling(&bytes[bom_len..])
     }
 
+    #[cfg(feature = "alloc")]
     /// Decodes `bytes`, treating a byte order mark as ordinary content.
     pub fn decode_without_bom_handling<'a>(&'static self, bytes: &'a [u8]) -> (Cow<'a, str>, bool) {
         if let Some(borrowed) = self.borrow_as_str(bytes) {
@@ -345,6 +374,7 @@ impl Encoding {
         (Cow::Owned(text), had_errors)
     }
 
+    #[cfg(feature = "alloc")]
     /// Decodes `bytes` and fails, returning `None`, on the first malformed
     /// sequence.  A byte order mark is treated as ordinary content.
     pub fn decode_without_bom_handling_and_without_replacement<'a>(
@@ -361,6 +391,7 @@ impl Encoding {
         Some(Cow::Owned(text))
     }
 
+    #[cfg(feature = "alloc")]
     /// Encodes `string` into this encoding's
     /// [output encoding](Encoding::output_encoding).
     ///
@@ -379,6 +410,7 @@ impl Encoding {
         (Cow::Owned(bytes), output, had_unmappable)
     }
 
+    #[cfg(feature = "alloc")]
     /// Returns `bytes` as a `&str` when this encoding decodes them to exactly
     /// themselves, which is what makes the borrowing `Cow` cases possible.
     fn borrow_as_str<'a>(&self, bytes: &'a [u8]) -> Option<&'a str> {

@@ -1,5 +1,6 @@
 //! The streaming decoder.
 
+#[cfg(feature = "alloc")]
 use alloc::string::String;
 
 use crate::Encoding;
@@ -49,7 +50,9 @@ enum Decision {
 /// # Examples
 ///
 /// ```
-/// use charcode::{CoderResult, SHIFT_JIS};
+/// # #[cfg(feature = "alloc")]
+/// # fn main() {
+/// use charcode::SHIFT_JIS;
 ///
 /// let mut decoder = SHIFT_JIS.new_decoder();
 /// let mut text = String::new();
@@ -57,7 +60,9 @@ enum Decision {
 /// decoder.decode_to_string(&[0x93], &mut text, false);
 /// decoder.decode_to_string(&[0xFA], &mut text, true);
 /// assert_eq!(text, "\u{65E5}");
-/// # let _ = CoderResult::InputEmpty;
+/// # }
+/// # #[cfg(not(feature = "alloc"))]
+/// # fn main() {}
 /// ```
 #[derive(Debug, Clone)]
 pub struct Decoder {
@@ -198,6 +203,7 @@ impl Decoder {
         }
     }
 
+    #[cfg(feature = "alloc")]
     /// Decodes all of `src`, appending to `dst` and writing U+FFFD for each
     /// malformed sequence.  Returns true if at least one substitution was made.
     pub fn decode_to_string(&mut self, src: &[u8], dst: &mut String, last: bool) -> bool {
@@ -218,6 +224,7 @@ impl Decoder {
         }
     }
 
+    #[cfg(feature = "alloc")]
     /// Decodes all of `src`, appending to `dst` and stopping at the first
     /// malformed sequence, which is reported as `Err`.
     pub fn decode_to_string_without_replacement(

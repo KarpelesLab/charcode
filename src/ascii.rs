@@ -31,6 +31,7 @@ pub(crate) fn ascii_prefix_len_str(s: &str) -> usize {
 }
 
 /// Returns true if every byte is ASCII.
+#[cfg(any(feature = "alloc", test))]
 pub(crate) fn is_ascii(bytes: &[u8]) -> bool {
     ascii_prefix_len(bytes) == bytes.len()
 }

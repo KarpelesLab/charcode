@@ -20,7 +20,13 @@ serde_json = "1"
 
 [features]
 default = ["std"]
-std = []
+# Implements `std::error::Error` for the error types.  Implies `alloc`.
+std = ["alloc"]
+# The conveniences that hand back an owned `String`, `Vec` or `Cow`.  Turning it
+# off leaves the streaming API, which converts into caller-provided buffers and
+# never allocates.
+alloc = []
+# An encoding serializes as its name.  Needs neither `std` nor `alloc`.
 serde = ["dep:serde"]
 # The `charcode` command-line tool, an iconv-style converter (gates the binary
 # target below).  It adds no dependencies.

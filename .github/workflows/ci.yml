@@ -42,10 +42,14 @@ jobs:
       - name: Test (all features)
         run: cargo test --all-features
 
-      # The library alone, with no optional feature pulled in: catches a `std`
-      # or `serde` path that only compiles because something else enabled it.
+      # The library alone, with no optional feature pulled in: catches a `std`,
+      # `alloc` or `serde` path that only compiles because something else
+      # enabled it.
       - name: Test (no default features)
         run: cargo test --no-default-features
+
+      - name: Test (alloc, no std)
+        run: cargo test --no-default-features --features alloc
 
   no_std:
     name: no_std builds (${{ matrix.target }})
@@ -71,12 +75,22 @@ jobs:
         with:
           key: ${{ matrix.target }}
 
-      - name: Build bare no_std (no default features)
+      # No allocator at all.  `extern crate alloc` is itself feature-gated, so
+      # a stray `alloc::` path in an ungated module fails here as E0433 rather
+      # than silently requiring a heap on a target that has none.
+      - name: Build without an allocator
         run: cargo build --target ${{ matrix.target }} --no-default-features
 
-      # serde must not drag in `std`; it is used here in its own no_std mode.
-      - name: Build no_std with serde
+      - name: Build with alloc, without std
+        run: cargo build --target ${{ matrix.target }} --no-default-features --features alloc
+
+      # serde must drag in neither `std` nor `alloc`: an encoding serializes as
+      # a borrowed `&'static str`, which needs neither.
+      - name: Build with serde, without alloc
         run: cargo build --target ${{ matrix.target }} --no-default-features --features serde
+
+      - name: Build with serde and alloc, without std
+        run: cargo build --target ${{ matrix.target }} --no-default-features --features serde,alloc
 
   cli:
     name: CLI
