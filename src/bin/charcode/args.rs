@@ -167,6 +167,19 @@ fn resolve_name(kind: &str, name: &str) -> Result<&'static Encoding, ParseError>
              to neutralize labels that are unsafe to support"
         ));
     }
+    // The label may be one the WHATWG Encoding Standard reassigns to something
+    // else for web compatibility.  That is not what -f and -t do, but saying so
+    // is more use than "unknown".
+    if let Some(whatwg) = Encoding::for_whatwg_label(name.as_bytes()) {
+        return error(format!(
+            "unknown {kind} '{name}'\n\
+             The WHATWG Encoding Standard resolves this label to {} for web \
+             compatibility, which is not\nthe same charset; pass '{}' if that is \
+             what you meant.",
+            whatwg.name(),
+            whatwg.name()
+        ));
+    }
     error(format!("unknown {kind} '{name}'"))
 }
 
@@ -405,7 +418,7 @@ mod tests {
             &["--from-code=latin1", "--to-code=utf8"],
         ] {
             let options = parse_options(args);
-            assert_eq!(options.from, charcode::WINDOWS_1252, "{args:?}");
+            assert_eq!(options.from, charcode::ISO_8859_1, "{args:?}");
             assert_eq!(options.to, charcode::UTF_8, "{args:?}");
         }
     }
@@ -451,11 +464,10 @@ mod tests {
         assert_eq!(parse_options(&["-f", "cp949"]).from, charcode::EUC_KR);
         assert_eq!(parse_options(&["-f", "ibm866"]).from, charcode::IBM866);
         assert_eq!(parse_options(&["-f", "cp65001"]).from, charcode::UTF_8);
-        // A label always wins over a number that would mean something else.
-        assert_eq!(
-            parse_options(&["-f", "latin1"]).from,
-            charcode::WINDOWS_1252
-        );
+        // A label always wins over a number that would mean something else,
+        // and `latin1` names ISO-8859-1 rather than the standard's superset.
+        assert_eq!(parse_options(&["-f", "latin1"]).from, charcode::ISO_8859_1);
+        assert_eq!(parse_options(&["-f", "cp819"]).from, charcode::ISO_8859_1);
         // A bare number is not a charset name.
         for bare in ["932", "1252", "65001", "0"] {
             assert!(parse_args(&["-f", bare]).is_err(), "{bare}");
@@ -507,7 +519,7 @@ mod tests {
     #[test]
     fn iconv_suffixes() {
         let options = parse_options(&["-t", "ascii//IGNORE"]);
-        assert_eq!(options.to, charcode::WINDOWS_1252);
+        assert_eq!(options.to, charcode::US_ASCII);
         assert_eq!(options.encode.unmappable_policy(), Unmappable::Omit);
         // An explicit --substitute is not overridden by the suffix.
         let options = parse_options(&["--substitute", "-t", "ascii//IGNORE"]);
@@ -523,9 +535,12 @@ mod tests {
         assert!(parse_args(&["-x"]).is_err());
         assert!(parse_args(&["--nope"]).is_err());
         assert!(parse_args(&["--silent=yes"]).is_err());
-        // The replacement encoding is rejected with an explanation.
+        // A label the standard reassigns is refused, and says what it would
+        // have meant there rather than just "unknown".
         let message = parse_args(&["-f", "hz-gb-2312"]).unwrap_err().0;
-        assert!(message.contains("replacement"), "{message}");
+        assert!(message.contains("WHATWG"), "{message}");
+        let message = parse_args(&["-f", "gb2312"]).unwrap_err().0;
+        assert!(message.contains("GBK"), "{message}");
     }
 
     #[test]

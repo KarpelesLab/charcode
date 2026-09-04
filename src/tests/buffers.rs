@@ -179,14 +179,26 @@ fn a_byte_order_mark_still_switches_encoding() {
 fn lookup_and_metadata_need_no_allocator() {
     use crate::Encoding;
 
-    assert_eq!(Encoding::for_label(b"  LATIN1 "), Some(WINDOWS_1252));
+    // The general lookup answers with what the label names...
+    assert_eq!(Encoding::for_label(b"  LATIN1 "), Some(crate::ISO_8859_1));
+    assert_eq!(Encoding::for_label(b"windows-1252"), Some(WINDOWS_1252));
+    // ...and the standard's lookup with what the standard says.
+    #[cfg(feature = "whatwg-aliases")]
+    assert_eq!(Encoding::for_whatwg_label(b"  LATIN1 "), Some(WINDOWS_1252));
     assert_eq!(Encoding::for_label_no_replacement(b"iso-2022-kr"), None);
     assert_eq!(Encoding::for_bom(b"\xFF\xFEa\0"), Some((UTF_16LE, 2)));
     assert_eq!(UTF_16BE.output_encoding(), UTF_8);
-    // The extras add to this, so the exact count only holds without them.
-    #[cfg(not(any(feature = "dos", feature = "ebcdic", feature = "mac", feature = "misc")))]
-    assert_eq!(Encoding::all().len(), 40);
-    assert!(Encoding::all().len() >= 40);
+    // The standard's 40, plus ISO-8859-1 and US-ASCII, which it has no room
+    // for.  The extra groups add more still.
+    #[cfg(not(any(
+        feature = "dos",
+        feature = "ebcdic",
+        feature = "mac",
+        feature = "misc",
+        feature = "unicode-extras"
+    )))]
+    assert_eq!(Encoding::all().len(), 42);
+    assert!(Encoding::all().len() >= 42);
     assert!(IBM866.labels().any(|label| label == "cp866"));
     assert!(WINDOWS_1252.is_single_byte());
     assert!(!ISO_2022_JP.is_ascii_compatible());
@@ -257,11 +269,21 @@ fn code_pages_resolve_and_round_trip() {
         assert!(canonical <= 1, "{} has {canonical}", encoding.name());
     }
 
-    // The numbers the standard folds into a superset behave like their labels.
-    assert_eq!(Encoding::for_windows_code_page(28591), Some(WINDOWS_1252));
-    assert_eq!(Encoding::for_windows_code_page(20127), Some(WINDOWS_1252));
-    assert_eq!(Encoding::for_windows_code_page(28599), Some(WINDOWS_1254));
+    // A number resolves to the charset Microsoft assigns it, not to whatever
+    // the standard would make of the matching label.
+    assert_eq!(
+        Encoding::for_windows_code_page(28591),
+        Some(crate::ISO_8859_1)
+    );
+    assert_eq!(
+        Encoding::for_windows_code_page(20127),
+        Some(crate::US_ASCII)
+    );
+    // Microsoft and the standard agree that 10017 is the Cyrillic Mac page.
     assert_eq!(Encoding::for_windows_code_page(10017), Some(X_MAC_CYRILLIC));
+    // ISO-8859-9 has no encoding here yet, so its number is absent rather than
+    // pointed at windows-1254.
+    assert_eq!(Encoding::for_windows_code_page(28599), None);
 
     // The neutralized ones, and the filtered variant.
     for number in [50225u32, 50227, 50229, 52936] {

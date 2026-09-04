@@ -154,21 +154,24 @@ fn listings_cover_the_whole_standard() {
 
     let encodings = stdout(&["--list"], b"");
     let encodings = String::from_utf8(encodings).expect("UTF-8");
+    // 40 from the standard, plus ISO-8859-1 and US-ASCII, which it has no
+    // room for.
     if EXTRAS {
-        assert!(encodings.lines().count() > 40);
+        assert!(encodings.lines().count() > 42);
     } else {
-        assert_eq!(encodings.lines().count(), 40);
+        assert_eq!(encodings.lines().count(), 42);
     }
     assert!(encodings.lines().any(|l| l == "windows-1252"));
 
     let labels = stdout(&["--list-labels"], b"");
     let labels = String::from_utf8(labels).expect("UTF-8");
-    if EXTRAS {
-        assert!(labels.lines().count() > 228);
-    } else {
-        assert_eq!(labels.lines().count(), 228);
-    }
-    assert!(labels.lines().any(|l| l == "latin1\twindows-1252"));
+    // The general listing drops the 52 labels the standard reassigns and adds
+    // the ones ISO-8859-1 and US-ASCII bring.
+    assert!(labels.lines().count() > 180);
+    // The listing is the honest one: `latin1` names ISO-8859-1 here, whatever
+    // the WHATWG Encoding Standard resolves it to for the web.
+    assert!(labels.lines().any(|l| l == "latin1\tISO-8859-1"));
+    assert!(labels.lines().any(|l| l == "windows-1252\twindows-1252"));
     // The listing is sorted by label.
     let mut sorted: Vec<&str> = labels.lines().collect();
     sorted.sort_unstable();

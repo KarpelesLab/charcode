@@ -188,6 +188,7 @@ overrides `-f`, and `iconv`'s `//IGNORE` suffix is accepted as a synonym for
 | Group | Encodings |
 | --- | --- |
 | Unicode | UTF-8, UTF-16BE, UTF-16LE |
+| Always present | ISO-8859-1, US-ASCII (identity maps, no tables) |
 | Single-byte | IBM866, ISO-8859-2/3/4/5/6/7/8/8-I/10/13/14/15/16, KOI8-R, KOI8-U, macintosh, windows-874, windows-1250 through windows-1258, x-mac-cyrillic |
 | Chinese | GBK, gb18030, Big5 |
 | Japanese | EUC-JP, ISO-2022-JP, Shift_JIS |
@@ -233,22 +234,39 @@ always present. Static data ranges from about 1 KiB with no table group, to
 
 ### Two lookups, on purpose
 
-`Encoding::for_label` is the general lookup: it knows every label of every
-charset compiled in.
+`Encoding::for_label` answers with the charset a label **names**.
 
-`Encoding::for_whatwg_label` (behind `whatwg-aliases`) is the standard's
-`get an encoding`, and it answers **only** with encodings the standard
-sanctions. The standard leaves some charsets out deliberately — UTF-7 and
-HZ-GB-2312 can both be used to smuggle markup past a filter that only inspects
-the bytes — so a build that adds `unicode-extras` or `dos` for local use does
-not thereby widen what a label off the network can select:
+`Encoding::for_whatwg_label` (behind `whatwg-aliases`) answers with what the
+WHATWG Encoding Standard **resolves** it to. For 52 of its labels that is a
+different charset — usually a superset a browser is more likely to have meant:
 
 ```rust
-use charcode::{Encoding, WINDOWS_1252};
+use charcode::{Encoding, ISO_8859_1, WINDOWS_1252};
 
-assert_eq!(Encoding::for_whatwg_label(b"latin1"), Some(WINDOWS_1252));
-// Real encodings here when their groups are on, but not ones the standard
-// sanctions, so this lookup will not return them.
+// `iso-8859-1` names ISO-8859-1, where byte 0x80 is a C1 control.
+assert_eq!(Encoding::for_label(b"iso-8859-1"), Some(ISO_8859_1));
+assert_eq!(ISO_8859_1.decode(b"\x80").0, "\u{80}");
+
+// The standard sends it to windows-1252, where 0x80 is a euro sign.
+assert_eq!(Encoding::for_whatwg_label(b"iso-8859-1"), Some(WINDOWS_1252));
+assert_eq!(WINDOWS_1252.decode(b"\x80").0, "€");
+```
+
+The same goes for `ascii`, `us-ascii`, `iso-8859-9`, `tis-620`, `gb2312`,
+`ks_c_5601-1987` and the rest. `for_label` never substitutes: a label naming a
+charset this build does not carry gives `None` rather than something close to
+it.
+
+The standard's lookup is also a boundary in the other direction — it answers
+**only** with encodings the standard sanctions. It leaves some charsets out
+deliberately (UTF-7 and HZ-GB-2312 can both be used to smuggle markup past a
+filter that only inspects the bytes), so a build that adds `unicode-extras` or
+`dos` for local use does not thereby widen what a label off the network can
+select:
+
+```rust
+use charcode::Encoding;
+
 assert_eq!(Encoding::for_whatwg_label(b"utf-7"), None);
 assert_eq!(Encoding::for_whatwg_label(b"cp437"), None);
 ```

@@ -207,16 +207,16 @@ fn extras_are_reachable_and_do_not_collide() {
             "{}",
             entry.text
         );
-        // A label from outside the standard must never be reachable through the
-        // standard's own lookup, whatever is compiled in.
+        // A label from outside the standard must never reach one of its
+        // encodings through the standard's own lookup.  It may still name
+        // something there — `iso-8859-1` is ours and the standard's, resolving
+        // differently in each — but never to the same place.
         #[cfg(feature = "whatwg-aliases")]
-        if !entry.whatwg {
-            assert_eq!(
-                Encoding::for_whatwg_label(entry.text.as_bytes()),
-                None,
-                "{} is not the standard's",
-                entry.text
-            );
+        if !entry.whatwg
+            && let Some(found) = Encoding::for_whatwg_label(entry.text.as_bytes())
+        {
+            assert_ne!(found, entry.encoding, "{} resolves alike", entry.text);
+            assert!(found.is_whatwg(), "{}", entry.text);
         }
         assert_eq!(entry.encoding.is_whatwg(), entry.whatwg, "{}", entry.text);
     }

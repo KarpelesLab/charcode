@@ -6,11 +6,17 @@
 //! hand you.  The mapping below pairs each number with the encoding this crate
 //! uses for it.
 //!
-//! Where a number names an encoding the standard folds into a superset, the
-//! superset is what you get, exactly as it is for the equivalent label: code
-//! page 28591 (ISO-8859-1) resolves to [`WINDOWS_1252`], and 28599
-//! (ISO-8859-9) to [`WINDOWS_1254`].  Numbers for encodings the standard
-//! neutralizes — 50225, 50227, 50229 and 52936 — resolve to [`REPLACEMENT`].
+//! A number resolves to the charset Microsoft assigns it, not to whatever the
+//! WHATWG Encoding Standard would make of the equivalent label: 28591 is
+//! [`ISO_8859_1`](crate::ISO_8859_1) and 20127 is
+//! [`US_ASCII`](crate::US_ASCII), rather than windows-1252 as the labels
+//! `iso-8859-1` and `ascii` would give through
+//! [`Encoding::for_whatwg_label`](crate::Encoding::for_whatwg_label).
+//!
+//! A number for a charset this crate does not have yet — 28599 for ISO-8859-9,
+//! 936 for GB 2312 — is absent rather than pointed at a superset.  Numbers for
+//! encodings the standard neutralizes — 50225, 50227, 50229 and 52936 —
+//! resolve to [`REPLACEMENT`].
 //!
 //! [Code Page Identifiers]: https://learn.microsoft.com/en-us/windows/win32/intl/code-page-identifiers
 
@@ -88,7 +94,6 @@ pub(crate) static CODE_PAGES: &[CodePage] = &[
     #[cfg(feature = "single-byte")]
     alias(10017, &e::X_MAC_CYRILLIC_INIT), // Mac Ukrainian
     #[cfg(feature = "single-byte")]
-    alias(20127, &e::WINDOWS_1252_INIT), // US-ASCII
     #[cfg(feature = "single-byte")]
     cp(20866, &e::KOI8_R_INIT),
     #[cfg(feature = "euc-jp")]
@@ -100,7 +105,6 @@ pub(crate) static CODE_PAGES: &[CodePage] = &[
     #[cfg(feature = "single-byte")]
     cp(21866, &e::KOI8_U_INIT),
     #[cfg(feature = "single-byte")]
-    alias(28591, &e::WINDOWS_1252_INIT), // ISO-8859-1
     #[cfg(feature = "single-byte")]
     cp(28592, &e::ISO_8859_2_INIT),
     #[cfg(feature = "single-byte")]
@@ -116,7 +120,6 @@ pub(crate) static CODE_PAGES: &[CodePage] = &[
     #[cfg(feature = "single-byte")]
     cp(28598, &e::ISO_8859_8_INIT),
     #[cfg(feature = "single-byte")]
-    alias(28599, &e::WINDOWS_1254_INIT), // ISO-8859-9
     #[cfg(feature = "single-byte")]
     cp(28603, &e::ISO_8859_13_INIT),
     #[cfg(feature = "single-byte")]

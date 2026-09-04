@@ -5,8 +5,9 @@
 //! The [`Encoding`] instances for the charsets outside the standard.
 
 use crate::Encoding;
-// A build may take only the algorithmic charsets, which need no table.
+// A build may take only the charsets that need no table.
 #[cfg(any(feature = "dos", feature = "ebcdic", feature = "mac", feature = "misc"))]
+#[allow(unused_imports)]
 use crate::tables::extra as t;
 use crate::variant::VariantEncoding;
 
@@ -448,6 +449,20 @@ pub(crate) const KZ_1048_INIT: Encoding = Encoding::new(
 pub static KZ_1048: &Encoding = &KZ_1048_INIT;
 
 // Algorithmic charsets, which need no table
+
+pub(crate) const ISO_8859_1_INIT: Encoding = Encoding::new(
+    "ISO-8859-1",
+    VariantEncoding::Identity(crate::identity::Identity::latin1()),
+);
+/// ISO-8859-1
+pub static ISO_8859_1: &Encoding = &ISO_8859_1_INIT;
+
+pub(crate) const US_ASCII_INIT: Encoding = Encoding::new(
+    "US-ASCII",
+    VariantEncoding::Identity(crate::identity::Identity::ascii()),
+);
+/// US-ASCII
+pub static US_ASCII: &Encoding = &US_ASCII_INIT;
 
 #[cfg(feature = "unicode-extras")]
 pub(crate) const UTF_32BE_INIT: Encoding = Encoding::new("UTF-32BE", VariantEncoding::Utf32Be);

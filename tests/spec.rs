@@ -26,14 +26,44 @@ fn encode(encoding: &'static Encoding, text: &str) -> Vec<u8> {
 
 #[test]
 fn labels_are_matched_case_insensitively_and_trimmed() {
-    assert_eq!(Encoding::for_label(b"UTF-8"), Some(UTF_8));
-    assert_eq!(Encoding::for_label(b"utf8"), Some(UTF_8));
-    assert_eq!(Encoding::for_label(b"\t\n\x0C\r UTF-8 \t"), Some(UTF_8));
-    assert_eq!(Encoding::for_label(b"LATIN1"), Some(WINDOWS_1252));
-    assert_eq!(Encoding::for_label(b"ascii"), Some(WINDOWS_1252));
-    assert_eq!(Encoding::for_label(b"iso-8859-1"), Some(WINDOWS_1252));
-    assert_eq!(Encoding::for_label(b"chinese"), Some(GBK));
-    assert_eq!(Encoding::for_label(b"utf-16"), Some(UTF_16LE));
+    // This file is about what the standard says, so it asks the lookup that
+    // implements it.  `for_label` deliberately answers differently for the
+    // labels the standard reassigns; see `the_two_lookups_disagree_on_purpose`.
+    let f = |l: &[u8]| Encoding::for_whatwg_label(l);
+    assert_eq!(f(b"UTF-8"), Some(UTF_8));
+    assert_eq!(f(b"utf8"), Some(UTF_8));
+    assert_eq!(f(b"\t\n\x0C\r UTF-8 \t"), Some(UTF_8));
+    assert_eq!(f(b"LATIN1"), Some(WINDOWS_1252));
+    assert_eq!(f(b"ascii"), Some(WINDOWS_1252));
+    assert_eq!(f(b"iso-8859-1"), Some(WINDOWS_1252));
+    assert_eq!(f(b"chinese"), Some(GBK));
+    assert_eq!(f(b"utf-16"), Some(UTF_16LE));
+}
+
+/// The reassignments the standard makes for web compatibility live in its own
+/// lookup and nowhere else.
+#[test]
+fn the_two_lookups_disagree_on_purpose() {
+    // A label that names one charset and is resolved by the standard to another.
+    assert_eq!(Encoding::for_label(b"iso-8859-1"), Some(ISO_8859_1));
+    assert_eq!(
+        Encoding::for_whatwg_label(b"iso-8859-1"),
+        Some(WINDOWS_1252)
+    );
+    assert_eq!(Encoding::for_label(b"ascii"), Some(US_ASCII));
+    assert_eq!(Encoding::for_whatwg_label(b"ascii"), Some(WINDOWS_1252));
+
+    // 0x80 is where it shows: a C1 control, or a euro sign.
+    assert_eq!(decode(ISO_8859_1, b"\x80"), "\u{80}");
+    assert_eq!(decode(WINDOWS_1252, b"\x80"), "\u{20AC}");
+    assert_eq!(decode(US_ASCII, b"\x80"), "\u{FFFD}");
+
+    // A label naming a charset this build does not have resolves to nothing,
+    // rather than quietly to a superset of it.
+    for label in [&b"gb2312"[..], b"ks_c_5601-1987", b"tis-620", b"iso-8859-9"] {
+        assert_eq!(Encoding::for_label(label), None, "{label:?}");
+        assert!(Encoding::for_whatwg_label(label).is_some(), "{label:?}");
+    }
 }
 
 #[test]
@@ -60,14 +90,29 @@ fn replacement_labels_can_be_filtered_out() {
         b"iso-2022-kr",
         b"replacement",
     ] {
-        assert_eq!(Encoding::for_label(label), Some(REPLACEMENT), "{label:?}");
-        assert_eq!(Encoding::for_label_no_replacement(label), None, "{label:?}");
+        assert_eq!(
+            Encoding::for_whatwg_label(label),
+            Some(REPLACEMENT),
+            "{label:?}"
+        );
+        assert_eq!(
+            Encoding::for_whatwg_label_no_replacement(label),
+            None,
+            "{label:?}"
+        );
+        // The general lookup does not hand back `replacement` for a label that
+        // names a real encoding; it says it has none.  `replacement` itself is
+        // the exception: that label names exactly what it resolves to.
+        if label != b"replacement" {
+            assert_eq!(Encoding::for_label(label), None, "{label:?}");
+        }
     }
     // ISO-2022-JP is a real encoding and survives the filter.
     assert_eq!(
-        Encoding::for_label_no_replacement(b"iso-2022-jp"),
+        Encoding::for_whatwg_label_no_replacement(b"iso-2022-jp"),
         Some(ISO_2022_JP)
     );
+    assert_eq!(Encoding::for_label(b"iso-2022-jp"), Some(ISO_2022_JP));
 }
 
 #[test]
@@ -76,12 +121,23 @@ fn every_encoding_is_reachable_by_its_own_name() {
     #[cfg(not(any(feature = "dos", feature = "ebcdic", feature = "mac", feature = "misc")))]
     assert_eq!(Encoding::all().len(), 40);
     for &encoding in Encoding::all() {
+        // The standard's lookup answers only for its own encodings; every
+        // encoding, its own or ours, is reachable by name through the general
+        // one.
         assert_eq!(
             Encoding::for_label(encoding.name().as_bytes()),
             Some(encoding),
             "{}",
             encoding.name()
         );
+        if encoding.is_whatwg() {
+            assert_eq!(
+                Encoding::for_whatwg_label(encoding.name().as_bytes()),
+                Some(encoding),
+                "{}",
+                encoding.name()
+            );
+        }
     }
 }
 
@@ -513,10 +569,17 @@ fn the_whatwg_lookup_refuses_everything_outside_the_standard() {
 #[test]
 fn is_whatwg_marks_exactly_the_standards_encodings() {
     for &encoding in Encoding::all() {
+        // ISO-8859-1 and US-ASCII are ours, not the standard's: it resolves
+        // their labels to windows-1252 instead.
+        if matches!(encoding.name(), "ISO-8859-1" | "US-ASCII") {
+            assert!(!encoding.is_whatwg(), "{}", encoding.name());
+            continue;
+        }
         let standard = matches!(
             encoding.name(),
             "UTF-8" | "UTF-16BE" | "UTF-16LE" | "replacement" | "x-user-defined"
-        ) || encoding.name().starts_with("ISO-8859")
+        ) || (encoding.name().starts_with("ISO-8859")
+            && encoding.name() != "ISO-8859-1")
             || encoding.name().starts_with("windows-")
             || encoding.name().starts_with("KOI8")
             || matches!(

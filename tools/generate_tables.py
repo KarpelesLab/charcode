@@ -277,6 +277,41 @@ CONST_NAMES = {
 
 
 
+
+# --- labels the standard reassigns ------------------------------------------
+#
+# Each of these names one charset and is resolved by the standard to a
+# different one, almost always a superset that a browser is more likely to have
+# meant.  `Encoding::for_label` must not do that: a caller asking for
+# ISO-8859-1 and silently getting windows-1252 has had byte 0x80 turn into a
+# euro sign behind its back.  They stay reachable through
+# `Encoding::for_whatwg_label`, which is the whole point of that lookup being
+# separate.
+#
+# Where the named charset exists in this crate the general table points at it
+# instead; where it does not, the general lookup answers None.
+WHATWG_ONLY_LABELS = {
+    # ISO-8859-1 and US-ASCII are not windows-1252; 0x80 is U+0080, not U+20AC.
+    "ansi_x3.4-1968", "ascii", "us-ascii", "cp819", "csisolatin1", "ibm819",
+    "iso-8859-1", "iso-ir-100", "iso8859-1", "iso88591", "iso_8859-1",
+    "iso_8859-1:1987", "l1", "latin1",
+    # ISO-8859-9 is not windows-1254.
+    "csisolatin5", "iso-8859-9", "iso-ir-148", "iso8859-9", "iso88599",
+    "iso_8859-9", "iso_8859-9:1989", "l5", "latin5",
+    # TIS-620 and ISO-8859-11 are not windows-874, and neither is DOS-874.
+    "dos-874", "iso-8859-11", "iso8859-11", "iso885911", "tis-620",
+    # GB 2312 is a subset of GBK, not GBK.
+    "chinese", "csgb2312", "csiso58gb231280", "gb2312", "gb_2312",
+    "gb_2312-80", "iso-ir-58",
+    # KS X 1001 is a subset of the Unified Hangul Code, not all of it.
+    "cseuckr", "csksc56011987", "iso-ir-149", "korean", "ks_c_5601-1987",
+    "ks_c_5601-1989", "ksc5601", "ksc_5601",
+    # Real encodings the standard neutralizes.  A caller that wants one should
+    # be told this build has no such thing, not handed `replacement`.
+    "csiso2022kr", "hz-gb-2312", "iso-2022-cn", "iso-2022-cn-ext",
+    "iso-2022-kr",
+}
+
 # --- charsets outside the Encoding Standard ---------------------------------
 #
 # Mapping data comes from the Unicode Consortium's MAPPINGS archive, whose files
@@ -356,6 +391,15 @@ EXTRA = [
 # Charsets outside the standard that need no table.
 # (group, name, ident, variant, Windows code page or None, labels)
 ALGORITHMIC = [
+    # Always present: no table, and the standard resolves their labels to
+    # windows-1252 instead, so a caller that wants the real thing has nowhere
+    # else to go.
+    (None, "ISO-8859-1", "ISO_8859_1", "Identity(crate::identity::Identity::latin1())", 28591,
+     ["iso-8859-1", "iso8859-1", "iso88591", "iso_8859-1", "iso_8859-1:1987",
+      "iso-ir-100", "latin1", "l1", "cp819", "ibm819", "csisolatin1"]),
+    (None, "US-ASCII", "US_ASCII", "Identity(crate::identity::Identity::ascii())", 20127,
+     ["us-ascii", "ascii", "ansi_x3.4-1968", "iso-ir-6", "iso646-us", "us", "csascii",
+      "iso_646.irv:1991", "ansi_x3.4-1986"]),
     ("unicode-extras", "UTF-32BE", "UTF_32BE", "Utf32Be", 12001,
      ["utf-32be", "utf32be"]),
     ("unicode-extras", "UTF-32LE", "UTF_32LE", "Utf32Le", 12000,
@@ -451,8 +495,9 @@ def emit_extra(indexes):
 //! The [`Encoding`] instances for the charsets outside the standard.
 
 use crate::Encoding;
-// A build may take only the algorithmic charsets, which need no table.
+// A build may take only the charsets that need no table.
 #[cfg(any(feature = "dos", feature = "ebcdic", feature = "mac", feature = "misc"))]
+#[allow(unused_imports)]
 use crate::tables::extra as t;
 use crate::variant::VariantEncoding;
 """]
@@ -471,11 +516,12 @@ use crate::variant::VariantEncoding;
                          .format(g=g, i=ident, n=name))
     parts.append("\n// Algorithmic charsets, which need no table\n")
     for group, name, ident, variant, _cp, _labels in ALGORITHMIC:
+        gate = "" if group is None else '#[cfg(feature = "{}")]\n'.format(group)
         parts.append(
-            '\n#[cfg(feature = "{g}")]\npub(crate) const {i}_INIT: Encoding =\n'
-            '    Encoding::new("{n}", VariantEncoding::{v});\n'.format(g=group, i=ident, n=name, v=variant))
-        parts.append('/// {n}\n#[cfg(feature = "{g}")]\npub static {i}: &Encoding = &{i}_INIT;\n'
-                     .format(g=group, i=ident, n=name))
+            '\n{g}pub(crate) const {i}_INIT: Encoding =\n'
+            '    Encoding::new("{n}", VariantEncoding::{v});\n'.format(g=gate, i=ident, n=name, v=variant))
+        parts.append('/// {n}\n{g}pub static {i}: &Encoding = &{i}_INIT;\n'
+                     .format(g=gate, i=ident, n=name))
     write(os.path.join(ROOT, "src", "extra_encodings.rs"), "".join(parts))
 
     # Labels and code pages, merged into the tables the lookups read.
@@ -489,7 +535,6 @@ use crate::variant::VariantEncoding;
 
 use crate::code_page::CodePage;
 // A group may have no Windows code pages of its own.
-#[cfg(any(\n    feature = "dos",\n    feature = "ebcdic",\n    feature = "mac",\n    feature = "misc",\n    feature = "unicode-extras"\n))]
 #[allow(unused_imports)]
 use crate::extra_encodings as x;
 """]
@@ -497,8 +542,9 @@ use crate::extra_encodings as x;
     parts.append("\n/// Sorted by number, for binary search.\n")
     parts.append("pub static EXTRA_CODE_PAGES: &[CodePage] = &[\n")
     for cp, ident, group in sorted(code_pages):
-        parts.append('    #[cfg(feature = "{}")]\n    CodePage {{ number: {}, encoding: &x::{}_INIT, canonical: true }},\n'
-                     .format(group, cp, ident))
+        gate = "" if group is None else '    #[cfg(feature = "{}")]\n'.format(group)
+        parts.append('{}    CodePage {{ number: {}, encoding: &x::{}_INIT, canonical: true }},\n'
+                     .format(gate, cp, ident))
     parts.append("];\n")
     write(os.path.join(OUT, "extra_labels.rs"), "".join(parts))
     return label_rows
@@ -692,13 +738,22 @@ def main():
             names.append(enc["name"])
             for label in enc["labels"]:
                 labels.append((label, CONST_NAMES[enc["name"]]))
-    # Merge in the charsets outside the standard; the generator asserts below
-    # that no label is claimed twice, in any feature combination.
     by_const = {CONST_NAMES[n]: n for n in names}
-    all_labels = [(label, const, feature(by_const[const]), "e") for label, const in labels]
+    # The standard's own table keeps every label it defines, reassignments and
+    # all.  The general table drops the reassigned ones and takes the charsets
+    # from outside the standard instead — including ISO-8859-1 and US-ASCII,
+    # which claim labels the standard hands to windows-1252.  The two tables
+    # therefore disagree on 52 labels, by design; each must still be internally
+    # unique, since each is binary searched.
+    whatwg_labels = sorted(
+        (label, const, feature(by_const[const]), "e") for label, const in labels)
+    assert len(set(r[0] for r in whatwg_labels)) == len(whatwg_labels), "duplicate WHATWG label"
+    all_labels = [r for r in whatwg_labels if r[0] not in WHATWG_ONLY_LABELS]
     all_labels += [(label, ident + "_INIT", group, "x") for label, ident, group in extra_rows]
     all_labels.sort(key=lambda r: r[0])
-    assert len(set(r[0] for r in all_labels)) == len(all_labels), "duplicate label"
+    duplicates = [r[0] for r in all_labels
+                  if sum(1 for x in all_labels if x[0] == r[0]) > 1]
+    assert not duplicates, "duplicate label in the general table: {}".format(sorted(set(duplicates)))
     parts = [HEADER, """
 //! Every label the standard defines, sorted for binary search.
 //!
@@ -708,7 +763,6 @@ def main():
 
 use crate::Encoding;
 use crate::encodings as e;
-#[cfg(any(\n    feature = "dos",\n    feature = "ebcdic",\n    feature = "mac",\n    feature = "misc",\n    feature = "unicode-extras"\n))]
 use crate::extra_encodings as x;
 
 /// Every label of every encoding compiled in, sorted for binary search.
@@ -729,6 +783,25 @@ pub static LABELS: &[Label] = &[
         parts.append('{}    Label {{ text: "{}", encoding: &{}::{}, whatwg: {} }},\n'
                      .format(gate, label, module, const, "true" if module == "e" else "false"))
     parts.append("];\n\n")
+    assert WHATWG_ONLY_LABELS <= {r[0] for r in whatwg_labels}, (
+        "reassigned labels the standard does not define: {}".format(
+            sorted(WHATWG_ONLY_LABELS - {r[0] for r in whatwg_labels})))
+
+    # The standard's own table, which `for_whatwg_label` alone reads.
+    parts.append("""/// Every label the WHATWG Encoding Standard defines, sorted for binary search.
+///
+/// This is the table `Encoding::for_whatwg_label` reads, and it is the only
+/// place the standard's reassignments live: `iso-8859-1` to windows-1252,
+/// `gb2312` to GBK, `iso-2022-kr` to replacement.  The general lookup must not
+/// see them.
+#[cfg(feature = "whatwg-aliases")]
+pub static WHATWG_LABELS: &[Label] = &[
+""")
+    for label, const, group, _module in whatwg_labels:
+        gate = "" if group is None else '    #[cfg(feature = "{}")]\n'.format(group)
+        parts.append('{}    Label {{ text: "{}", encoding: &e::{}, whatwg: true }},\n'
+                     .format(gate, label, const))
+    parts.append("];\n\n")
     parts.append("/// Every encoding compiled in: the standard's first, then the rest.\n")
     parts.append("pub static ALL_ENCODINGS: &[&Encoding] = &[\n")
     for name in names:
@@ -737,7 +810,8 @@ pub static LABELS: &[Label] = &[
     for group, _n, ident, _f, _cp, _l, _full in EXTRA:
         parts.append('    #[cfg(feature = "{}")]\n    &x::{}_INIT,\n'.format(group, ident))
     for group, _n, ident, _v, _cp, _l in ALGORITHMIC:
-        parts.append('    #[cfg(feature = "{}")]\n    &x::{}_INIT,\n'.format(group, ident))
+        gate = "" if group is None else '    #[cfg(feature = "{}")]\n'.format(group)
+        parts.append('{}    &x::{}_INIT,\n'.format(gate, ident))
     parts.append("];\n")
     write(os.path.join(OUT, "labels.rs"), "".join(parts))
 

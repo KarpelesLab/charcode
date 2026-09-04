@@ -3,7 +3,7 @@
 
 #![cfg(all(feature = "serde", feature = "std"))]
 
-use charcode::{Encoding, SHIFT_JIS, UTF_8, WINDOWS_1252};
+use charcode::{Encoding, ISO_8859_1, SHIFT_JIS, UTF_8};
 
 #[test]
 fn serializes_as_its_name() {
@@ -16,7 +16,9 @@ fn deserializes_from_any_label() {
     let parse = |s: &str| serde_json::from_str::<&'static Encoding>(s).unwrap();
     assert_eq!(parse("\"UTF-8\""), UTF_8);
     assert_eq!(parse("\"utf8\""), UTF_8);
-    assert_eq!(parse("\" latin1 \""), WINDOWS_1252);
+    // Deserialization uses the general lookup, so `latin1` is ISO-8859-1 and
+    // not the superset the WHATWG Encoding Standard resolves it to.
+    assert_eq!(parse("\" latin1 \""), ISO_8859_1);
     assert!(serde_json::from_str::<&'static Encoding>("\"nope\"").is_err());
 }
 

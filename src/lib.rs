@@ -31,10 +31,33 @@
 //! # fn main() {}
 //! ```
 //!
-//! Encodings are looked up by label.  For anything that came off the network —
-//! a `Content-Type` charset parameter, an HTML `<meta charset>` — use
-//! [`Encoding::for_whatwg_label`], which implements the standard's
-//! `get an encoding` and answers only with encodings the standard sanctions:
+//! # Two lookups
+//!
+//! [`Encoding::for_label`] answers with the charset a label *names*.
+//! [`Encoding::for_whatwg_label`] answers with what the WHATWG Encoding
+//! Standard *resolves* it to, which for 52 of its labels is a different
+//! charset — usually a superset a browser is more likely to have meant.
+//!
+//! ```
+//! # #[cfg(all(feature = "whatwg", feature = "alloc"))]
+//! # fn main() {
+//! use charcode::{Encoding, ISO_8859_1, WINDOWS_1252};
+//!
+//! // `iso-8859-1` names ISO-8859-1.
+//! assert_eq!(Encoding::for_label(b"iso-8859-1"), Some(ISO_8859_1));
+//! assert_eq!(ISO_8859_1.decode(b"\x80").0, "\u{80}");
+//!
+//! // The standard sends it to windows-1252, where 0x80 is a euro sign.
+//! assert_eq!(Encoding::for_whatwg_label(b"iso-8859-1"), Some(WINDOWS_1252));
+//! assert_eq!(WINDOWS_1252.decode(b"\x80").0, "\u{20AC}");
+//! # }
+//! # #[cfg(not(all(feature = "whatwg", feature = "alloc")))]
+//! # fn main() {}
+//! ```
+//!
+//! Use the second for anything that came off the network — a `Content-Type`
+//! charset parameter, an HTML `<meta charset>` — where matching browsers is
+//! the point.  Use the first everywhere else:
 //!
 //! ```
 //! # #[cfg(feature = "whatwg")]
@@ -206,6 +229,9 @@ mod euc_kr;
 mod full_byte;
 #[cfg(feature = "gb18030")]
 mod gb18030;
+
+/// ISO-8859-1 and US-ASCII, which need no tables.
+mod identity;
 #[cfg(any(
     feature = "big5",
     feature = "euc-jp",
@@ -241,13 +267,6 @@ mod variant;
 mod x_user_defined;
 
 mod encodings;
-#[cfg(any(
-    feature = "dos",
-    feature = "ebcdic",
-    feature = "mac",
-    feature = "misc",
-    feature = "unicode-extras"
-))]
 mod extra_encodings;
 
 #[cfg(feature = "serde")]
@@ -259,19 +278,14 @@ use alloc::{borrow::Cow, string::String, vec::Vec};
 pub use crate::decoder::{DECODER_MIN_BUFFER, Decoder, MalformedError};
 pub use crate::encoder::{ENCODER_MIN_BUFFER, Encoder, UnmappableError};
 pub use crate::encodings::*;
-#[cfg(any(
-    feature = "dos",
-    feature = "ebcdic",
-    feature = "mac",
-    feature = "misc",
-    feature = "unicode-extras"
-))]
 pub use crate::extra_encodings::*;
 pub use crate::options::{Bom, DecodeOptions, EncodeOptions, Malformed, Tally, Unmappable};
 pub use crate::result::{DecoderResult, EncoderResult};
 
 use crate::code_page::CODE_PAGES;
 use crate::tables::extra_labels::EXTRA_CODE_PAGES;
+#[cfg(feature = "whatwg-aliases")]
+use crate::tables::labels::WHATWG_LABELS;
 use crate::tables::labels::{ALL_ENCODINGS, LABELS, Label};
 use crate::variant::VariantEncoding;
 
@@ -341,11 +355,18 @@ impl Encoding {
             .map(|entry| entry.text)
     }
 
-    /// Looks up an encoding by label, implementing `get an encoding`.
+    /// Looks up an encoding by label, answering with the charset the label
+    /// names.
     ///
     /// Leading and trailing ASCII whitespace is ignored and the comparison is
-    /// ASCII case-insensitive, so a `Content-Type` charset parameter or a
-    /// `<meta charset>` value can be passed through unchanged.
+    /// ASCII case-insensitive.
+    ///
+    /// This lookup never substitutes: `iso-8859-1` gives [`ISO_8859_1`], not
+    /// the windows-1252 superset the WHATWG Encoding Standard resolves it to,
+    /// and a label naming a charset this build does not carry gives `None`
+    /// rather than something close to it.  For a label off the network, where
+    /// browser behaviour is the point, use
+    /// [`Encoding::for_whatwg_label`].
     ///
     /// ```
     /// # #[cfg(feature = "whatwg")]
@@ -358,11 +379,11 @@ impl Encoding {
     /// # fn main() {}
     /// ```
     pub fn for_label(label: &[u8]) -> Option<&'static Encoding> {
-        Encoding::look_up(label).map(|entry| entry.encoding)
+        Encoding::look_up_in(LABELS, label).map(|entry| entry.encoding)
     }
 
-    /// The row in the label table for `label`, after normalization.
-    fn look_up(label: &[u8]) -> Option<&'static Label> {
+    /// The row in `table` for `label`, after normalization.
+    fn look_up_in(table: &'static [Label], label: &[u8]) -> Option<&'static Label> {
         let trimmed = trim_ascii_whitespace(label);
         if trimmed.is_empty() || trimmed.len() > MAX_LABEL_LEN {
             return None;
@@ -372,10 +393,10 @@ impl Encoding {
             *slot = byte.to_ascii_lowercase();
         }
         let needle = &lowercased[..trimmed.len()];
-        LABELS
+        table
             .binary_search_by(|entry| entry.text.as_bytes().cmp(needle))
             .ok()
-            .map(|i| &LABELS[i])
+            .map(|i| &table[i])
     }
 
     /// Implements the standard's `get an encoding`, and answers only with an
@@ -408,9 +429,7 @@ impl Encoding {
     /// ```
     #[cfg(feature = "whatwg-aliases")]
     pub fn for_whatwg_label(label: &[u8]) -> Option<&'static Encoding> {
-        Encoding::look_up(label)
-            .filter(|entry| entry.whatwg)
-            .map(|entry| entry.encoding)
+        Encoding::look_up_in(WHATWG_LABELS, label).map(|entry| entry.encoding)
     }
 
     /// Like [`Encoding::for_whatwg_label`], but treats the labels that map to
@@ -451,9 +470,11 @@ impl Encoding {
     /// Encoding Standard, and are what `GetACP`, a .NET `Encoding.CodePage` or
     /// an old database column reports.
     ///
-    /// A number for an encoding the standard folds into a superset resolves to
-    /// that superset, exactly as the equivalent label does: 28591 (ISO-8859-1)
-    /// gives [`WINDOWS_1252`], and 20127 (US-ASCII) does too.
+    /// A number resolves to the charset Microsoft assigns it, not to whatever
+    /// the standard would make of the matching label: 28591 is
+    /// [`ISO_8859_1`] and 20127 is [`US_ASCII`], where the labels
+    /// `iso-8859-1` and `ascii` give windows-1252 through
+    /// [`Encoding::for_whatwg_label`].
     ///
     /// ```
     /// # #[cfg(feature = "whatwg")]
@@ -523,8 +544,9 @@ impl Encoding {
     /// # use charcode::{Encoding, SHIFT_JIS, WINDOWS_1252, X_USER_DEFINED};
     /// assert_eq!(WINDOWS_1252.windows_code_page(), Some(1252));
     /// assert_eq!(SHIFT_JIS.windows_code_page(), Some(932));
-    /// // 28591 also resolves to windows-1252, but 1252 is its own number.
-    /// assert_eq!(Encoding::for_windows_code_page(28591), Some(WINDOWS_1252));
+    /// // 28591 is ISO-8859-1, the charset Microsoft assigns it, and not what
+    /// // the label `iso-8859-1` gives through the standard's own lookup.
+    /// assert_eq!(Encoding::for_windows_code_page(28591), Some(charcode::ISO_8859_1));
     /// // Microsoft has no number for this one.
     /// assert_eq!(X_USER_DEFINED.windows_code_page(), None);
     /// # }

@@ -10,13 +10,6 @@
 
 use crate::Encoding;
 use crate::encodings as e;
-#[cfg(any(
-    feature = "dos",
-    feature = "ebcdic",
-    feature = "mac",
-    feature = "misc",
-    feature = "unicode-extras"
-))]
 use crate::extra_encodings as x;
 
 /// Every label of every encoding compiled in, sorted for binary search.
@@ -37,11 +30,15 @@ pub static LABELS: &[Label] = &[
         encoding: &e::IBM866_INIT,
         whatwg: true,
     },
-    #[cfg(feature = "single-byte")]
     Label {
         text: "ansi_x3.4-1968",
-        encoding: &e::WINDOWS_1252_INIT,
-        whatwg: true,
+        encoding: &x::US_ASCII_INIT,
+        whatwg: false,
+    },
+    Label {
+        text: "ansi_x3.4-1986",
+        encoding: &x::US_ASCII_INIT,
+        whatwg: false,
     },
     #[cfg(feature = "single-byte")]
     Label {
@@ -49,11 +46,10 @@ pub static LABELS: &[Label] = &[
         encoding: &e::ISO_8859_6_INIT,
         whatwg: true,
     },
-    #[cfg(feature = "single-byte")]
     Label {
         text: "ascii",
-        encoding: &e::WINDOWS_1252_INIT,
-        whatwg: true,
+        encoding: &x::US_ASCII_INIT,
+        whatwg: false,
     },
     #[cfg(feature = "single-byte")]
     Label {
@@ -83,12 +79,6 @@ pub static LABELS: &[Label] = &[
     Label {
         text: "big5-hkscs",
         encoding: &e::BIG5_INIT,
-        whatwg: true,
-    },
-    #[cfg(feature = "gb18030")]
-    Label {
-        text: "chinese",
-        encoding: &e::GBK_INIT,
         whatwg: true,
     },
     #[cfg(feature = "big5")]
@@ -211,11 +201,10 @@ pub static LABELS: &[Label] = &[
         encoding: &x::IBM775_INIT,
         whatwg: false,
     },
-    #[cfg(feature = "single-byte")]
     Label {
         text: "cp819",
-        encoding: &e::WINDOWS_1252_INIT,
-        whatwg: true,
+        encoding: &x::ISO_8859_1_INIT,
+        whatwg: false,
     },
     #[cfg(feature = "dos")]
     Label {
@@ -301,28 +290,21 @@ pub static LABELS: &[Label] = &[
         encoding: &x::IBM875_INIT,
         whatwg: false,
     },
+    Label {
+        text: "csascii",
+        encoding: &x::US_ASCII_INIT,
+        whatwg: false,
+    },
     #[cfg(feature = "big5")]
     Label {
         text: "csbig5",
         encoding: &e::BIG5_INIT,
         whatwg: true,
     },
-    #[cfg(feature = "euc-kr")]
-    Label {
-        text: "cseuckr",
-        encoding: &e::EUC_KR_INIT,
-        whatwg: true,
-    },
     #[cfg(feature = "euc-jp")]
     Label {
         text: "cseucpkdfmtjapanese",
         encoding: &e::EUC_JP_INIT,
-        whatwg: true,
-    },
-    #[cfg(feature = "gb18030")]
-    Label {
-        text: "csgb2312",
-        encoding: &e::GBK_INIT,
         whatwg: true,
     },
     #[cfg(feature = "ebcdic")]
@@ -402,6 +384,1616 @@ pub static LABELS: &[Label] = &[
         text: "csibm869",
         encoding: &x::IBM869_INIT,
         whatwg: false,
+    },
+    #[cfg(feature = "iso-2022-jp")]
+    Label {
+        text: "csiso2022jp",
+        encoding: &e::ISO_2022_JP_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "csiso88596e",
+        encoding: &e::ISO_8859_6_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "csiso88596i",
+        encoding: &e::ISO_8859_6_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "csiso88598e",
+        encoding: &e::ISO_8859_8_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "csiso88598i",
+        encoding: &e::ISO_8859_8_I_INIT,
+        whatwg: true,
+    },
+    Label {
+        text: "csisolatin1",
+        encoding: &x::ISO_8859_1_INIT,
+        whatwg: false,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "csisolatin2",
+        encoding: &e::ISO_8859_2_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "csisolatin3",
+        encoding: &e::ISO_8859_3_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "csisolatin4",
+        encoding: &e::ISO_8859_4_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "csisolatin6",
+        encoding: &e::ISO_8859_10_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "csisolatin9",
+        encoding: &e::ISO_8859_15_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "csisolatinarabic",
+        encoding: &e::ISO_8859_6_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "csisolatincyrillic",
+        encoding: &e::ISO_8859_5_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "csisolatingreek",
+        encoding: &e::ISO_8859_7_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "csisolatinhebrew",
+        encoding: &e::ISO_8859_8_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "cskoi8r",
+        encoding: &e::KOI8_R_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "misc")]
+    Label {
+        text: "cskz1048",
+        encoding: &x::KZ_1048_INIT,
+        whatwg: false,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "csmacintosh",
+        encoding: &e::MACINTOSH_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "dos")]
+    Label {
+        text: "cspc775baltic",
+        encoding: &x::IBM775_INIT,
+        whatwg: false,
+    },
+    #[cfg(feature = "dos")]
+    Label {
+        text: "cspc850multilingual",
+        encoding: &x::IBM850_INIT,
+        whatwg: false,
+    },
+    #[cfg(feature = "dos")]
+    Label {
+        text: "cspc862latinhebrew",
+        encoding: &x::IBM862_INIT,
+        whatwg: false,
+    },
+    #[cfg(feature = "dos")]
+    Label {
+        text: "cspc8codepage437",
+        encoding: &x::IBM437_INIT,
+        whatwg: false,
+    },
+    #[cfg(feature = "dos")]
+    Label {
+        text: "cspcp852",
+        encoding: &x::IBM852_INIT,
+        whatwg: false,
+    },
+    #[cfg(feature = "shift-jis")]
+    Label {
+        text: "csshiftjis",
+        encoding: &e::SHIFT_JIS_INIT,
+        whatwg: true,
+    },
+    Label {
+        text: "csunicode",
+        encoding: &e::UTF_16LE_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "unicode-extras")]
+    Label {
+        text: "csunicode11utf7",
+        encoding: &x::UTF_7_INIT,
+        whatwg: false,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "cyrillic",
+        encoding: &e::ISO_8859_5_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "dos")]
+    Label {
+        text: "dos-862",
+        encoding: &x::IBM862_INIT,
+        whatwg: false,
+    },
+    #[cfg(feature = "ebcdic")]
+    Label {
+        text: "ebcdic-cp-be",
+        encoding: &x::IBM500_INIT,
+        whatwg: false,
+    },
+    #[cfg(feature = "ebcdic")]
+    Label {
+        text: "ebcdic-cp-ca",
+        encoding: &x::IBM037_INIT,
+        whatwg: false,
+    },
+    #[cfg(feature = "ebcdic")]
+    Label {
+        text: "ebcdic-cp-ch",
+        encoding: &x::IBM500_INIT,
+        whatwg: false,
+    },
+    #[cfg(feature = "ebcdic")]
+    Label {
+        text: "ebcdic-cp-he",
+        encoding: &x::IBM424_INIT,
+        whatwg: false,
+    },
+    #[cfg(feature = "ebcdic")]
+    Label {
+        text: "ebcdic-cp-nl",
+        encoding: &x::IBM037_INIT,
+        whatwg: false,
+    },
+    #[cfg(feature = "ebcdic")]
+    Label {
+        text: "ebcdic-cp-us",
+        encoding: &x::IBM037_INIT,
+        whatwg: false,
+    },
+    #[cfg(feature = "ebcdic")]
+    Label {
+        text: "ebcdic-cp-wt",
+        encoding: &x::IBM037_INIT,
+        whatwg: false,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "ecma-114",
+        encoding: &e::ISO_8859_6_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "ecma-118",
+        encoding: &e::ISO_8859_7_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "elot_928",
+        encoding: &e::ISO_8859_7_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "euc-jp")]
+    Label {
+        text: "euc-jp",
+        encoding: &e::EUC_JP_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "euc-kr")]
+    Label {
+        text: "euc-kr",
+        encoding: &e::EUC_KR_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "gb18030")]
+    Label {
+        text: "gb18030",
+        encoding: &e::GB18030_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "gb18030")]
+    Label {
+        text: "gbk",
+        encoding: &e::GBK_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "greek",
+        encoding: &e::ISO_8859_7_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "greek8",
+        encoding: &e::ISO_8859_7_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "hebrew",
+        encoding: &e::ISO_8859_8_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "ebcdic")]
+    Label {
+        text: "ibm037",
+        encoding: &x::IBM037_INIT,
+        whatwg: false,
+    },
+    #[cfg(feature = "dos")]
+    Label {
+        text: "ibm1006",
+        encoding: &x::IBM1006_INIT,
+        whatwg: false,
+    },
+    #[cfg(feature = "ebcdic")]
+    Label {
+        text: "ibm1026",
+        encoding: &x::IBM1026_INIT,
+        whatwg: false,
+    },
+    #[cfg(feature = "ebcdic")]
+    Label {
+        text: "ibm424",
+        encoding: &x::IBM424_INIT,
+        whatwg: false,
+    },
+    #[cfg(feature = "dos")]
+    Label {
+        text: "ibm437",
+        encoding: &x::IBM437_INIT,
+        whatwg: false,
+    },
+    #[cfg(feature = "ebcdic")]
+    Label {
+        text: "ibm500",
+        encoding: &x::IBM500_INIT,
+        whatwg: false,
+    },
+    #[cfg(feature = "dos")]
+    Label {
+        text: "ibm737",
+        encoding: &x::IBM737_INIT,
+        whatwg: false,
+    },
+    #[cfg(feature = "dos")]
+    Label {
+        text: "ibm775",
+        encoding: &x::IBM775_INIT,
+        whatwg: false,
+    },
+    Label {
+        text: "ibm819",
+        encoding: &x::ISO_8859_1_INIT,
+        whatwg: false,
+    },
+    #[cfg(feature = "dos")]
+    Label {
+        text: "ibm850",
+        encoding: &x::IBM850_INIT,
+        whatwg: false,
+    },
+    #[cfg(feature = "dos")]
+    Label {
+        text: "ibm852",
+        encoding: &x::IBM852_INIT,
+        whatwg: false,
+    },
+    #[cfg(feature = "dos")]
+    Label {
+        text: "ibm855",
+        encoding: &x::IBM855_INIT,
+        whatwg: false,
+    },
+    #[cfg(feature = "dos")]
+    Label {
+        text: "ibm856",
+        encoding: &x::IBM856_INIT,
+        whatwg: false,
+    },
+    #[cfg(feature = "dos")]
+    Label {
+        text: "ibm857",
+        encoding: &x::IBM857_INIT,
+        whatwg: false,
+    },
+    #[cfg(feature = "dos")]
+    Label {
+        text: "ibm860",
+        encoding: &x::IBM860_INIT,
+        whatwg: false,
+    },
+    #[cfg(feature = "dos")]
+    Label {
+        text: "ibm861",
+        encoding: &x::IBM861_INIT,
+        whatwg: false,
+    },
+    #[cfg(feature = "dos")]
+    Label {
+        text: "ibm862",
+        encoding: &x::IBM862_INIT,
+        whatwg: false,
+    },
+    #[cfg(feature = "dos")]
+    Label {
+        text: "ibm863",
+        encoding: &x::IBM863_INIT,
+        whatwg: false,
+    },
+    #[cfg(feature = "dos")]
+    Label {
+        text: "ibm864",
+        encoding: &x::IBM864_INIT,
+        whatwg: false,
+    },
+    #[cfg(feature = "dos")]
+    Label {
+        text: "ibm865",
+        encoding: &x::IBM865_INIT,
+        whatwg: false,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "ibm866",
+        encoding: &e::IBM866_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "dos")]
+    Label {
+        text: "ibm869",
+        encoding: &x::IBM869_INIT,
+        whatwg: false,
+    },
+    #[cfg(feature = "ebcdic")]
+    Label {
+        text: "ibm875",
+        encoding: &x::IBM875_INIT,
+        whatwg: false,
+    },
+    Label {
+        text: "iso-10646-ucs-2",
+        encoding: &e::UTF_16LE_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "iso-2022-jp")]
+    Label {
+        text: "iso-2022-jp",
+        encoding: &e::ISO_2022_JP_INIT,
+        whatwg: true,
+    },
+    Label {
+        text: "iso-8859-1",
+        encoding: &x::ISO_8859_1_INIT,
+        whatwg: false,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "iso-8859-10",
+        encoding: &e::ISO_8859_10_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "iso-8859-13",
+        encoding: &e::ISO_8859_13_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "iso-8859-14",
+        encoding: &e::ISO_8859_14_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "iso-8859-15",
+        encoding: &e::ISO_8859_15_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "iso-8859-16",
+        encoding: &e::ISO_8859_16_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "iso-8859-2",
+        encoding: &e::ISO_8859_2_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "iso-8859-3",
+        encoding: &e::ISO_8859_3_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "iso-8859-4",
+        encoding: &e::ISO_8859_4_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "iso-8859-5",
+        encoding: &e::ISO_8859_5_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "iso-8859-6",
+        encoding: &e::ISO_8859_6_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "iso-8859-6-e",
+        encoding: &e::ISO_8859_6_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "iso-8859-6-i",
+        encoding: &e::ISO_8859_6_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "iso-8859-7",
+        encoding: &e::ISO_8859_7_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "iso-8859-8",
+        encoding: &e::ISO_8859_8_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "iso-8859-8-e",
+        encoding: &e::ISO_8859_8_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "iso-8859-8-i",
+        encoding: &e::ISO_8859_8_I_INIT,
+        whatwg: true,
+    },
+    Label {
+        text: "iso-ir-100",
+        encoding: &x::ISO_8859_1_INIT,
+        whatwg: false,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "iso-ir-101",
+        encoding: &e::ISO_8859_2_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "iso-ir-109",
+        encoding: &e::ISO_8859_3_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "iso-ir-110",
+        encoding: &e::ISO_8859_4_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "iso-ir-126",
+        encoding: &e::ISO_8859_7_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "iso-ir-127",
+        encoding: &e::ISO_8859_6_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "iso-ir-138",
+        encoding: &e::ISO_8859_8_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "iso-ir-144",
+        encoding: &e::ISO_8859_5_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "iso-ir-157",
+        encoding: &e::ISO_8859_10_INIT,
+        whatwg: true,
+    },
+    Label {
+        text: "iso-ir-6",
+        encoding: &x::US_ASCII_INIT,
+        whatwg: false,
+    },
+    Label {
+        text: "iso646-us",
+        encoding: &x::US_ASCII_INIT,
+        whatwg: false,
+    },
+    Label {
+        text: "iso8859-1",
+        encoding: &x::ISO_8859_1_INIT,
+        whatwg: false,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "iso8859-10",
+        encoding: &e::ISO_8859_10_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "iso8859-13",
+        encoding: &e::ISO_8859_13_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "iso8859-14",
+        encoding: &e::ISO_8859_14_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "iso8859-15",
+        encoding: &e::ISO_8859_15_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "iso8859-2",
+        encoding: &e::ISO_8859_2_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "iso8859-3",
+        encoding: &e::ISO_8859_3_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "iso8859-4",
+        encoding: &e::ISO_8859_4_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "iso8859-5",
+        encoding: &e::ISO_8859_5_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "iso8859-6",
+        encoding: &e::ISO_8859_6_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "iso8859-7",
+        encoding: &e::ISO_8859_7_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "iso8859-8",
+        encoding: &e::ISO_8859_8_INIT,
+        whatwg: true,
+    },
+    Label {
+        text: "iso88591",
+        encoding: &x::ISO_8859_1_INIT,
+        whatwg: false,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "iso885910",
+        encoding: &e::ISO_8859_10_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "iso885913",
+        encoding: &e::ISO_8859_13_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "iso885914",
+        encoding: &e::ISO_8859_14_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "iso885915",
+        encoding: &e::ISO_8859_15_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "iso88592",
+        encoding: &e::ISO_8859_2_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "iso88593",
+        encoding: &e::ISO_8859_3_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "iso88594",
+        encoding: &e::ISO_8859_4_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "iso88595",
+        encoding: &e::ISO_8859_5_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "iso88596",
+        encoding: &e::ISO_8859_6_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "iso88597",
+        encoding: &e::ISO_8859_7_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "iso88598",
+        encoding: &e::ISO_8859_8_INIT,
+        whatwg: true,
+    },
+    Label {
+        text: "iso_646.irv:1991",
+        encoding: &x::US_ASCII_INIT,
+        whatwg: false,
+    },
+    Label {
+        text: "iso_8859-1",
+        encoding: &x::ISO_8859_1_INIT,
+        whatwg: false,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "iso_8859-15",
+        encoding: &e::ISO_8859_15_INIT,
+        whatwg: true,
+    },
+    Label {
+        text: "iso_8859-1:1987",
+        encoding: &x::ISO_8859_1_INIT,
+        whatwg: false,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "iso_8859-2",
+        encoding: &e::ISO_8859_2_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "iso_8859-2:1987",
+        encoding: &e::ISO_8859_2_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "iso_8859-3",
+        encoding: &e::ISO_8859_3_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "iso_8859-3:1988",
+        encoding: &e::ISO_8859_3_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "iso_8859-4",
+        encoding: &e::ISO_8859_4_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "iso_8859-4:1988",
+        encoding: &e::ISO_8859_4_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "iso_8859-5",
+        encoding: &e::ISO_8859_5_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "iso_8859-5:1988",
+        encoding: &e::ISO_8859_5_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "iso_8859-6",
+        encoding: &e::ISO_8859_6_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "iso_8859-6:1987",
+        encoding: &e::ISO_8859_6_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "iso_8859-7",
+        encoding: &e::ISO_8859_7_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "iso_8859-7:1987",
+        encoding: &e::ISO_8859_7_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "iso_8859-8",
+        encoding: &e::ISO_8859_8_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "iso_8859-8:1988",
+        encoding: &e::ISO_8859_8_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "koi",
+        encoding: &e::KOI8_R_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "koi8",
+        encoding: &e::KOI8_R_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "koi8-r",
+        encoding: &e::KOI8_R_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "koi8-ru",
+        encoding: &e::KOI8_U_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "koi8-u",
+        encoding: &e::KOI8_U_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "koi8_r",
+        encoding: &e::KOI8_R_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "misc")]
+    Label {
+        text: "kz-1048",
+        encoding: &x::KZ_1048_INIT,
+        whatwg: false,
+    },
+    #[cfg(feature = "misc")]
+    Label {
+        text: "kz1048",
+        encoding: &x::KZ_1048_INIT,
+        whatwg: false,
+    },
+    Label {
+        text: "l1",
+        encoding: &x::ISO_8859_1_INIT,
+        whatwg: false,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "l2",
+        encoding: &e::ISO_8859_2_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "l3",
+        encoding: &e::ISO_8859_3_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "l4",
+        encoding: &e::ISO_8859_4_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "l6",
+        encoding: &e::ISO_8859_10_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "l9",
+        encoding: &e::ISO_8859_15_INIT,
+        whatwg: true,
+    },
+    Label {
+        text: "latin1",
+        encoding: &x::ISO_8859_1_INIT,
+        whatwg: false,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "latin2",
+        encoding: &e::ISO_8859_2_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "latin3",
+        encoding: &e::ISO_8859_3_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "latin4",
+        encoding: &e::ISO_8859_4_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "latin6",
+        encoding: &e::ISO_8859_10_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "logical",
+        encoding: &e::ISO_8859_8_I_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "mac",
+        encoding: &e::MACINTOSH_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "mac")]
+    Label {
+        text: "mac-arabic",
+        encoding: &x::X_MAC_ARABIC_INIT,
+        whatwg: false,
+    },
+    #[cfg(feature = "mac")]
+    Label {
+        text: "mac-celtic",
+        encoding: &x::X_MAC_CELTIC_INIT,
+        whatwg: false,
+    },
+    #[cfg(feature = "mac")]
+    Label {
+        text: "mac-centraleurroman",
+        encoding: &x::X_MAC_CENTRALEURROMAN_INIT,
+        whatwg: false,
+    },
+    #[cfg(feature = "mac")]
+    Label {
+        text: "mac-croatian",
+        encoding: &x::X_MAC_CROATIAN_INIT,
+        whatwg: false,
+    },
+    #[cfg(feature = "mac")]
+    Label {
+        text: "mac-farsi",
+        encoding: &x::X_MAC_FARSI_INIT,
+        whatwg: false,
+    },
+    #[cfg(feature = "mac")]
+    Label {
+        text: "mac-gaelic",
+        encoding: &x::X_MAC_GAELIC_INIT,
+        whatwg: false,
+    },
+    #[cfg(feature = "mac")]
+    Label {
+        text: "mac-greek",
+        encoding: &x::X_MAC_GREEK_INIT,
+        whatwg: false,
+    },
+    #[cfg(feature = "mac")]
+    Label {
+        text: "mac-icelandic",
+        encoding: &x::X_MAC_ICELANDIC_INIT,
+        whatwg: false,
+    },
+    #[cfg(feature = "mac")]
+    Label {
+        text: "mac-romanian",
+        encoding: &x::X_MAC_ROMANIAN_INIT,
+        whatwg: false,
+    },
+    #[cfg(feature = "mac")]
+    Label {
+        text: "mac-turkish",
+        encoding: &x::X_MAC_TURKISH_INIT,
+        whatwg: false,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "macintosh",
+        encoding: &e::MACINTOSH_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "shift-jis")]
+    Label {
+        text: "ms932",
+        encoding: &e::SHIFT_JIS_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "shift-jis")]
+    Label {
+        text: "ms_kanji",
+        encoding: &e::SHIFT_JIS_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "dos")]
+    Label {
+        text: "oem-us",
+        encoding: &x::IBM437_INIT,
+        whatwg: false,
+    },
+    Label {
+        text: "replacement",
+        encoding: &e::REPLACEMENT_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "misc")]
+    Label {
+        text: "rk1048",
+        encoding: &x::KZ_1048_INIT,
+        whatwg: false,
+    },
+    #[cfg(feature = "shift-jis")]
+    Label {
+        text: "shift-jis",
+        encoding: &e::SHIFT_JIS_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "shift-jis")]
+    Label {
+        text: "shift_jis",
+        encoding: &e::SHIFT_JIS_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "shift-jis")]
+    Label {
+        text: "sjis",
+        encoding: &e::SHIFT_JIS_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "misc")]
+    Label {
+        text: "strk1048-2002",
+        encoding: &x::KZ_1048_INIT,
+        whatwg: false,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "sun_eu_greek",
+        encoding: &e::ISO_8859_7_INIT,
+        whatwg: true,
+    },
+    Label {
+        text: "ucs-2",
+        encoding: &e::UTF_16LE_INIT,
+        whatwg: true,
+    },
+    Label {
+        text: "unicode",
+        encoding: &e::UTF_16LE_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "unicode-extras")]
+    Label {
+        text: "unicode-1-1-utf-7",
+        encoding: &x::UTF_7_INIT,
+        whatwg: false,
+    },
+    Label {
+        text: "unicode-1-1-utf-8",
+        encoding: &e::UTF_8_INIT,
+        whatwg: true,
+    },
+    Label {
+        text: "unicode11utf8",
+        encoding: &e::UTF_8_INIT,
+        whatwg: true,
+    },
+    Label {
+        text: "unicode20utf8",
+        encoding: &e::UTF_8_INIT,
+        whatwg: true,
+    },
+    Label {
+        text: "unicodefeff",
+        encoding: &e::UTF_16LE_INIT,
+        whatwg: true,
+    },
+    Label {
+        text: "unicodefffe",
+        encoding: &e::UTF_16BE_INIT,
+        whatwg: true,
+    },
+    Label {
+        text: "us",
+        encoding: &x::US_ASCII_INIT,
+        whatwg: false,
+    },
+    Label {
+        text: "us-ascii",
+        encoding: &x::US_ASCII_INIT,
+        whatwg: false,
+    },
+    Label {
+        text: "utf-16",
+        encoding: &e::UTF_16LE_INIT,
+        whatwg: true,
+    },
+    Label {
+        text: "utf-16be",
+        encoding: &e::UTF_16BE_INIT,
+        whatwg: true,
+    },
+    Label {
+        text: "utf-16le",
+        encoding: &e::UTF_16LE_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "unicode-extras")]
+    Label {
+        text: "utf-32",
+        encoding: &x::UTF_32LE_INIT,
+        whatwg: false,
+    },
+    #[cfg(feature = "unicode-extras")]
+    Label {
+        text: "utf-32be",
+        encoding: &x::UTF_32BE_INIT,
+        whatwg: false,
+    },
+    #[cfg(feature = "unicode-extras")]
+    Label {
+        text: "utf-32le",
+        encoding: &x::UTF_32LE_INIT,
+        whatwg: false,
+    },
+    #[cfg(feature = "unicode-extras")]
+    Label {
+        text: "utf-7",
+        encoding: &x::UTF_7_INIT,
+        whatwg: false,
+    },
+    Label {
+        text: "utf-8",
+        encoding: &e::UTF_8_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "unicode-extras")]
+    Label {
+        text: "utf32",
+        encoding: &x::UTF_32LE_INIT,
+        whatwg: false,
+    },
+    #[cfg(feature = "unicode-extras")]
+    Label {
+        text: "utf32be",
+        encoding: &x::UTF_32BE_INIT,
+        whatwg: false,
+    },
+    #[cfg(feature = "unicode-extras")]
+    Label {
+        text: "utf32le",
+        encoding: &x::UTF_32LE_INIT,
+        whatwg: false,
+    },
+    #[cfg(feature = "unicode-extras")]
+    Label {
+        text: "utf7",
+        encoding: &x::UTF_7_INIT,
+        whatwg: false,
+    },
+    Label {
+        text: "utf8",
+        encoding: &e::UTF_8_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "visual",
+        encoding: &e::ISO_8859_8_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "windows-1250",
+        encoding: &e::WINDOWS_1250_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "windows-1251",
+        encoding: &e::WINDOWS_1251_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "windows-1252",
+        encoding: &e::WINDOWS_1252_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "windows-1253",
+        encoding: &e::WINDOWS_1253_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "windows-1254",
+        encoding: &e::WINDOWS_1254_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "windows-1255",
+        encoding: &e::WINDOWS_1255_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "windows-1256",
+        encoding: &e::WINDOWS_1256_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "windows-1257",
+        encoding: &e::WINDOWS_1257_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "windows-1258",
+        encoding: &e::WINDOWS_1258_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "shift-jis")]
+    Label {
+        text: "windows-31j",
+        encoding: &e::SHIFT_JIS_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "windows-874",
+        encoding: &e::WINDOWS_874_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "euc-kr")]
+    Label {
+        text: "windows-949",
+        encoding: &e::EUC_KR_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "x-cp1250",
+        encoding: &e::WINDOWS_1250_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "x-cp1251",
+        encoding: &e::WINDOWS_1251_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "x-cp1252",
+        encoding: &e::WINDOWS_1252_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "x-cp1253",
+        encoding: &e::WINDOWS_1253_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "x-cp1254",
+        encoding: &e::WINDOWS_1254_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "x-cp1255",
+        encoding: &e::WINDOWS_1255_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "x-cp1256",
+        encoding: &e::WINDOWS_1256_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "x-cp1257",
+        encoding: &e::WINDOWS_1257_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "x-cp1258",
+        encoding: &e::WINDOWS_1258_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "euc-jp")]
+    Label {
+        text: "x-euc-jp",
+        encoding: &e::EUC_JP_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "gb18030")]
+    Label {
+        text: "x-gbk",
+        encoding: &e::GBK_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "mac")]
+    Label {
+        text: "x-mac-arabic",
+        encoding: &x::X_MAC_ARABIC_INIT,
+        whatwg: false,
+    },
+    #[cfg(feature = "mac")]
+    Label {
+        text: "x-mac-ce",
+        encoding: &x::X_MAC_CENTRALEURROMAN_INIT,
+        whatwg: false,
+    },
+    #[cfg(feature = "mac")]
+    Label {
+        text: "x-mac-celtic",
+        encoding: &x::X_MAC_CELTIC_INIT,
+        whatwg: false,
+    },
+    #[cfg(feature = "mac")]
+    Label {
+        text: "x-mac-centraleurroman",
+        encoding: &x::X_MAC_CENTRALEURROMAN_INIT,
+        whatwg: false,
+    },
+    #[cfg(feature = "mac")]
+    Label {
+        text: "x-mac-croatian",
+        encoding: &x::X_MAC_CROATIAN_INIT,
+        whatwg: false,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "x-mac-cyrillic",
+        encoding: &e::X_MAC_CYRILLIC_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "mac")]
+    Label {
+        text: "x-mac-farsi",
+        encoding: &x::X_MAC_FARSI_INIT,
+        whatwg: false,
+    },
+    #[cfg(feature = "mac")]
+    Label {
+        text: "x-mac-gaelic",
+        encoding: &x::X_MAC_GAELIC_INIT,
+        whatwg: false,
+    },
+    #[cfg(feature = "mac")]
+    Label {
+        text: "x-mac-greek",
+        encoding: &x::X_MAC_GREEK_INIT,
+        whatwg: false,
+    },
+    #[cfg(feature = "mac")]
+    Label {
+        text: "x-mac-icelandic",
+        encoding: &x::X_MAC_ICELANDIC_INIT,
+        whatwg: false,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "x-mac-roman",
+        encoding: &e::MACINTOSH_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "mac")]
+    Label {
+        text: "x-mac-romanian",
+        encoding: &x::X_MAC_ROMANIAN_INIT,
+        whatwg: false,
+    },
+    #[cfg(feature = "mac")]
+    Label {
+        text: "x-mac-turkish",
+        encoding: &x::X_MAC_TURKISH_INIT,
+        whatwg: false,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "x-mac-ukrainian",
+        encoding: &e::X_MAC_CYRILLIC_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "shift-jis")]
+    Label {
+        text: "x-sjis",
+        encoding: &e::SHIFT_JIS_INIT,
+        whatwg: true,
+    },
+    Label {
+        text: "x-unicode20utf8",
+        encoding: &e::UTF_8_INIT,
+        whatwg: true,
+    },
+    Label {
+        text: "x-user-defined",
+        encoding: &e::X_USER_DEFINED_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "big5")]
+    Label {
+        text: "x-x-big5",
+        encoding: &e::BIG5_INIT,
+        whatwg: true,
+    },
+];
+
+/// Every label the WHATWG Encoding Standard defines, sorted for binary search.
+///
+/// This is the table `Encoding::for_whatwg_label` reads, and it is the only
+/// place the standard's reassignments live: `iso-8859-1` to windows-1252,
+/// `gb2312` to GBK, `iso-2022-kr` to replacement.  The general lookup must not
+/// see them.
+#[cfg(feature = "whatwg-aliases")]
+pub static WHATWG_LABELS: &[Label] = &[
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "866",
+        encoding: &e::IBM866_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "ansi_x3.4-1968",
+        encoding: &e::WINDOWS_1252_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "arabic",
+        encoding: &e::ISO_8859_6_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "ascii",
+        encoding: &e::WINDOWS_1252_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "asmo-708",
+        encoding: &e::ISO_8859_6_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "big5")]
+    Label {
+        text: "big5",
+        encoding: &e::BIG5_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "big5")]
+    Label {
+        text: "big5-hkscs",
+        encoding: &e::BIG5_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "gb18030")]
+    Label {
+        text: "chinese",
+        encoding: &e::GBK_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "big5")]
+    Label {
+        text: "cn-big5",
+        encoding: &e::BIG5_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "cp1250",
+        encoding: &e::WINDOWS_1250_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "cp1251",
+        encoding: &e::WINDOWS_1251_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "cp1252",
+        encoding: &e::WINDOWS_1252_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "cp1253",
+        encoding: &e::WINDOWS_1253_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "cp1254",
+        encoding: &e::WINDOWS_1254_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "cp1255",
+        encoding: &e::WINDOWS_1255_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "cp1256",
+        encoding: &e::WINDOWS_1256_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "cp1257",
+        encoding: &e::WINDOWS_1257_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "cp1258",
+        encoding: &e::WINDOWS_1258_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "cp819",
+        encoding: &e::WINDOWS_1252_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "cp866",
+        encoding: &e::IBM866_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "big5")]
+    Label {
+        text: "csbig5",
+        encoding: &e::BIG5_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "euc-kr")]
+    Label {
+        text: "cseuckr",
+        encoding: &e::EUC_KR_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "euc-jp")]
+    Label {
+        text: "cseucpkdfmtjapanese",
+        encoding: &e::EUC_JP_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "gb18030")]
+    Label {
+        text: "csgb2312",
+        encoding: &e::GBK_INIT,
+        whatwg: true,
+    },
+    #[cfg(feature = "single-byte")]
+    Label {
+        text: "csibm866",
+        encoding: &e::IBM866_INIT,
+        whatwg: true,
     },
     #[cfg(feature = "iso-2022-jp")]
     Label {
@@ -522,47 +2114,11 @@ pub static LABELS: &[Label] = &[
         encoding: &e::EUC_KR_INIT,
         whatwg: true,
     },
-    #[cfg(feature = "misc")]
-    Label {
-        text: "cskz1048",
-        encoding: &x::KZ_1048_INIT,
-        whatwg: false,
-    },
     #[cfg(feature = "single-byte")]
     Label {
         text: "csmacintosh",
         encoding: &e::MACINTOSH_INIT,
         whatwg: true,
-    },
-    #[cfg(feature = "dos")]
-    Label {
-        text: "cspc775baltic",
-        encoding: &x::IBM775_INIT,
-        whatwg: false,
-    },
-    #[cfg(feature = "dos")]
-    Label {
-        text: "cspc850multilingual",
-        encoding: &x::IBM850_INIT,
-        whatwg: false,
-    },
-    #[cfg(feature = "dos")]
-    Label {
-        text: "cspc862latinhebrew",
-        encoding: &x::IBM862_INIT,
-        whatwg: false,
-    },
-    #[cfg(feature = "dos")]
-    Label {
-        text: "cspc8codepage437",
-        encoding: &x::IBM437_INIT,
-        whatwg: false,
-    },
-    #[cfg(feature = "dos")]
-    Label {
-        text: "cspcp852",
-        encoding: &x::IBM852_INIT,
-        whatwg: false,
     },
     #[cfg(feature = "shift-jis")]
     Label {
@@ -575,71 +2131,17 @@ pub static LABELS: &[Label] = &[
         encoding: &e::UTF_16LE_INIT,
         whatwg: true,
     },
-    #[cfg(feature = "unicode-extras")]
-    Label {
-        text: "csunicode11utf7",
-        encoding: &x::UTF_7_INIT,
-        whatwg: false,
-    },
     #[cfg(feature = "single-byte")]
     Label {
         text: "cyrillic",
         encoding: &e::ISO_8859_5_INIT,
         whatwg: true,
     },
-    #[cfg(feature = "dos")]
-    Label {
-        text: "dos-862",
-        encoding: &x::IBM862_INIT,
-        whatwg: false,
-    },
     #[cfg(feature = "single-byte")]
     Label {
         text: "dos-874",
         encoding: &e::WINDOWS_874_INIT,
         whatwg: true,
-    },
-    #[cfg(feature = "ebcdic")]
-    Label {
-        text: "ebcdic-cp-be",
-        encoding: &x::IBM500_INIT,
-        whatwg: false,
-    },
-    #[cfg(feature = "ebcdic")]
-    Label {
-        text: "ebcdic-cp-ca",
-        encoding: &x::IBM037_INIT,
-        whatwg: false,
-    },
-    #[cfg(feature = "ebcdic")]
-    Label {
-        text: "ebcdic-cp-ch",
-        encoding: &x::IBM500_INIT,
-        whatwg: false,
-    },
-    #[cfg(feature = "ebcdic")]
-    Label {
-        text: "ebcdic-cp-he",
-        encoding: &x::IBM424_INIT,
-        whatwg: false,
-    },
-    #[cfg(feature = "ebcdic")]
-    Label {
-        text: "ebcdic-cp-nl",
-        encoding: &x::IBM037_INIT,
-        whatwg: false,
-    },
-    #[cfg(feature = "ebcdic")]
-    Label {
-        text: "ebcdic-cp-us",
-        encoding: &x::IBM037_INIT,
-        whatwg: false,
-    },
-    #[cfg(feature = "ebcdic")]
-    Label {
-        text: "ebcdic-cp-wt",
-        encoding: &x::IBM037_INIT,
-        whatwg: false,
     },
     #[cfg(feature = "single-byte")]
     Label {
@@ -724,143 +2226,17 @@ pub static LABELS: &[Label] = &[
         encoding: &e::REPLACEMENT_INIT,
         whatwg: true,
     },
-    #[cfg(feature = "ebcdic")]
-    Label {
-        text: "ibm037",
-        encoding: &x::IBM037_INIT,
-        whatwg: false,
-    },
-    #[cfg(feature = "dos")]
-    Label {
-        text: "ibm1006",
-        encoding: &x::IBM1006_INIT,
-        whatwg: false,
-    },
-    #[cfg(feature = "ebcdic")]
-    Label {
-        text: "ibm1026",
-        encoding: &x::IBM1026_INIT,
-        whatwg: false,
-    },
-    #[cfg(feature = "ebcdic")]
-    Label {
-        text: "ibm424",
-        encoding: &x::IBM424_INIT,
-        whatwg: false,
-    },
-    #[cfg(feature = "dos")]
-    Label {
-        text: "ibm437",
-        encoding: &x::IBM437_INIT,
-        whatwg: false,
-    },
-    #[cfg(feature = "ebcdic")]
-    Label {
-        text: "ibm500",
-        encoding: &x::IBM500_INIT,
-        whatwg: false,
-    },
-    #[cfg(feature = "dos")]
-    Label {
-        text: "ibm737",
-        encoding: &x::IBM737_INIT,
-        whatwg: false,
-    },
-    #[cfg(feature = "dos")]
-    Label {
-        text: "ibm775",
-        encoding: &x::IBM775_INIT,
-        whatwg: false,
-    },
     #[cfg(feature = "single-byte")]
     Label {
         text: "ibm819",
         encoding: &e::WINDOWS_1252_INIT,
         whatwg: true,
     },
-    #[cfg(feature = "dos")]
-    Label {
-        text: "ibm850",
-        encoding: &x::IBM850_INIT,
-        whatwg: false,
-    },
-    #[cfg(feature = "dos")]
-    Label {
-        text: "ibm852",
-        encoding: &x::IBM852_INIT,
-        whatwg: false,
-    },
-    #[cfg(feature = "dos")]
-    Label {
-        text: "ibm855",
-        encoding: &x::IBM855_INIT,
-        whatwg: false,
-    },
-    #[cfg(feature = "dos")]
-    Label {
-        text: "ibm856",
-        encoding: &x::IBM856_INIT,
-        whatwg: false,
-    },
-    #[cfg(feature = "dos")]
-    Label {
-        text: "ibm857",
-        encoding: &x::IBM857_INIT,
-        whatwg: false,
-    },
-    #[cfg(feature = "dos")]
-    Label {
-        text: "ibm860",
-        encoding: &x::IBM860_INIT,
-        whatwg: false,
-    },
-    #[cfg(feature = "dos")]
-    Label {
-        text: "ibm861",
-        encoding: &x::IBM861_INIT,
-        whatwg: false,
-    },
-    #[cfg(feature = "dos")]
-    Label {
-        text: "ibm862",
-        encoding: &x::IBM862_INIT,
-        whatwg: false,
-    },
-    #[cfg(feature = "dos")]
-    Label {
-        text: "ibm863",
-        encoding: &x::IBM863_INIT,
-        whatwg: false,
-    },
-    #[cfg(feature = "dos")]
-    Label {
-        text: "ibm864",
-        encoding: &x::IBM864_INIT,
-        whatwg: false,
-    },
-    #[cfg(feature = "dos")]
-    Label {
-        text: "ibm865",
-        encoding: &x::IBM865_INIT,
-        whatwg: false,
-    },
     #[cfg(feature = "single-byte")]
     Label {
         text: "ibm866",
         encoding: &e::IBM866_INIT,
         whatwg: true,
-    },
-    #[cfg(feature = "dos")]
-    Label {
-        text: "ibm869",
-        encoding: &x::IBM869_INIT,
-        whatwg: false,
-    },
-    #[cfg(feature = "ebcdic")]
-    Label {
-        text: "ibm875",
-        encoding: &x::IBM875_INIT,
-        whatwg: false,
     },
     Label {
         text: "iso-10646-ucs-2",
@@ -1422,18 +2798,6 @@ pub static LABELS: &[Label] = &[
         encoding: &e::EUC_KR_INIT,
         whatwg: true,
     },
-    #[cfg(feature = "misc")]
-    Label {
-        text: "kz-1048",
-        encoding: &x::KZ_1048_INIT,
-        whatwg: false,
-    },
-    #[cfg(feature = "misc")]
-    Label {
-        text: "kz1048",
-        encoding: &x::KZ_1048_INIT,
-        whatwg: false,
-    },
     #[cfg(feature = "single-byte")]
     Label {
         text: "l1",
@@ -1524,66 +2888,6 @@ pub static LABELS: &[Label] = &[
         encoding: &e::MACINTOSH_INIT,
         whatwg: true,
     },
-    #[cfg(feature = "mac")]
-    Label {
-        text: "mac-arabic",
-        encoding: &x::X_MAC_ARABIC_INIT,
-        whatwg: false,
-    },
-    #[cfg(feature = "mac")]
-    Label {
-        text: "mac-celtic",
-        encoding: &x::X_MAC_CELTIC_INIT,
-        whatwg: false,
-    },
-    #[cfg(feature = "mac")]
-    Label {
-        text: "mac-centraleurroman",
-        encoding: &x::X_MAC_CENTRALEURROMAN_INIT,
-        whatwg: false,
-    },
-    #[cfg(feature = "mac")]
-    Label {
-        text: "mac-croatian",
-        encoding: &x::X_MAC_CROATIAN_INIT,
-        whatwg: false,
-    },
-    #[cfg(feature = "mac")]
-    Label {
-        text: "mac-farsi",
-        encoding: &x::X_MAC_FARSI_INIT,
-        whatwg: false,
-    },
-    #[cfg(feature = "mac")]
-    Label {
-        text: "mac-gaelic",
-        encoding: &x::X_MAC_GAELIC_INIT,
-        whatwg: false,
-    },
-    #[cfg(feature = "mac")]
-    Label {
-        text: "mac-greek",
-        encoding: &x::X_MAC_GREEK_INIT,
-        whatwg: false,
-    },
-    #[cfg(feature = "mac")]
-    Label {
-        text: "mac-icelandic",
-        encoding: &x::X_MAC_ICELANDIC_INIT,
-        whatwg: false,
-    },
-    #[cfg(feature = "mac")]
-    Label {
-        text: "mac-romanian",
-        encoding: &x::X_MAC_ROMANIAN_INIT,
-        whatwg: false,
-    },
-    #[cfg(feature = "mac")]
-    Label {
-        text: "mac-turkish",
-        encoding: &x::X_MAC_TURKISH_INIT,
-        whatwg: false,
-    },
     #[cfg(feature = "single-byte")]
     Label {
         text: "macintosh",
@@ -1602,22 +2906,10 @@ pub static LABELS: &[Label] = &[
         encoding: &e::SHIFT_JIS_INIT,
         whatwg: true,
     },
-    #[cfg(feature = "dos")]
-    Label {
-        text: "oem-us",
-        encoding: &x::IBM437_INIT,
-        whatwg: false,
-    },
     Label {
         text: "replacement",
         encoding: &e::REPLACEMENT_INIT,
         whatwg: true,
-    },
-    #[cfg(feature = "misc")]
-    Label {
-        text: "rk1048",
-        encoding: &x::KZ_1048_INIT,
-        whatwg: false,
     },
     #[cfg(feature = "shift-jis")]
     Label {
@@ -1636,12 +2928,6 @@ pub static LABELS: &[Label] = &[
         text: "sjis",
         encoding: &e::SHIFT_JIS_INIT,
         whatwg: true,
-    },
-    #[cfg(feature = "misc")]
-    Label {
-        text: "strk1048-2002",
-        encoding: &x::KZ_1048_INIT,
-        whatwg: false,
     },
     #[cfg(feature = "single-byte")]
     Label {
@@ -1664,12 +2950,6 @@ pub static LABELS: &[Label] = &[
         text: "unicode",
         encoding: &e::UTF_16LE_INIT,
         whatwg: true,
-    },
-    #[cfg(feature = "unicode-extras")]
-    Label {
-        text: "unicode-1-1-utf-7",
-        encoding: &x::UTF_7_INIT,
-        whatwg: false,
     },
     Label {
         text: "unicode-1-1-utf-8",
@@ -1717,58 +2997,10 @@ pub static LABELS: &[Label] = &[
         encoding: &e::UTF_16LE_INIT,
         whatwg: true,
     },
-    #[cfg(feature = "unicode-extras")]
-    Label {
-        text: "utf-32",
-        encoding: &x::UTF_32LE_INIT,
-        whatwg: false,
-    },
-    #[cfg(feature = "unicode-extras")]
-    Label {
-        text: "utf-32be",
-        encoding: &x::UTF_32BE_INIT,
-        whatwg: false,
-    },
-    #[cfg(feature = "unicode-extras")]
-    Label {
-        text: "utf-32le",
-        encoding: &x::UTF_32LE_INIT,
-        whatwg: false,
-    },
-    #[cfg(feature = "unicode-extras")]
-    Label {
-        text: "utf-7",
-        encoding: &x::UTF_7_INIT,
-        whatwg: false,
-    },
     Label {
         text: "utf-8",
         encoding: &e::UTF_8_INIT,
         whatwg: true,
-    },
-    #[cfg(feature = "unicode-extras")]
-    Label {
-        text: "utf32",
-        encoding: &x::UTF_32LE_INIT,
-        whatwg: false,
-    },
-    #[cfg(feature = "unicode-extras")]
-    Label {
-        text: "utf32be",
-        encoding: &x::UTF_32BE_INIT,
-        whatwg: false,
-    },
-    #[cfg(feature = "unicode-extras")]
-    Label {
-        text: "utf32le",
-        encoding: &x::UTF_32LE_INIT,
-        whatwg: false,
-    },
-    #[cfg(feature = "unicode-extras")]
-    Label {
-        text: "utf7",
-        encoding: &x::UTF_7_INIT,
-        whatwg: false,
     },
     Label {
         text: "utf8",
@@ -1919,83 +3151,17 @@ pub static LABELS: &[Label] = &[
         encoding: &e::GBK_INIT,
         whatwg: true,
     },
-    #[cfg(feature = "mac")]
-    Label {
-        text: "x-mac-arabic",
-        encoding: &x::X_MAC_ARABIC_INIT,
-        whatwg: false,
-    },
-    #[cfg(feature = "mac")]
-    Label {
-        text: "x-mac-ce",
-        encoding: &x::X_MAC_CENTRALEURROMAN_INIT,
-        whatwg: false,
-    },
-    #[cfg(feature = "mac")]
-    Label {
-        text: "x-mac-celtic",
-        encoding: &x::X_MAC_CELTIC_INIT,
-        whatwg: false,
-    },
-    #[cfg(feature = "mac")]
-    Label {
-        text: "x-mac-centraleurroman",
-        encoding: &x::X_MAC_CENTRALEURROMAN_INIT,
-        whatwg: false,
-    },
-    #[cfg(feature = "mac")]
-    Label {
-        text: "x-mac-croatian",
-        encoding: &x::X_MAC_CROATIAN_INIT,
-        whatwg: false,
-    },
     #[cfg(feature = "single-byte")]
     Label {
         text: "x-mac-cyrillic",
         encoding: &e::X_MAC_CYRILLIC_INIT,
         whatwg: true,
     },
-    #[cfg(feature = "mac")]
-    Label {
-        text: "x-mac-farsi",
-        encoding: &x::X_MAC_FARSI_INIT,
-        whatwg: false,
-    },
-    #[cfg(feature = "mac")]
-    Label {
-        text: "x-mac-gaelic",
-        encoding: &x::X_MAC_GAELIC_INIT,
-        whatwg: false,
-    },
-    #[cfg(feature = "mac")]
-    Label {
-        text: "x-mac-greek",
-        encoding: &x::X_MAC_GREEK_INIT,
-        whatwg: false,
-    },
-    #[cfg(feature = "mac")]
-    Label {
-        text: "x-mac-icelandic",
-        encoding: &x::X_MAC_ICELANDIC_INIT,
-        whatwg: false,
-    },
     #[cfg(feature = "single-byte")]
     Label {
         text: "x-mac-roman",
         encoding: &e::MACINTOSH_INIT,
         whatwg: true,
-    },
-    #[cfg(feature = "mac")]
-    Label {
-        text: "x-mac-romanian",
-        encoding: &x::X_MAC_ROMANIAN_INIT,
-        whatwg: false,
-    },
-    #[cfg(feature = "mac")]
-    Label {
-        text: "x-mac-turkish",
-        encoding: &x::X_MAC_TURKISH_INIT,
-        whatwg: false,
     },
     #[cfg(feature = "single-byte")]
     Label {
@@ -2170,6 +3336,8 @@ pub static ALL_ENCODINGS: &[&Encoding] = &[
     &x::ATARI_ST_INIT,
     #[cfg(feature = "misc")]
     &x::KZ_1048_INIT,
+    &x::ISO_8859_1_INIT,
+    &x::US_ASCII_INIT,
     #[cfg(feature = "unicode-extras")]
     &x::UTF_32BE_INIT,
     #[cfg(feature = "unicode-extras")]
