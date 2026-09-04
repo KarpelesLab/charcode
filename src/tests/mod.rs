@@ -13,7 +13,8 @@ mod buffers;
         feature = "ebcdic",
         feature = "mac",
         feature = "misc",
-        feature = "unicode-extras"
+        feature = "unicode-extras",
+        feature = "iso-2022-kr"
     )
 ))]
 mod extra;

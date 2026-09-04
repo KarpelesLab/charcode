@@ -59,7 +59,8 @@ jobs:
         run: |
           set -euo pipefail
           for group in single-byte big5 euc-jp euc-kr gb18030 iso-2022-jp \
-                       shift-jis dos ebcdic mac misc unicode-extras; do
+                       shift-jis iso-2022-kr dos ebcdic mac misc \
+                       unicode-extras; do
             echo "::group::$group"
             cargo test --no-default-features --features "alloc,$group"
             echo "::endgroup::"
@@ -149,8 +150,8 @@ jobs:
           # what it would have meant there.  The message is captured rather
           # than piped, since `pipefail` would see the non-zero exit that is
           # the point of the check.
-          ! "$bin" -f iso-2022-kr </dev/null 2>/dev/null
-          refusal="$("$bin" -f iso-2022-kr </dev/null 2>&1 || true)"
+          ! "$bin" -f hz-gb-2312 </dev/null 2>/dev/null
+          refusal="$("$bin" -f hz-gb-2312 </dev/null 2>&1 || true)"
           grep -q 'WHATWG' <<<"$refusal"
           # GB 2312 is its own charset here, and disagrees with GBK.
           printf '\xa1\xaa' | "$bin" -f gb2312 | diff - <(printf '\xe2\x80\x95')

@@ -426,6 +426,9 @@ ALGORITHMIC = [
     ("gb18030", "GB2312", "GB2312", "Gb2312", 20936,
      ["gb2312", "gb_2312", "gb_2312-80", "gb2312-80", "chinese", "csgb2312",
       "csiso58gb231280", "iso-ir-58", "euc-cn", "x-euc-cn"]),
+    # ISO-2022-KR, which reuses the EUC-KR table.
+    ("iso-2022-kr", "ISO-2022-KR", "ISO_2022_KR", "Iso2022Kr", 50225,
+     ["iso-2022-kr", "csiso2022kr", "iso2022kr"]),
     ("unicode-extras", "UTF-32BE", "UTF_32BE", "Utf32Be", 12001,
      ["utf-32be", "utf32be"]),
     ("unicode-extras", "UTF-32LE", "UTF_32LE", "Utf32Le", 12000,

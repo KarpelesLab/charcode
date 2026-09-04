@@ -336,3 +336,89 @@ fn utf_7_is_not_reachable_through_the_standards_lookup() {
     assert!(!crate::UTF_7.is_whatwg());
     assert!(!crate::UTF_7.is_ascii_compatible());
 }
+
+#[cfg(feature = "iso-2022-kr")]
+#[test]
+fn iso_2022_kr_matches_rfc_1557() {
+    use crate::ISO_2022_KR;
+
+    let encode = |text: &str| {
+        let mut out = Vec::new();
+        ISO_2022_KR
+            .new_encoder()
+            .encode_from_str(text, &mut out, true)
+            .unwrap_or_else(|e| panic!("ISO-2022-KR cannot encode {e}"));
+        out
+    };
+
+    // Vectors both glibc and Python produce.
+    assert_eq!(
+        decode(ISO_2022_KR, b"\x1B$)C\x0E0!\x0F").as_deref(),
+        Some("\u{AC00}")
+    );
+    assert_eq!(
+        decode(ISO_2022_KR, b"\x1B$)C\x0Elm\\be^\x0Fzz\x0E,(\x0F").as_deref(),
+        Some("\u{65E5}\u{672C}\u{8A9E}zz\u{416}")
+    );
+    assert_eq!(encode("\u{AC00}"), b"\x1B$)C\x0E0!\x0F");
+    // The designator is written once, lazily, and the stream ends in ASCII.
+    assert_eq!(encode("abc\u{AC00}def"), b"abc\x1B$)C\x0E0!\x0Fdef");
+    assert_eq!(encode("plain"), b"plain");
+
+    // The designator is a no-op, wherever it appears and however often.
+    assert_eq!(
+        decode(ISO_2022_KR, b"\x1B$)C\x1B$)Cab").as_deref(),
+        Some("ab")
+    );
+    assert_eq!(decode(ISO_2022_KR, b"ab\x1B$)C").as_deref(), Some("ab"));
+
+    // A line ends in ASCII, so a run left open does not swallow the next line.
+    assert_eq!(
+        decode(ISO_2022_KR, b"\x1B$)C\x0E0!\n0!").as_deref(),
+        Some("\u{AC00}\n0!")
+    );
+
+    // Errors: a high byte, an unassigned cell, a truncated pair, and an escape
+    // that is not the designator — which is refused rather than passed through,
+    // since passing it through is what lets markup hide.
+    assert_eq!(decode(ISO_2022_KR, b"\x80"), None);
+    assert_eq!(decode(ISO_2022_KR, b"\x1B$)C\x0E-!\x0F"), None);
+    assert_eq!(decode(ISO_2022_KR, b"\x1B$)C\x0E0"), None);
+    assert_eq!(decode(ISO_2022_KR, b"a\x1B$)Ab"), None);
+    // ...and the bytes after a bad escape are still read, not dropped.
+    let (text, _, _) = ISO_2022_KR.decode_with(
+        b"a\x1B$)Ab",
+        crate::DecodeOptions::new().bom(crate::Bom::Ignore),
+    );
+    assert_eq!(text, "a\u{FFFD}$)Ab");
+
+    // The encoder refuses to write the codes its own structure is made of.
+    let mut out = Vec::new();
+    assert!(
+        ISO_2022_KR
+            .new_encoder()
+            .encode_from_str("a\u{0E}b", &mut out, true)
+            .is_err()
+    );
+}
+
+/// The standard refuses this label; compiling the encoding in must not change
+/// that, or a build that wants it for a mail archive would widen what a label
+/// off the network can select.
+#[cfg(all(feature = "iso-2022-kr", feature = "whatwg-aliases"))]
+#[test]
+fn iso_2022_kr_is_not_reachable_through_the_standards_lookup() {
+    assert_eq!(
+        Encoding::for_label(b"iso-2022-kr"),
+        Some(crate::ISO_2022_KR)
+    );
+    assert_eq!(
+        Encoding::for_whatwg_label(b"iso-2022-kr"),
+        Some(crate::REPLACEMENT)
+    );
+    assert_eq!(
+        Encoding::for_whatwg_label(b"csiso2022kr"),
+        Some(crate::REPLACEMENT)
+    );
+    assert!(!crate::ISO_2022_KR.is_whatwg());
+}

@@ -77,6 +77,9 @@ euc-jp = []        # ~70 KiB, shares the JIS tables with the two below
 euc-kr = []        # ~115 KiB
 gb18030 = []       # ~145 KiB, also provides GBK
 iso-2022-jp = []   # ~55 KiB
+# Reuses the EUC-KR table, so it needs that group.  The standard refuses this
+# encoding outright; `for_whatwg_label` still answers `replacement` for it.
+iso-2022-kr = ["euc-kr"]
 shift-jis = []     # ~55 KiB
 
 # --- charsets outside the standard ------------------------------------------

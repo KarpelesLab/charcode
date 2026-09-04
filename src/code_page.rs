@@ -13,10 +13,10 @@
 //! `iso-8859-1` and `ascii` would give through
 //! [`Encoding::for_whatwg_label`](crate::Encoding::for_whatwg_label).
 //!
-//! A number for a charset this crate does not have yet — 28599 for ISO-8859-9,
-//! 936 for GB 2312 — is absent rather than pointed at a superset.  Numbers for
-//! encodings the standard neutralizes — 50225, 50227, 50229 and 52936 —
-//! resolve to [`REPLACEMENT`].
+//! A number for a charset this crate does not have is absent, rather than
+//! pointed at a superset or at [`REPLACEMENT`]: 50227 is ISO-2022-CN and 52936
+//! is HZ-GB-2312 in Microsoft's registry, whatever the standard makes of the
+//! matching labels, and neither is something this crate can decode.
 //!
 //! [Code Page Identifiers]: https://learn.microsoft.com/en-us/windows/win32/intl/code-page-identifiers
 
@@ -132,16 +132,12 @@ pub(crate) static CODE_PAGES: &[CodePage] = &[
     alias(50221, &e::ISO_2022_JP_INIT), // allows half-width katakana
     #[cfg(feature = "iso-2022-jp")]
     alias(50222, &e::ISO_2022_JP_INIT), // allows SO/SI
-    cp(50225, &e::REPLACEMENT_INIT),    // ISO-2022-KR
-    alias(50227, &e::REPLACEMENT_INIT), // ISO-2022-CN
-    alias(50229, &e::REPLACEMENT_INIT), // ISO-2022-CN-EXT
     #[cfg(feature = "euc-jp")]
     cp(51932, &e::EUC_JP_INIT),
     #[cfg(feature = "gb18030")]
     alias(51936, &e::GBK_INIT), // EUC-CN
     #[cfg(feature = "euc-kr")]
     alias(51949, &e::EUC_KR_INIT),
-    alias(52936, &e::REPLACEMENT_INIT), // HZ-GB-2312
     #[cfg(feature = "gb18030")]
     cp(54936, &e::GB18030_INIT),
     cp(65001, &e::UTF_8_INIT),

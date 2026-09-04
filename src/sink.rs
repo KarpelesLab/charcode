@@ -83,7 +83,7 @@ impl<'a> ByteSink<'a> {
 /// The standard describes errors in terms of restoring bytes to the input stream.
 /// Every such restore involves at most the current byte, which the decoder simply
 /// leaves unconsumed, plus at most two bytes it had been holding in its own state.
-#[cfg(any(feature = "gb18030", feature = "iso-2022-jp"))]
+#[cfg(any(feature = "gb18030", feature = "iso-2022-jp", feature = "iso-2022-kr"))]
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub(crate) struct Pushback {
     buf: [u8; 2],
@@ -91,7 +91,7 @@ pub(crate) struct Pushback {
     len: u8,
 }
 
-#[cfg(any(feature = "gb18030", feature = "iso-2022-jp"))]
+#[cfg(any(feature = "gb18030", feature = "iso-2022-jp", feature = "iso-2022-kr"))]
 impl Pushback {
     pub(crate) fn is_empty(&self) -> bool {
         self.pos == self.len
@@ -143,7 +143,7 @@ mod tests {
         assert_eq!(sink.room(), 0);
     }
 
-    #[cfg(any(feature = "gb18030", feature = "iso-2022-jp"))]
+    #[cfg(any(feature = "gb18030", feature = "iso-2022-jp", feature = "iso-2022-kr"))]
     #[test]
     fn pushback_is_fifo() {
         let mut pb = Pushback::default();

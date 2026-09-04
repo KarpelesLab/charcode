@@ -245,6 +245,8 @@ mod identity;
 mod index;
 #[cfg(feature = "iso-2022-jp")]
 mod iso_2022_jp;
+#[cfg(feature = "iso-2022-kr")]
+mod iso_2022_kr;
 mod options;
 mod replacement;
 mod result;

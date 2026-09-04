@@ -75,13 +75,11 @@ fn the_two_lookups_disagree_on_purpose() {
     assert_eq!(decode(GB2312, b"\xA1\xAA"), "\u{2015}");
     assert_eq!(decode(GBK, b"\xA1\xAA"), "\u{2014}");
 
-    // A label naming a charset this build does not have yet resolves to
-    // nothing, rather than quietly to something adjacent.
-    assert_eq!(Encoding::for_label(b"iso-2022-kr"), None);
-    assert_eq!(
-        Encoding::for_whatwg_label(b"iso-2022-kr"),
-        Some(REPLACEMENT)
-    );
+    // A label naming a charset this build does not have resolves to nothing,
+    // rather than quietly to something adjacent.  HZ-GB-2312 is one the
+    // standard neutralizes and this crate has no decoder for.
+    assert_eq!(Encoding::for_label(b"hz-gb-2312"), None);
+    assert_eq!(Encoding::for_whatwg_label(b"hz-gb-2312"), Some(REPLACEMENT));
 
     // A *faithful* superset is a different matter.  WHATWG's EUC-KR is the
     // Unified Hangul Code, which contains every one of KS X 1001's 8224 code
@@ -127,10 +125,13 @@ fn replacement_labels_can_be_filtered_out() {
             "{label:?}"
         );
         // The general lookup does not hand back `replacement` for a label that
-        // names a real encoding; it says it has none.  `replacement` itself is
-        // the exception: that label names exactly what it resolves to.
-        if label != b"replacement" {
-            assert_eq!(Encoding::for_label(label), None, "{label:?}");
+        // names a real encoding: it answers with that encoding if this build
+        // has it, and with nothing if it does not.  `replacement` itself is the
+        // exception, being the one label that names what it resolves to.
+        match Encoding::for_label(label) {
+            None => {}
+            Some(found) if label == b"replacement" => assert_eq!(found, REPLACEMENT),
+            Some(found) => assert_ne!(found, REPLACEMENT, "{label:?}"),
         }
     }
     // ISO-2022-JP is a real encoding and survives the filter.

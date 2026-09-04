@@ -477,9 +477,9 @@ mod tests {
         assert!(parse_args(&["-f", "cp437"]).is_err());
         #[cfg(feature = "dos")]
         assert_eq!(parse_options(&["-f", "cp437"]).from, charcode::IBM437);
-        // And the neutralized ones are refused with the same explanation.
-        let message = parse_args(&["-f", "cp50225"]).unwrap_err().0;
-        assert!(message.contains("replacement"), "{message}");
+        // A number for a charset this build does not have is unknown, not
+        // pointed at something adjacent.
+        assert!(parse_args(&["-f", "cp50227"]).is_err());
     }
 
     #[test]
@@ -542,7 +542,9 @@ mod tests {
         // GB 2312 exists now, and is not the GBK the standard resolves the
         // label to.
         assert_eq!(parse_options(&["-f", "gb2312"]).from, charcode::GB2312);
-        let message = parse_args(&["-f", "iso-2022-kr"]).unwrap_err().0;
+        // A label the standard reassigns, for a charset this build does not
+        // have, says what it would have meant there rather than just "unknown".
+        let message = parse_args(&["-f", "hz-gb-2312"]).unwrap_err().0;
         assert!(message.contains("WHATWG"), "{message}");
     }
 

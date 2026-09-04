@@ -201,6 +201,12 @@ pub static EXTRA_CODE_PAGES: &[CodePage] = &[
         encoding: &x::ISO_8859_9_INIT,
         canonical: true,
     },
+    #[cfg(feature = "iso-2022-kr")]
+    CodePage {
+        number: 50225,
+        encoding: &x::ISO_2022_KR_INIT,
+        canonical: true,
+    },
     #[cfg(feature = "unicode-extras")]
     CodePage {
         number: 65000,

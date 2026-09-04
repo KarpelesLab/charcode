@@ -185,6 +185,7 @@ fn lookup_and_metadata_need_no_allocator() {
     // ...and the standard's lookup with what the standard says.
     #[cfg(feature = "whatwg-aliases")]
     assert_eq!(Encoding::for_whatwg_label(b"  LATIN1 "), Some(WINDOWS_1252));
+    #[cfg(not(feature = "iso-2022-kr"))]
     assert_eq!(Encoding::for_label_no_replacement(b"iso-2022-kr"), None);
     assert_eq!(Encoding::for_bom(b"\xFF\xFEa\0"), Some((UTF_16LE, 2)));
     assert_eq!(UTF_16BE.output_encoding(), UTF_8);
@@ -286,15 +287,22 @@ fn code_pages_resolve_and_round_trip() {
         Some(crate::ISO_8859_9)
     );
 
-    // The neutralized ones, and the filtered variant.
-    for number in [50225u32, 50227, 50229, 52936] {
-        assert_eq!(Encoding::for_windows_code_page(number), Some(REPLACEMENT));
-        assert_eq!(
-            Encoding::for_windows_code_page_no_replacement(number),
-            None,
-            "code page {number}"
-        );
+    // 50225 is ISO-2022-KR, which this crate has when asked for it; the
+    // standard neutralizes the label, not Microsoft's number.
+    #[cfg(feature = "iso-2022-kr")]
+    assert_eq!(
+        Encoding::for_windows_code_page(50225),
+        Some(crate::ISO_2022_KR)
+    );
+
+    // A number naming a charset this crate does not have is absent, rather
+    // than pointed at `replacement`: these name real charsets in Microsoft's
+    // registry whatever the standard makes of the matching labels.
+    for number in [50227u32, 50229, 52936] {
+        assert_eq!(Encoding::for_windows_code_page(number), None, "{number}");
     }
+    #[cfg(not(feature = "iso-2022-kr"))]
+    assert_eq!(Encoding::for_windows_code_page(50225), None);
 
     // Code pages this crate has no encoding for.
     for number in [0u32, 1361, 65005, 999_999] {
@@ -310,5 +318,6 @@ fn code_pages_resolve_and_round_trip() {
         assert_eq!(Encoding::for_windows_code_page(number), None, "{number}");
     }
     assert_eq!(X_USER_DEFINED.windows_code_page(), None);
-    assert_eq!(REPLACEMENT.windows_code_page(), Some(50225));
+    // `replacement` is not a charset Microsoft ever numbered.
+    assert_eq!(REPLACEMENT.windows_code_page(), None);
 }

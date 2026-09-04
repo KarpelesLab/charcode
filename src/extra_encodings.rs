@@ -504,6 +504,13 @@ pub(crate) const GB2312_INIT: Encoding = Encoding::new("GB2312", VariantEncoding
 #[cfg(feature = "gb18030")]
 pub static GB2312: &Encoding = &GB2312_INIT;
 
+#[cfg(feature = "iso-2022-kr")]
+pub(crate) const ISO_2022_KR_INIT: Encoding =
+    Encoding::new("ISO-2022-KR", VariantEncoding::Iso2022Kr);
+/// ISO-2022-KR
+#[cfg(feature = "iso-2022-kr")]
+pub static ISO_2022_KR: &Encoding = &ISO_2022_KR_INIT;
+
 #[cfg(feature = "unicode-extras")]
 pub(crate) const UTF_32BE_INIT: Encoding = Encoding::new("UTF-32BE", VariantEncoding::Utf32Be);
 /// UTF-32BE
