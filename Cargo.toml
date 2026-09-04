@@ -19,7 +19,9 @@ serde = { version = "1", optional = true, default-features = false }
 serde_json = "1"
 
 [features]
-default = ["std"]
+default = ["std", "whatwg"]
+
+# --- capabilities -----------------------------------------------------------
 # Implements `std::error::Error` for the error types.  Implies `alloc`.
 std = ["alloc"]
 # The conveniences that hand back an owned `String`, `Vec` or `Cow`.  Turning it
@@ -30,7 +32,41 @@ alloc = []
 serde = ["dep:serde"]
 # The `charcode` command-line tool, an iconv-style converter (gates the binary
 # target below).  It adds no dependencies.
-cli = ["std"]
+cli = ["std", "whatwg"]
+
+# --- the WHATWG Encoding Standard -------------------------------------------
+# Everything the standard defines: all 40 encodings and all 228 of their labels.
+whatwg = [
+    "whatwg-aliases",
+    "single-byte",
+    "big5",
+    "euc-jp",
+    "euc-kr",
+    "gb18030",
+    "iso-2022-jp",
+    "shift-jis",
+]
+# The standard's label table and its lookup rules, which is what makes
+# `iso-8859-1` resolve to windows-1252, `ascii` to windows-1252 and
+# `iso-8859-9` to windows-1254.  Enable it alongside a subset of the tables
+# below to get a subset of the standard with the standard's naming.
+whatwg-aliases = []
+
+# --- table groups -----------------------------------------------------------
+# UTF-8, UTF-16BE/LE, replacement and x-user-defined are always present: they
+# need no tables, and the first three are what byte order mark sniffing
+# resolves to.
+#
+# The standard's 28 legacy single-byte encodings, about 22 KiB of tables.
+single-byte = []
+# The legacy multi-byte encodings, one feature each because their tables are
+# the large ones.
+big5 = []          # ~170 KiB
+euc-jp = []        # ~70 KiB, shares the JIS tables with the two below
+euc-kr = []        # ~115 KiB
+gb18030 = []       # ~145 KiB, also provides GBK
+iso-2022-jp = []   # ~55 KiB
+shift-jis = []     # ~55 KiB
 
 [[bin]]
 name = "charcode"

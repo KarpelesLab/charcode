@@ -1,10 +1,11 @@
 //! Behaviour required by the WHATWG Encoding Standard, exercised through the
 //! public API.  Each test names the algorithm it comes from.
 //!
-//! These use the owned-output API, so they need `alloc`; the buffer API is
-//! covered by the crate's own tests, which run without it.
+//! These use the owned-output API and every encoding the standard defines, so
+//! they need `alloc` and `whatwg`; the buffer API and the feature subsets are
+//! covered by the crate's own tests.
 
-#![cfg(feature = "alloc")]
+#![cfg(all(feature = "alloc", feature = "whatwg"))]
 
 use charcode::*;
 

@@ -7,13 +7,8 @@
 
 use alloc::string::String;
 
+use crate::Encoding;
 use crate::encodings::*;
-use crate::tables::big5::BIG5_DECODE;
-use crate::tables::euc_kr::EUC_KR_DECODE;
-use crate::tables::gb18030::GB18030_DECODE;
-use crate::tables::jis::{JIS0208_DECODE, JIS0212_DECODE};
-use crate::tables::single_byte as sb;
-use crate::{Encoding, index};
 
 /// Decodes with no BOM handling and no substitution, for tests that want to see
 /// exactly what a byte sequence maps to.
@@ -34,8 +29,10 @@ fn expect_char(encoding: &'static Encoding, bytes: &[u8], code_point: u32) {
     );
 }
 
+#[cfg(feature = "single-byte")]
 #[test]
 fn single_byte_indexes() {
+    use crate::tables::single_byte as sb;
     let cases: [(&'static Encoding, &[u16; 128]); 28] = [
         (IBM866, &sb::IBM866_DECODE),
         (ISO_8859_2, &sb::ISO_8859_2_DECODE),
@@ -86,8 +83,10 @@ fn single_byte_indexes() {
     }
 }
 
+#[cfg(feature = "gb18030")]
 #[test]
 fn gb18030_two_byte_index() {
+    use crate::tables::gb18030::GB18030_DECODE;
     for (pointer, &code_point) in GB18030_DECODE.iter().enumerate() {
         let lead = pointer / 190 + 0x81;
         let trail = pointer % 190;
@@ -104,8 +103,10 @@ fn gb18030_two_byte_index() {
     }
 }
 
+#[cfg(feature = "gb18030")]
 #[test]
 fn gb18030_four_byte_ranges() {
+    use crate::index;
     // Every pointer the four-byte form can express, at the resolution of the
     // range table's boundaries plus a step through each range.
     for pointer in (0..=1_237_575u32).step_by(97) {
@@ -134,8 +135,10 @@ fn gb18030_four_byte_ranges() {
     }
 }
 
+#[cfg(feature = "big5")]
 #[test]
 fn big5_index() {
+    use crate::tables::big5::BIG5_DECODE;
     for (pointer, &code_point) in BIG5_DECODE.iter().enumerate() {
         let lead = pointer / 157 + 0x81;
         let trail = pointer % 157;
@@ -161,8 +164,10 @@ fn big5_index() {
     }
 }
 
+#[cfg(feature = "euc-kr")]
 #[test]
 fn euc_kr_index() {
+    use crate::tables::euc_kr::EUC_KR_DECODE;
     for (pointer, &code_point) in EUC_KR_DECODE.iter().enumerate() {
         let lead = pointer / 190 + 0x81;
         let trail = pointer % 190 + 0x41;
@@ -175,8 +180,11 @@ fn euc_kr_index() {
     }
 }
 
+#[cfg(feature = "euc-jp")]
 #[test]
 fn euc_jp_indexes() {
+    use crate::index;
+    use crate::tables::jis::{JIS0208_DECODE, JIS0212_DECODE};
     for pointer in 0..8836usize {
         let bytes = [(pointer / 94 + 0xA1) as u8, (pointer % 94 + 0xA1) as u8];
         match index::code_point(&JIS0208_DECODE, pointer) {
@@ -195,8 +203,11 @@ fn euc_jp_indexes() {
     }
 }
 
+#[cfg(feature = "shift-jis")]
 #[test]
 fn shift_jis_index() {
+    use crate::index;
+    use crate::tables::jis::JIS0208_DECODE;
     for pointer in 0..JIS0208_DECODE.len() {
         let lead = pointer / 188;
         let lead_offset = if lead < 0x1F { 0x81 } else { 0xC1 };
@@ -225,8 +236,11 @@ fn shift_jis_index() {
     expect_char(SHIFT_JIS, &[0x80], 0x80);
 }
 
+#[cfg(feature = "iso-2022-jp")]
 #[test]
 fn iso_2022_jp_index() {
+    use crate::index;
+    use crate::tables::jis::JIS0208_DECODE;
     for pointer in 0..8836usize {
         let bytes = [
             0x1B,
@@ -281,6 +295,7 @@ fn utf_16_decodes_both_orders() {
     assert_eq!(decode_strict(UTF_16BE, &[0xDC, 0x00]), None);
 }
 
+#[cfg(feature = "whatwg")]
 #[test]
 fn every_label_resolves() {
     use crate::tables::labels::LABELS;
@@ -301,6 +316,7 @@ fn every_label_resolves() {
     assert!(LABELS.windows(2).all(|w| w[0].0 < w[1].0));
 }
 
+#[cfg(feature = "gb18030")]
 #[test]
 fn gb18030_encoder_side_table() {
     // The eighteen private use code points the encoder maps asymmetrically.

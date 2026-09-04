@@ -3,10 +3,18 @@
 // Do not edit by hand; re-run the generator instead.
 
 //! Static index tables derived from the WHATWG Encoding Standard.
+//!
+//! Each module is gated on the feature that asks for its encodings, so a build
+//! that wants only, say, Shift_JIS carries none of the Chinese or Korean data.
 
+#[cfg(feature = "big5")]
 pub mod big5;
+#[cfg(feature = "euc-kr")]
 pub mod euc_kr;
+#[cfg(feature = "gb18030")]
 pub mod gb18030;
+#[cfg(any(feature = "euc-jp", feature = "iso-2022-jp", feature = "shift-jis"))]
 pub mod jis;
 pub mod labels;
+#[cfg(feature = "single-byte")]
 pub mod single_byte;

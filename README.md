@@ -171,6 +171,8 @@ UTF-8, which is what the standard's `get an output encoding` prescribes.
 
 ## Features
 
+### Capabilities
+
 - `std` *(default)* — implements `std::error::Error` for the error types.
   Implies `alloc`.
 - `alloc` *(default, via `std`)* — the conveniences that hand back an owned
@@ -180,6 +182,29 @@ UTF-8, which is what the standard's `get an output encoding` prescribes.
   Needs neither `std` nor `alloc`.
 - `cli` — builds the `charcode` command-line tool described above. Adds no
   dependencies; it needs `std`.
+
+### Which encodings are compiled in
+
+- `whatwg` *(default)* — everything the standard defines, and its labels.
+- `whatwg-aliases` — the standard's label table and lookup rules on their own.
+  This is what makes `iso-8859-1` resolve to windows-1252 and `iso-8859-9` to
+  windows-1254. An entry appears only when the encoding it names is compiled
+  in, so pairing this with a subset of the table groups gives a subset of the
+  standard under the standard's naming.
+- `single-byte` — the 28 legacy single-byte encodings.
+- `big5`, `euc-jp`, `euc-kr`, `gb18030`, `iso-2022-jp`, `shift-jis` — one per
+  legacy multi-byte encoding, because theirs are the large tables. `gb18030`
+  also provides GBK.
+
+UTF-8, UTF-16BE/LE, `replacement` and `x-user-defined` need no tables and are
+always present. Static data ranges from about 1 KiB with no table group to
+about 540 KiB for the full standard:
+
+```toml
+# Just Shift_JIS and windows-1252, under the standard's naming.
+charcode = { version = "0.1", default-features = false,
+             features = ["std", "whatwg-aliases", "shift-jis", "single-byte"] }
+```
 
 With `default-features = false` and no `alloc`, what remains is the whole
 conversion engine plus encoding lookup — everything in the [Converting a

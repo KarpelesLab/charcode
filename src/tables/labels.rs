@@ -2,281 +2,548 @@
 // https://encoding.spec.whatwg.org/indexes.json
 // Do not edit by hand; re-run the generator instead.
 
-//! Every label defined by the standard, sorted for binary search.
+//! Every label the standard defines, sorted for binary search.
+//!
+//! An entry is present only when the encoding it names is compiled in, so the
+//! table shrinks with the enabled table groups rather than pointing at
+//! encodings that do not exist.
 
 use crate::Encoding;
 use crate::encodings as e;
 
 /// `(label, encoding)` pairs, sorted by label.  Labels are already lowercase and
 /// trimmed; callers must normalize before searching.
-pub static LABELS: [(&str, &Encoding); 228] = [
+pub static LABELS: &[(&str, &Encoding)] = &[
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("866", &e::IBM866_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("ansi_x3.4-1968", &e::WINDOWS_1252_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("arabic", &e::ISO_8859_6_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("ascii", &e::WINDOWS_1252_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("asmo-708", &e::ISO_8859_6_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "big5"))]
     ("big5", &e::BIG5_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "big5"))]
     ("big5-hkscs", &e::BIG5_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "gb18030"))]
     ("chinese", &e::GBK_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "big5"))]
     ("cn-big5", &e::BIG5_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("cp1250", &e::WINDOWS_1250_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("cp1251", &e::WINDOWS_1251_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("cp1252", &e::WINDOWS_1252_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("cp1253", &e::WINDOWS_1253_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("cp1254", &e::WINDOWS_1254_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("cp1255", &e::WINDOWS_1255_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("cp1256", &e::WINDOWS_1256_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("cp1257", &e::WINDOWS_1257_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("cp1258", &e::WINDOWS_1258_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("cp819", &e::WINDOWS_1252_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("cp866", &e::IBM866_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "big5"))]
     ("csbig5", &e::BIG5_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "euc-kr"))]
     ("cseuckr", &e::EUC_KR_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "euc-jp"))]
     ("cseucpkdfmtjapanese", &e::EUC_JP_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "gb18030"))]
     ("csgb2312", &e::GBK_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("csibm866", &e::IBM866_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "iso-2022-jp"))]
     ("csiso2022jp", &e::ISO_2022_JP_INIT),
+    #[cfg(feature = "whatwg-aliases")]
     ("csiso2022kr", &e::REPLACEMENT_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "gb18030"))]
     ("csiso58gb231280", &e::GBK_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("csiso88596e", &e::ISO_8859_6_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("csiso88596i", &e::ISO_8859_6_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("csiso88598e", &e::ISO_8859_8_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("csiso88598i", &e::ISO_8859_8_I_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("csisolatin1", &e::WINDOWS_1252_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("csisolatin2", &e::ISO_8859_2_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("csisolatin3", &e::ISO_8859_3_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("csisolatin4", &e::ISO_8859_4_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("csisolatin5", &e::WINDOWS_1254_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("csisolatin6", &e::ISO_8859_10_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("csisolatin9", &e::ISO_8859_15_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("csisolatinarabic", &e::ISO_8859_6_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("csisolatincyrillic", &e::ISO_8859_5_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("csisolatingreek", &e::ISO_8859_7_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("csisolatinhebrew", &e::ISO_8859_8_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("cskoi8r", &e::KOI8_R_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "euc-kr"))]
     ("csksc56011987", &e::EUC_KR_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("csmacintosh", &e::MACINTOSH_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "shift-jis"))]
     ("csshiftjis", &e::SHIFT_JIS_INIT),
+    #[cfg(feature = "whatwg-aliases")]
     ("csunicode", &e::UTF_16LE_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("cyrillic", &e::ISO_8859_5_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("dos-874", &e::WINDOWS_874_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("ecma-114", &e::ISO_8859_6_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("ecma-118", &e::ISO_8859_7_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("elot_928", &e::ISO_8859_7_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "euc-jp"))]
     ("euc-jp", &e::EUC_JP_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "euc-kr"))]
     ("euc-kr", &e::EUC_KR_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "gb18030"))]
     ("gb18030", &e::GB18030_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "gb18030"))]
     ("gb2312", &e::GBK_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "gb18030"))]
     ("gb_2312", &e::GBK_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "gb18030"))]
     ("gb_2312-80", &e::GBK_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "gb18030"))]
     ("gbk", &e::GBK_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("greek", &e::ISO_8859_7_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("greek8", &e::ISO_8859_7_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("hebrew", &e::ISO_8859_8_INIT),
+    #[cfg(feature = "whatwg-aliases")]
     ("hz-gb-2312", &e::REPLACEMENT_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("ibm819", &e::WINDOWS_1252_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("ibm866", &e::IBM866_INIT),
+    #[cfg(feature = "whatwg-aliases")]
     ("iso-10646-ucs-2", &e::UTF_16LE_INIT),
+    #[cfg(feature = "whatwg-aliases")]
     ("iso-2022-cn", &e::REPLACEMENT_INIT),
+    #[cfg(feature = "whatwg-aliases")]
     ("iso-2022-cn-ext", &e::REPLACEMENT_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "iso-2022-jp"))]
     ("iso-2022-jp", &e::ISO_2022_JP_INIT),
+    #[cfg(feature = "whatwg-aliases")]
     ("iso-2022-kr", &e::REPLACEMENT_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("iso-8859-1", &e::WINDOWS_1252_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("iso-8859-10", &e::ISO_8859_10_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("iso-8859-11", &e::WINDOWS_874_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("iso-8859-13", &e::ISO_8859_13_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("iso-8859-14", &e::ISO_8859_14_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("iso-8859-15", &e::ISO_8859_15_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("iso-8859-16", &e::ISO_8859_16_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("iso-8859-2", &e::ISO_8859_2_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("iso-8859-3", &e::ISO_8859_3_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("iso-8859-4", &e::ISO_8859_4_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("iso-8859-5", &e::ISO_8859_5_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("iso-8859-6", &e::ISO_8859_6_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("iso-8859-6-e", &e::ISO_8859_6_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("iso-8859-6-i", &e::ISO_8859_6_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("iso-8859-7", &e::ISO_8859_7_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("iso-8859-8", &e::ISO_8859_8_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("iso-8859-8-e", &e::ISO_8859_8_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("iso-8859-8-i", &e::ISO_8859_8_I_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("iso-8859-9", &e::WINDOWS_1254_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("iso-ir-100", &e::WINDOWS_1252_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("iso-ir-101", &e::ISO_8859_2_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("iso-ir-109", &e::ISO_8859_3_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("iso-ir-110", &e::ISO_8859_4_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("iso-ir-126", &e::ISO_8859_7_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("iso-ir-127", &e::ISO_8859_6_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("iso-ir-138", &e::ISO_8859_8_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("iso-ir-144", &e::ISO_8859_5_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("iso-ir-148", &e::WINDOWS_1254_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "euc-kr"))]
     ("iso-ir-149", &e::EUC_KR_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("iso-ir-157", &e::ISO_8859_10_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "gb18030"))]
     ("iso-ir-58", &e::GBK_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("iso8859-1", &e::WINDOWS_1252_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("iso8859-10", &e::ISO_8859_10_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("iso8859-11", &e::WINDOWS_874_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("iso8859-13", &e::ISO_8859_13_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("iso8859-14", &e::ISO_8859_14_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("iso8859-15", &e::ISO_8859_15_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("iso8859-2", &e::ISO_8859_2_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("iso8859-3", &e::ISO_8859_3_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("iso8859-4", &e::ISO_8859_4_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("iso8859-5", &e::ISO_8859_5_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("iso8859-6", &e::ISO_8859_6_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("iso8859-7", &e::ISO_8859_7_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("iso8859-8", &e::ISO_8859_8_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("iso8859-9", &e::WINDOWS_1254_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("iso88591", &e::WINDOWS_1252_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("iso885910", &e::ISO_8859_10_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("iso885911", &e::WINDOWS_874_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("iso885913", &e::ISO_8859_13_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("iso885914", &e::ISO_8859_14_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("iso885915", &e::ISO_8859_15_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("iso88592", &e::ISO_8859_2_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("iso88593", &e::ISO_8859_3_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("iso88594", &e::ISO_8859_4_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("iso88595", &e::ISO_8859_5_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("iso88596", &e::ISO_8859_6_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("iso88597", &e::ISO_8859_7_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("iso88598", &e::ISO_8859_8_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("iso88599", &e::WINDOWS_1254_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("iso_8859-1", &e::WINDOWS_1252_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("iso_8859-15", &e::ISO_8859_15_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("iso_8859-1:1987", &e::WINDOWS_1252_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("iso_8859-2", &e::ISO_8859_2_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("iso_8859-2:1987", &e::ISO_8859_2_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("iso_8859-3", &e::ISO_8859_3_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("iso_8859-3:1988", &e::ISO_8859_3_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("iso_8859-4", &e::ISO_8859_4_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("iso_8859-4:1988", &e::ISO_8859_4_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("iso_8859-5", &e::ISO_8859_5_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("iso_8859-5:1988", &e::ISO_8859_5_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("iso_8859-6", &e::ISO_8859_6_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("iso_8859-6:1987", &e::ISO_8859_6_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("iso_8859-7", &e::ISO_8859_7_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("iso_8859-7:1987", &e::ISO_8859_7_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("iso_8859-8", &e::ISO_8859_8_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("iso_8859-8:1988", &e::ISO_8859_8_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("iso_8859-9", &e::WINDOWS_1254_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("iso_8859-9:1989", &e::WINDOWS_1254_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("koi", &e::KOI8_R_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("koi8", &e::KOI8_R_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("koi8-r", &e::KOI8_R_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("koi8-ru", &e::KOI8_U_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("koi8-u", &e::KOI8_U_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("koi8_r", &e::KOI8_R_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "euc-kr"))]
     ("korean", &e::EUC_KR_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "euc-kr"))]
     ("ks_c_5601-1987", &e::EUC_KR_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "euc-kr"))]
     ("ks_c_5601-1989", &e::EUC_KR_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "euc-kr"))]
     ("ksc5601", &e::EUC_KR_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "euc-kr"))]
     ("ksc_5601", &e::EUC_KR_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("l1", &e::WINDOWS_1252_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("l2", &e::ISO_8859_2_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("l3", &e::ISO_8859_3_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("l4", &e::ISO_8859_4_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("l5", &e::WINDOWS_1254_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("l6", &e::ISO_8859_10_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("l9", &e::ISO_8859_15_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("latin1", &e::WINDOWS_1252_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("latin2", &e::ISO_8859_2_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("latin3", &e::ISO_8859_3_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("latin4", &e::ISO_8859_4_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("latin5", &e::WINDOWS_1254_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("latin6", &e::ISO_8859_10_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("logical", &e::ISO_8859_8_I_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("mac", &e::MACINTOSH_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("macintosh", &e::MACINTOSH_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "shift-jis"))]
     ("ms932", &e::SHIFT_JIS_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "shift-jis"))]
     ("ms_kanji", &e::SHIFT_JIS_INIT),
+    #[cfg(feature = "whatwg-aliases")]
     ("replacement", &e::REPLACEMENT_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "shift-jis"))]
     ("shift-jis", &e::SHIFT_JIS_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "shift-jis"))]
     ("shift_jis", &e::SHIFT_JIS_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "shift-jis"))]
     ("sjis", &e::SHIFT_JIS_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("sun_eu_greek", &e::ISO_8859_7_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("tis-620", &e::WINDOWS_874_INIT),
+    #[cfg(feature = "whatwg-aliases")]
     ("ucs-2", &e::UTF_16LE_INIT),
+    #[cfg(feature = "whatwg-aliases")]
     ("unicode", &e::UTF_16LE_INIT),
+    #[cfg(feature = "whatwg-aliases")]
     ("unicode-1-1-utf-8", &e::UTF_8_INIT),
+    #[cfg(feature = "whatwg-aliases")]
     ("unicode11utf8", &e::UTF_8_INIT),
+    #[cfg(feature = "whatwg-aliases")]
     ("unicode20utf8", &e::UTF_8_INIT),
+    #[cfg(feature = "whatwg-aliases")]
     ("unicodefeff", &e::UTF_16LE_INIT),
+    #[cfg(feature = "whatwg-aliases")]
     ("unicodefffe", &e::UTF_16BE_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("us-ascii", &e::WINDOWS_1252_INIT),
+    #[cfg(feature = "whatwg-aliases")]
     ("utf-16", &e::UTF_16LE_INIT),
+    #[cfg(feature = "whatwg-aliases")]
     ("utf-16be", &e::UTF_16BE_INIT),
+    #[cfg(feature = "whatwg-aliases")]
     ("utf-16le", &e::UTF_16LE_INIT),
+    #[cfg(feature = "whatwg-aliases")]
     ("utf-8", &e::UTF_8_INIT),
+    #[cfg(feature = "whatwg-aliases")]
     ("utf8", &e::UTF_8_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("visual", &e::ISO_8859_8_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("windows-1250", &e::WINDOWS_1250_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("windows-1251", &e::WINDOWS_1251_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("windows-1252", &e::WINDOWS_1252_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("windows-1253", &e::WINDOWS_1253_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("windows-1254", &e::WINDOWS_1254_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("windows-1255", &e::WINDOWS_1255_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("windows-1256", &e::WINDOWS_1256_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("windows-1257", &e::WINDOWS_1257_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("windows-1258", &e::WINDOWS_1258_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "shift-jis"))]
     ("windows-31j", &e::SHIFT_JIS_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("windows-874", &e::WINDOWS_874_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "euc-kr"))]
     ("windows-949", &e::EUC_KR_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("x-cp1250", &e::WINDOWS_1250_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("x-cp1251", &e::WINDOWS_1251_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("x-cp1252", &e::WINDOWS_1252_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("x-cp1253", &e::WINDOWS_1253_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("x-cp1254", &e::WINDOWS_1254_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("x-cp1255", &e::WINDOWS_1255_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("x-cp1256", &e::WINDOWS_1256_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("x-cp1257", &e::WINDOWS_1257_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("x-cp1258", &e::WINDOWS_1258_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "euc-jp"))]
     ("x-euc-jp", &e::EUC_JP_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "gb18030"))]
     ("x-gbk", &e::GBK_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("x-mac-cyrillic", &e::X_MAC_CYRILLIC_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("x-mac-roman", &e::MACINTOSH_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
     ("x-mac-ukrainian", &e::X_MAC_CYRILLIC_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "shift-jis"))]
     ("x-sjis", &e::SHIFT_JIS_INIT),
+    #[cfg(feature = "whatwg-aliases")]
     ("x-unicode20utf8", &e::UTF_8_INIT),
+    #[cfg(feature = "whatwg-aliases")]
     ("x-user-defined", &e::X_USER_DEFINED_INIT),
+    #[cfg(all(feature = "whatwg-aliases", feature = "big5"))]
     ("x-x-big5", &e::BIG5_INIT),
 ];
 
-/// Every encoding defined by the standard, in specification order.
-pub static ALL_ENCODINGS: [&Encoding; 40] = [
+/// Every encoding compiled in, in specification order.
+pub static ALL_ENCODINGS: &[&Encoding] = &[
     &e::UTF_8_INIT,
+    #[cfg(feature = "single-byte")]
     &e::IBM866_INIT,
+    #[cfg(feature = "single-byte")]
     &e::ISO_8859_2_INIT,
+    #[cfg(feature = "single-byte")]
     &e::ISO_8859_3_INIT,
+    #[cfg(feature = "single-byte")]
     &e::ISO_8859_4_INIT,
+    #[cfg(feature = "single-byte")]
     &e::ISO_8859_5_INIT,
+    #[cfg(feature = "single-byte")]
     &e::ISO_8859_6_INIT,
+    #[cfg(feature = "single-byte")]
     &e::ISO_8859_7_INIT,
+    #[cfg(feature = "single-byte")]
     &e::ISO_8859_8_INIT,
+    #[cfg(feature = "single-byte")]
     &e::ISO_8859_8_I_INIT,
+    #[cfg(feature = "single-byte")]
     &e::ISO_8859_10_INIT,
+    #[cfg(feature = "single-byte")]
     &e::ISO_8859_13_INIT,
+    #[cfg(feature = "single-byte")]
     &e::ISO_8859_14_INIT,
+    #[cfg(feature = "single-byte")]
     &e::ISO_8859_15_INIT,
+    #[cfg(feature = "single-byte")]
     &e::ISO_8859_16_INIT,
+    #[cfg(feature = "single-byte")]
     &e::KOI8_R_INIT,
+    #[cfg(feature = "single-byte")]
     &e::KOI8_U_INIT,
+    #[cfg(feature = "single-byte")]
     &e::MACINTOSH_INIT,
+    #[cfg(feature = "single-byte")]
     &e::WINDOWS_874_INIT,
+    #[cfg(feature = "single-byte")]
     &e::WINDOWS_1250_INIT,
+    #[cfg(feature = "single-byte")]
     &e::WINDOWS_1251_INIT,
+    #[cfg(feature = "single-byte")]
     &e::WINDOWS_1252_INIT,
+    #[cfg(feature = "single-byte")]
     &e::WINDOWS_1253_INIT,
+    #[cfg(feature = "single-byte")]
     &e::WINDOWS_1254_INIT,
+    #[cfg(feature = "single-byte")]
     &e::WINDOWS_1255_INIT,
+    #[cfg(feature = "single-byte")]
     &e::WINDOWS_1256_INIT,
+    #[cfg(feature = "single-byte")]
     &e::WINDOWS_1257_INIT,
+    #[cfg(feature = "single-byte")]
     &e::WINDOWS_1258_INIT,
+    #[cfg(feature = "single-byte")]
     &e::X_MAC_CYRILLIC_INIT,
+    #[cfg(feature = "gb18030")]
     &e::GBK_INIT,
+    #[cfg(feature = "gb18030")]
     &e::GB18030_INIT,
+    #[cfg(feature = "big5")]
     &e::BIG5_INIT,
+    #[cfg(feature = "euc-jp")]
     &e::EUC_JP_INIT,
+    #[cfg(feature = "iso-2022-jp")]
     &e::ISO_2022_JP_INIT,
+    #[cfg(feature = "shift-jis")]
     &e::SHIFT_JIS_INIT,
+    #[cfg(feature = "euc-kr")]
     &e::EUC_KR_INIT,
     &e::REPLACEMENT_INIT,
     &e::UTF_16BE_INIT,

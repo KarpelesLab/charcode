@@ -24,7 +24,7 @@ const MAX_NUMERIC_REFERENCE: usize = 10;
 /// # Examples
 ///
 /// ```
-/// # #[cfg(feature = "alloc")]
+/// # #[cfg(all(feature = "alloc", feature = "whatwg"))]
 /// # fn main() {
 /// use charcode::WINDOWS_1252;
 ///
@@ -36,7 +36,7 @@ const MAX_NUMERIC_REFERENCE: usize = 10;
 /// // numeric character reference.
 /// assert_eq!(bytes, b" \x80 &#19968;");
 /// # }
-/// # #[cfg(not(feature = "alloc"))]
+/// # #[cfg(not(all(feature = "alloc", feature = "whatwg")))]
 /// # fn main() {}
 /// ```
 #[derive(Debug, Clone)]

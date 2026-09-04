@@ -50,7 +50,7 @@ enum Decision {
 /// # Examples
 ///
 /// ```
-/// # #[cfg(feature = "alloc")]
+/// # #[cfg(all(feature = "alloc", feature = "whatwg"))]
 /// # fn main() {
 /// use charcode::SHIFT_JIS;
 ///
@@ -61,7 +61,7 @@ enum Decision {
 /// decoder.decode_to_string(&[0xFA], &mut text, true);
 /// assert_eq!(text, "\u{65E5}");
 /// # }
-/// # #[cfg(not(feature = "alloc"))]
+/// # #[cfg(not(all(feature = "alloc", feature = "whatwg")))]
 /// # fn main() {}
 /// ```
 #[derive(Debug, Clone)]

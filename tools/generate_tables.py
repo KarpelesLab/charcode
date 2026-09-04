@@ -74,17 +74,21 @@ def decode_table(name, index, width):
         name, ty, len(values), body)
 
 
-def encode_table(name, pairs, cp_width):
-    """Two parallel arrays sorted by code point, for binary search by the encoders."""
+def encode_table(name, pairs, cp_width, gate=None):
+    """Two parallel arrays sorted by code point, for binary search by the encoders.
+
+    `gate` repeats the caller's `#[cfg(...)]` on the second array, since an
+    attribute written above the call only covers the first."""
     cps = [cp for cp, _ in pairs]
     ptrs = [p for _, p in pairs]
     assert cps == sorted(cps)
     assert all(p <= 0xFFFF for p in ptrs)
     cp_ty = "u16" if cp_width == 16 else "u32"
+    second = "#[cfg({})]\n".format(gate) if gate else ""
     out = "#[rustfmt::skip]\npub static {}_CODE_POINTS: [{}; {}] = [\n{}\n];\n\n".format(
         name, cp_ty, len(cps), rows(cps, 16 if cp_width == 16 else 12, u32_hex))
-    out += "#[rustfmt::skip]\npub static {}_POINTERS: [u16; {}] = [\n{}\n];\n".format(
-        name, len(ptrs), rows(ptrs, 16, u16_hex))
+    out += "{}#[rustfmt::skip]\npub static {}_POINTERS: [u16; {}] = [\n{}\n];\n".format(
+        second, name, len(ptrs), rows(ptrs, 16, u16_hex))
     return out
 
 
@@ -145,6 +149,69 @@ SINGLE_BYTE = [
     ("windows-1258", "WINDOWS_1258"),
     ("x-mac-cyrillic", "X_MAC_CYRILLIC"),
 ]
+
+# WHATWG encoding name -> the `VariantEncoding` arm implementing it.  The
+# single-byte encodings are absent; they all share `VariantEncoding::SingleByte`.
+VARIANTS = {
+    "UTF-8": "Utf8",
+    "GBK": "Gb18030 { is_gbk: true }",
+    "gb18030": "Gb18030 { is_gbk: false }",
+    "Big5": "Big5",
+    "EUC-JP": "EucJp",
+    "ISO-2022-JP": "Iso2022Jp",
+    "Shift_JIS": "ShiftJis",
+    "EUC-KR": "EucKr",
+    "replacement": "Replacement",
+    "UTF-16BE": "Utf16Be",
+    "UTF-16LE": "Utf16Le",
+    "x-user-defined": "XUserDefined",
+}
+
+# The one-line doc on each public static; anything absent gets its own name.
+ENCODING_DOCS = {
+    "UTF-8": "UTF-8, the encoding every new format should use.",
+    "ISO-8859-8-I": "ISO-8859-8-I, identical to [`ISO_8859_8`] except in its name and implied text direction.",
+    "GBK": "GBK, which decodes as [`GB18030`] but whose encoder emits only two-byte sequences.",
+    "gb18030": "gb18030, the Chinese national standard, which covers all of Unicode.",
+    "replacement": "The `replacement` encoding, which decodes any non-empty input to a single U+FFFD.",
+    "UTF-16BE": "UTF-16BE.  Decode only; encoding to it yields UTF-8, per `get an output encoding`.",
+    "UTF-16LE": "UTF-16LE.  Decode only; encoding to it yields UTF-8, per `get an output encoding`.",
+    "x-user-defined": "x-user-defined, which maps bytes 0x80 to 0xFF into the private use area.",
+    "Big5": "Big5, with the Hong Kong Supplementary Character Set extensions.",
+    "EUC-JP": "EUC-JP.  Its decoder also accepts JIS X 0212 via the 0x8F prefix.",
+    "ISO-2022-JP": "ISO-2022-JP, the only stateful encoding in the standard.",
+    "Shift_JIS": "Shift_JIS, including the Windows end-user defined character range.",
+    "EUC-KR": "EUC-KR, in practice the Unified Hangul Code (Windows codepage 949).",
+}
+
+# WHATWG encoding name -> the Cargo feature its tables live behind.  `None` means
+# the encoding needs no tables and is always present.
+FEATURES = {
+    "UTF-8": None,
+    "UTF-16BE": None,
+    "UTF-16LE": None,
+    "replacement": None,
+    "x-user-defined": None,
+    "GBK": "gb18030",
+    "gb18030": "gb18030",
+    "Big5": "big5",
+    "EUC-JP": "euc-jp",
+    "ISO-2022-JP": "iso-2022-jp",
+    "Shift_JIS": "shift-jis",
+    "EUC-KR": "euc-kr",
+    # Everything else is one of the 28 legacy single-byte encodings.
+}
+
+
+def feature(name):
+    return FEATURES.get(name, "single-byte")
+
+
+def cfg(name):
+    """The `#[cfg(...)]` line gating `name`, or an empty string if always on."""
+    f = feature(name)
+    return "" if f is None else '#[cfg(feature = "{}")]\n'.format(f)
+
 
 # WHATWG encoding name -> the Rust `Encoding` constant in `crate::encodings`.
 CONST_NAMES = {
@@ -243,18 +310,28 @@ def main():
     jis0208 = indexes["jis0208"]
     jis0212 = indexes["jis0212"]
     katakana = indexes["iso-2022-jp-katakana"]
+    # Three encodings share index jis0208, so each static is gated on exactly
+    # the features that read it.
+    jp = 'feature = "iso-2022-jp"'
+    ej = 'feature = "euc-jp"'
+    sj = 'feature = "shift-jis"'
     parts = [HEADER, "\n//! index jis0208, index jis0212 and index ISO-2022-JP katakana.\n\n"]
     parts.append(decode_table("JIS0208_DECODE", jis0208, 16))
-    parts.append("\n")
+    parts.append("\n/// Read only by EUC-JP, through the 0x8F prefix.\n")
+    parts.append("#[cfg({})]\n".format(ej))
     parts.append(decode_table("JIS0212_DECODE", jis0212, 16))
     parts.append("\n/// `index pointer for code point in index jis0208`, used by EUC-JP and ISO-2022-JP.\n")
-    parts.append(encode_table("JIS0208_ENCODE", first_pointers(jis0208), 16))
+    parts.append("#[cfg(any({}, {}))]\n".format(ej, jp))
+    parts.append(encode_table("JIS0208_ENCODE", first_pointers(jis0208), 16, gate="any({}, {})".format(ej, jp)))
     parts.append("\n/// `index Shift_JIS pointer`: index jis0208 without pointers 8272..=8835.\n")
+    parts.append("#[cfg({})]\n".format(sj))
     parts.append(encode_table(
         "SHIFT_JIS_ENCODE",
         first_pointers(jis0208, skip=lambda p: 8272 <= p <= 8835),
-        16))
+        16,
+        gate=sj))
     parts.append("\n/// index ISO-2022-JP katakana, indexed by `code point - 0xFF61`.\n")
+    parts.append("#[cfg({})]\n".format(jp))
     parts.append("#[rustfmt::skip]\npub static ISO_2022_JP_KATAKANA: [u16; {}] = [\n{}\n];\n".format(
         len(katakana), rows(katakana, 16, u16_hex)))
     write(os.path.join(OUT, "jis.rs"), "".join(parts))
@@ -277,35 +354,92 @@ def main():
                 labels.append((label, CONST_NAMES[enc["name"]]))
     labels.sort(key=lambda kv: kv[0])
     assert len(set(l for l, _ in labels)) == len(labels), "duplicate label"
+    by_const = {CONST_NAMES[name]: name for name in names}
     parts = [HEADER, """
-//! Every label defined by the standard, sorted for binary search.
+//! Every label the standard defines, sorted for binary search.
+//!
+//! An entry is present only when the encoding it names is compiled in, so the
+//! table shrinks with the enabled table groups rather than pointing at
+//! encodings that do not exist.
 
 use crate::Encoding;
 use crate::encodings as e;
 
 /// `(label, encoding)` pairs, sorted by label.  Labels are already lowercase and
 /// trimmed; callers must normalize before searching.
-pub static LABELS: [(&str, &Encoding); %d] = [
-""" % len(labels)]
+pub static LABELS: &[(&str, &Encoding)] = &[
+"""]
     for label, const in labels:
-        parts.append('    ("{}", &e::{}),\n'.format(label, const))
+        f = feature(by_const[const])
+        gate = ('#[cfg(feature = "whatwg-aliases")]' if f is None
+                else '#[cfg(all(feature = "whatwg-aliases", feature = "{}"))]'.format(f))
+        parts.append('    {}\n    ("{}", &e::{}),\n'.format(gate, label, const))
     parts.append("];\n\n")
-    parts.append("/// Every encoding defined by the standard, in specification order.\n")
-    parts.append("pub static ALL_ENCODINGS: [&Encoding; {}] = [\n".format(len(names)))
+    parts.append("/// Every encoding compiled in, in specification order.\n")
+    parts.append("pub static ALL_ENCODINGS: &[&Encoding] = &[\n")
     for name in names:
-        parts.append("    &e::{},\n".format(CONST_NAMES[name]))
+        parts.append("    {}&e::{},\n".format(
+            cfg(name).replace("\n", "\n    "), CONST_NAMES[name]))
     parts.append("];\n")
     write(os.path.join(OUT, "labels.rs"), "".join(parts))
+
+    # --- the Encoding constants and statics ------------------------------
+    # Encoding name -> the table identifier in tables::single_byte.
+    sb_tables = {n: CONST_NAMES[n][: -len("_INIT")]
+                 for n in names if feature(n) == "single-byte"}
+    # ISO-8859-8-I shares its index with ISO-8859-8.
+    sb_tables["ISO-8859-8-I"] = "ISO_8859_8"
+    parts = [HEADER, """
+//! The [`Encoding`] instances for every encoding compiled in.
+//!
+//! Each exists once as a private `const`, so that it can be named in other
+//! constants such as the label table, and once as the `&'static` reference the
+//! API hands out.  Both are gated on the feature that carries the encoding's
+//! tables; see the crate documentation for what each feature covers.
+
+use crate::Encoding;
+#[cfg(feature = "single-byte")]
+use crate::tables::single_byte as sb;
+use crate::variant::VariantEncoding;
+"""]
+    for group in encodings:
+        parts.append("\n// {}\n".format(group["heading"]))
+        for enc in group["encodings"]:
+            name = enc["name"]
+            const = CONST_NAMES[name]
+            if name in sb_tables:
+                t = sb_tables[name]
+                variant = ("VariantEncoding::SingleByte(\n"
+                           "    &sb::{t}_DECODE,\n"
+                           "    &sb::{t}_ENCODE_CODE_POINTS,\n"
+                           "    &sb::{t}_ENCODE_BYTES,\n)").format(t=t)
+            else:
+                variant = "VariantEncoding::" + VARIANTS[name]
+            doc = ENCODING_DOCS.get(name, "{}.".format(name))
+            gate = cfg(name)
+            parts.append('\n{}pub(crate) const {}: Encoding = Encoding::new("{}", {});\n'
+                         .format(gate, const, name, variant))
+            parts.append('/// {}\n{}pub static {}: &Encoding = &{};\n'
+                         .format(doc, gate, const[:-len("_INIT")], const))
+    write(os.path.join(ROOT, "src", "encodings.rs"), "".join(parts))
 
     # --- module root -----------------------------------------------------
     write(os.path.join(OUT, "mod.rs"), HEADER + """
 //! Static index tables derived from the WHATWG Encoding Standard.
+//!
+//! Each module is gated on the feature that asks for its encodings, so a build
+//! that wants only, say, Shift_JIS carries none of the Chinese or Korean data.
 
+#[cfg(feature = "big5")]
 pub mod big5;
+#[cfg(feature = "euc-kr")]
 pub mod euc_kr;
+#[cfg(feature = "gb18030")]
 pub mod gb18030;
+#[cfg(any(feature = "euc-jp", feature = "iso-2022-jp", feature = "shift-jis"))]
 pub mod jis;
 pub mod labels;
+#[cfg(feature = "single-byte")]
 pub mod single_byte;
 """)
 

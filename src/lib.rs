@@ -13,7 +13,7 @@
 //! malformed sequences the way a browser does:
 //!
 //! ```
-//! # #[cfg(feature = "alloc")]
+//! # #[cfg(all(feature = "alloc", feature = "whatwg"))]
 //! # fn main() {
 //! use charcode::{Encoding, WINDOWS_1252};
 //!
@@ -27,7 +27,7 @@
 //! assert_eq!(text, "caf\u{E9}");
 //! assert_eq!(encoding.name(), "UTF-8");
 //! # }
-//! # #[cfg(not(feature = "alloc"))]
+//! # #[cfg(not(all(feature = "alloc", feature = "whatwg")))]
 //! # fn main() {}
 //! ```
 //!
@@ -35,18 +35,23 @@
 //! what a `Content-Type` header or an HTML `<meta charset>` carries:
 //!
 //! ```
+//! # #[cfg(feature = "whatwg")]
+//! # fn main() {
 //! use charcode::Encoding;
 //!
 //! assert_eq!(Encoding::for_label(b"latin1").unwrap().name(), "windows-1252");
 //! assert_eq!(Encoding::for_label(b"  Shift-JIS ").unwrap().name(), "Shift_JIS");
 //! assert!(Encoding::for_label(b"not-an-encoding").is_none());
+//! # }
+//! # #[cfg(not(feature = "whatwg"))]
+//! # fn main() {}
 //! ```
 //!
 //! Encoding goes the other way.  Characters the target cannot represent become
 //! HTML numeric character references, matching form submission:
 //!
 //! ```
-//! # #[cfg(feature = "alloc")]
+//! # #[cfg(all(feature = "alloc", feature = "whatwg"))]
 //! # fn main() {
 //! use charcode::EUC_KR;
 //!
@@ -55,7 +60,7 @@
 //! assert_eq!(encoding, EUC_KR);
 //! assert!(had_unmappable);
 //! # }
-//! # #[cfg(not(feature = "alloc"))]
+//! # #[cfg(not(all(feature = "alloc", feature = "whatwg")))]
 //! # fn main() {}
 //! ```
 //!
@@ -70,7 +75,7 @@
 //! a truncated sequence is reported rather than dropped:
 //!
 //! ```
-//! # #[cfg(feature = "alloc")]
+//! # #[cfg(all(feature = "alloc", feature = "whatwg"))]
 //! # fn main() {
 //! use charcode::BIG5;
 //!
@@ -80,7 +85,7 @@
 //! decoder.decode_to_string(&[0x40], &mut text, true);
 //! assert_eq!(text, "\u{4E00}");
 //! # }
-//! # #[cfg(not(feature = "alloc"))]
+//! # #[cfg(not(all(feature = "alloc", feature = "whatwg")))]
 //! # fn main() {}
 //! ```
 //!
@@ -96,6 +101,8 @@
 //!
 //! # Features
 //!
+//! Capabilities:
+//!
 //! - `std` (default): implements [`std::error::Error`] for the error types.
 //!   Implies `alloc`.
 //! - `alloc` (default, through `std`): the conveniences that hand back an owned
@@ -107,6 +114,30 @@
 //! - `serde`: serializes an encoding as its name.  Needs neither `std` nor
 //!   `alloc`.
 //! - `cli`: builds the `charcode` command-line tool.  Needs `std`.
+//!
+//! Which encodings are compiled in:
+//!
+//! - `whatwg` (default): everything the standard defines, and its labels.
+//! - `whatwg-aliases`: the standard's label table and its lookup rules on their
+//!   own — this is what makes `iso-8859-1` resolve to [`WINDOWS_1252`] and
+//!   `iso-8859-9` to [`WINDOWS_1254`].  An entry appears only when the encoding
+//!   it names is compiled in, so pairing it with a subset of the table groups
+//!   below gives a subset of the standard under the standard's naming.
+//! - `single-byte`: the 28 legacy single-byte encodings.
+//! - `big5`, `euc-jp`, `euc-kr`, `gb18030`, `iso-2022-jp`, `shift-jis`: one per
+//!   legacy multi-byte encoding, because theirs are the large tables.
+//!   `gb18030` also provides [`GBK`].
+//!
+//! UTF-8, UTF-16BE/LE, `replacement` and `x-user-defined` need no tables and
+//! are always present; the first three are what byte order mark sniffing
+//! resolves to.  A build with no table group at all is about 1 KiB of static
+//! data; the full standard is about 540 KiB.
+//!
+//! ```toml
+//! # Just Shift_JIS and Windows-1252, under the standard's naming.
+//! charcode = { version = "0.1", default-features = false,
+//!              features = ["std", "whatwg-aliases", "shift-jis", "single-byte"] }
+//! ```
 //!
 //! [WHATWG Encoding Standard]: https://encoding.spec.whatwg.org/
 
@@ -121,25 +152,41 @@ extern crate std;
 
 /// The examples in the README are compiled and run as part of the test suite.
 ///
-/// They use the owned-output API, so they are only checked when `alloc` is on;
-/// hidden `cfg` lines are not an option here because GitHub renders them.
-#[cfg(all(doctest, feature = "alloc"))]
+/// They use the owned-output API and the standard's encodings, so they are only
+/// checked when `alloc` and `whatwg` are on; hidden `cfg` lines are not an
+/// option here because GitHub renders them.
+#[cfg(all(doctest, feature = "alloc", feature = "whatwg"))]
 #[doc = include_str!("../README.md")]
 struct Readme;
 
 mod ascii;
+#[cfg(feature = "big5")]
 mod big5;
 mod code_page;
 mod decoder;
 mod encoder;
+#[cfg(feature = "euc-jp")]
 mod euc_jp;
+#[cfg(feature = "euc-kr")]
 mod euc_kr;
+#[cfg(feature = "gb18030")]
 mod gb18030;
+#[cfg(any(
+    feature = "big5",
+    feature = "euc-jp",
+    feature = "euc-kr",
+    feature = "gb18030",
+    feature = "iso-2022-jp",
+    feature = "shift-jis"
+))]
 mod index;
+#[cfg(feature = "iso-2022-jp")]
 mod iso_2022_jp;
 mod replacement;
 mod result;
+#[cfg(feature = "shift-jis")]
 mod shift_jis;
+#[cfg(feature = "single-byte")]
 mod single_byte;
 mod sink;
 mod tables;
@@ -209,7 +256,7 @@ impl Encoding {
 
     /// Every encoding in the standard, in specification order.
     pub fn all() -> &'static [&'static Encoding] {
-        &ALL_ENCODINGS
+        ALL_ENCODINGS
     }
 
     /// Every label the standard defines for this encoding, in sorted order.
@@ -217,9 +264,14 @@ impl Encoding {
     /// The name itself is always among them, ASCII-lowercased.
     ///
     /// ```
+    /// # #[cfg(feature = "whatwg")]
+    /// # fn main() {
     /// # use charcode::IBM866;
     /// let labels: Vec<_> = IBM866.labels().collect();
     /// assert_eq!(labels, ["866", "cp866", "csibm866", "ibm866"]);
+    /// # }
+    /// # #[cfg(not(feature = "whatwg"))]
+    /// # fn main() {}
     /// ```
     pub fn labels(&'static self) -> impl Iterator<Item = &'static str> {
         LABELS
@@ -235,9 +287,14 @@ impl Encoding {
     /// `<meta charset>` value can be passed through unchanged.
     ///
     /// ```
+    /// # #[cfg(feature = "whatwg")]
+    /// # fn main() {
     /// # use charcode::{Encoding, UTF_8};
     /// assert_eq!(Encoding::for_label(b"utf8"), Some(UTF_8));
     /// assert_eq!(Encoding::for_label(b"\tUTF-8\n"), Some(UTF_8));
+    /// # }
+    /// # #[cfg(not(feature = "whatwg"))]
+    /// # fn main() {}
     /// ```
     pub fn for_label(label: &[u8]) -> Option<&'static Encoding> {
         let trimmed = trim_ascii_whitespace(label);
@@ -279,12 +336,17 @@ impl Encoding {
     /// gives [`WINDOWS_1252`], and 20127 (US-ASCII) does too.
     ///
     /// ```
+    /// # #[cfg(feature = "whatwg")]
+    /// # fn main() {
     /// # use charcode::{Encoding, BIG5, SHIFT_JIS, WINDOWS_1252};
     /// assert_eq!(Encoding::for_windows_code_page(1252), Some(WINDOWS_1252));
     /// assert_eq!(Encoding::for_windows_code_page(932), Some(SHIFT_JIS));
     /// assert_eq!(Encoding::for_windows_code_page(950), Some(BIG5));
     /// // Not an encoding this crate has.
     /// assert_eq!(Encoding::for_windows_code_page(437), None);
+    /// # }
+    /// # #[cfg(not(feature = "whatwg"))]
+    /// # fn main() {}
     /// ```
     pub fn for_windows_code_page(code_page: u32) -> Option<&'static Encoding> {
         CODE_PAGES
@@ -301,10 +363,15 @@ impl Encoding {
     /// have to say "windows" to mean IBM's or DOS's numbering.
     ///
     /// ```
+    /// # #[cfg(feature = "whatwg")]
+    /// # fn main() {
     /// # use charcode::{Encoding, IBM866, SHIFT_JIS};
     /// assert_eq!(Encoding::for_cp(932), Some(SHIFT_JIS));
     /// assert_eq!(Encoding::for_cp(866), Some(IBM866));
     /// assert_eq!(Encoding::for_cp(437), None);
+    /// # }
+    /// # #[cfg(not(feature = "whatwg"))]
+    /// # fn main() {}
     /// ```
     pub fn for_cp(code_page: u32) -> Option<&'static Encoding> {
         Encoding::for_windows_code_page(code_page)
@@ -327,6 +394,8 @@ impl Encoding {
     /// [`Encoding::for_windows_code_page`] only up to those aliases.
     ///
     /// ```
+    /// # #[cfg(feature = "whatwg")]
+    /// # fn main() {
     /// # use charcode::{Encoding, SHIFT_JIS, WINDOWS_1252, X_USER_DEFINED};
     /// assert_eq!(WINDOWS_1252.windows_code_page(), Some(1252));
     /// assert_eq!(SHIFT_JIS.windows_code_page(), Some(932));
@@ -334,6 +403,9 @@ impl Encoding {
     /// assert_eq!(Encoding::for_windows_code_page(28591), Some(WINDOWS_1252));
     /// // Microsoft has no number for this one.
     /// assert_eq!(X_USER_DEFINED.windows_code_page(), None);
+    /// # }
+    /// # #[cfg(not(feature = "whatwg"))]
+    /// # fn main() {}
     /// ```
     pub fn windows_code_page(&self) -> Option<u32> {
         CODE_PAGES

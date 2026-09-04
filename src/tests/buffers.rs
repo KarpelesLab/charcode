@@ -3,8 +3,10 @@
 //! Nothing here allocates, so these run in the `no_std`, no-allocator build as
 //! well — which is the configuration in which they are the only tests there are.
 
+use crate::CoderResult;
 use crate::encodings::*;
-use crate::{CoderResult, DECODER_MIN_BUFFER, DecoderResult, ENCODER_MIN_BUFFER, EncoderResult};
+#[allow(unused_imports)]
+use crate::{DECODER_MIN_BUFFER, DecoderResult, ENCODER_MIN_BUFFER, EncoderResult};
 
 /// Decodes all of `bytes` into `out`, substituting errors, and returns the text
 /// and whether anything was substituted.
@@ -35,8 +37,37 @@ fn encode<'a>(
     (&out[..written], unmappable)
 }
 
+/// The always-present encodings: these need no table group at all.
 #[test]
 fn round_trips_through_stack_buffers() {
+    let mut buffer = [0u8; 64];
+    assert_eq!(
+        decode(UTF_8, "caf\u{E9}".as_bytes(), &mut buffer).0,
+        "caf\u{E9}"
+    );
+    assert_eq!(decode(UTF_16LE, b"a\x00\xE9\x00", &mut buffer).0, "a\u{E9}");
+    assert_eq!(decode(UTF_16BE, b"\x00a\x00\xE9", &mut buffer).0, "a\u{E9}");
+    assert_eq!(
+        decode(X_USER_DEFINED, b"a\x80\xFF", &mut buffer).0,
+        "a\u{F780}\u{F7FF}"
+    );
+    assert_eq!(decode(REPLACEMENT, b"anything", &mut buffer).0, "\u{FFFD}");
+    assert_eq!(
+        encode(UTF_8, "caf\u{E9}", &mut buffer).0,
+        "caf\u{E9}".as_bytes()
+    );
+    assert_eq!(encode(X_USER_DEFINED, "a\u{F780}", &mut buffer).0, b"a\x80");
+    // UTF-16 has no encoder; the standard says to encode as UTF-8.
+    assert_eq!(encode(UTF_16LE, "hi", &mut buffer).0, b"hi");
+}
+
+#[cfg(all(
+    feature = "shift-jis",
+    feature = "iso-2022-jp",
+    feature = "single-byte"
+))]
+#[test]
+fn round_trips_through_stack_buffers_with_tables() {
     let mut buffer = [0u8; 64];
     assert_eq!(decode(WINDOWS_1252, b"caf\xE9", &mut buffer).0, "caf\u{E9}");
     assert_eq!(
@@ -50,6 +81,7 @@ fn round_trips_through_stack_buffers() {
     );
 }
 
+#[cfg(feature = "single-byte")]
 #[test]
 fn errors_are_substituted_without_allocating() {
     let mut buffer = [0u8; 64];
@@ -62,6 +94,7 @@ fn errors_are_substituted_without_allocating() {
     assert!(unmappable);
 }
 
+#[cfg(feature = "single-byte")]
 #[test]
 fn errors_can_be_reported_instead() {
     let mut buffer = [0u8; 64];
@@ -78,6 +111,7 @@ fn errors_can_be_reported_instead() {
 
 /// The whole point of the buffer API is that the caller chooses the buffer, so
 /// the smallest documented size has to keep making progress.
+#[cfg(all(feature = "big5", feature = "gb18030"))]
 #[test]
 fn the_minimum_buffer_size_makes_progress() {
     let mut decoder = BIG5.new_decoder_without_bom_handling();
@@ -115,6 +149,7 @@ fn the_minimum_buffer_size_makes_progress() {
     assert_eq!((read, written_total), (text.len(), 8));
 }
 
+#[cfg(feature = "single-byte")]
 #[test]
 fn a_byte_order_mark_still_switches_encoding() {
     let mut buffer = [0u8; 64];
@@ -129,6 +164,7 @@ fn a_byte_order_mark_still_switches_encoding() {
     assert_eq!(decoder.encoding(), UTF_8);
 }
 
+#[cfg(feature = "whatwg")]
 #[test]
 fn lookup_and_metadata_need_no_allocator() {
     use crate::Encoding;
@@ -143,6 +179,7 @@ fn lookup_and_metadata_need_no_allocator() {
     assert!(!ISO_2022_JP.is_ascii_compatible());
 }
 
+#[cfg(feature = "whatwg")]
 #[test]
 fn code_pages_resolve_and_round_trip() {
     use crate::Encoding;
@@ -183,7 +220,7 @@ fn code_pages_resolve_and_round_trip() {
     }
 
     // Every canonical entry is the one the reverse lookup reports.
-    for entry in &crate::code_page::CODE_PAGES {
+    for entry in crate::code_page::CODE_PAGES {
         if entry.canonical {
             assert_eq!(
                 entry.encoding.windows_code_page(),

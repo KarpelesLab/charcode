@@ -51,6 +51,21 @@ jobs:
       - name: Test (alloc, no std)
         run: cargo test --no-default-features --features alloc
 
+      # Each table group has to stand on its own: a build asking for one
+      # encoding must not fail on a table another encoding owns.
+      - name: Test (one table group at a time)
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          set -euo pipefail
+          for group in single-byte big5 euc-jp euc-kr gb18030 iso-2022-jp shift-jis; do
+            echo "::group::$group"
+            cargo test --no-default-features --features "alloc,$group"
+            echo "::endgroup::"
+          done
+          # A subset of the standard, under the standard's naming.
+          cargo test --no-default-features --features alloc,whatwg-aliases,shift-jis,single-byte
+
   no_std:
     name: no_std builds (${{ matrix.target }})
     runs-on: ubuntu-latest

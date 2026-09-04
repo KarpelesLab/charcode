@@ -7,11 +7,6 @@ use alloc::string::String;
 
 use crate::Encoding;
 use crate::encodings::*;
-use crate::tables::big5::BIG5_ENCODE_CODE_POINTS;
-use crate::tables::euc_kr::EUC_KR_ENCODE_CODE_POINTS;
-use crate::tables::gb18030::GB18030_ENCODE_CODE_POINTS;
-use crate::tables::jis::{JIS0208_ENCODE_CODE_POINTS, SHIFT_JIS_ENCODE_CODE_POINTS};
-use crate::tables::single_byte as sb;
 
 /// Encodes one character, requiring that the encoding can represent it.
 fn encode_char(encoding: &'static Encoding, c: char) -> alloc::vec::Vec<u8> {
@@ -59,8 +54,10 @@ fn ascii_round_trips() {
     }
 }
 
+#[cfg(feature = "single-byte")]
 #[test]
 fn single_byte_round_trips() {
+    use crate::tables::single_byte as sb;
     let cases: [(&'static Encoding, &[u16]); 28] = [
         (IBM866, &sb::IBM866_ENCODE_CODE_POINTS),
         (ISO_8859_2, &sb::ISO_8859_2_ENCODE_CODE_POINTS),
@@ -101,21 +98,27 @@ fn x_user_defined_round_trips() {
     round_trip(X_USER_DEFINED, 0xF780..=0xF7FF);
 }
 
+#[cfg(feature = "big5")]
 #[test]
 fn big5_round_trips() {
+    use crate::tables::big5::BIG5_ENCODE_CODE_POINTS;
     round_trip(BIG5, BIG5_ENCODE_CODE_POINTS.iter().copied());
 }
 
+#[cfg(feature = "euc-kr")]
 #[test]
 fn euc_kr_round_trips() {
+    use crate::tables::euc_kr::EUC_KR_ENCODE_CODE_POINTS;
     round_trip(
         EUC_KR,
         EUC_KR_ENCODE_CODE_POINTS.iter().map(|&cp| u32::from(cp)),
     );
 }
 
+#[cfg(feature = "gb18030")]
 #[test]
 fn gb18030_round_trips() {
+    use crate::tables::gb18030::GB18030_ENCODE_CODE_POINTS;
     round_trip(
         GB18030,
         GB18030_ENCODE_CODE_POINTS
@@ -128,10 +131,13 @@ fn gb18030_round_trips() {
 /// gb18030's encoder maps these to two-byte sequences that the decoder reads as
 /// something else, to keep encoding them the way GB18030-2005 did.  The standard
 /// calls the table out as asymmetric.
+#[cfg(feature = "gb18030")]
 const GB18030_ENCODER_EXCEPTIONS: &[u32] = &[];
 
+#[cfg(all(feature = "euc-jp", feature = "iso-2022-jp", feature = "shift-jis"))]
 #[test]
 fn jis_round_trips() {
+    use crate::tables::jis::{JIS0208_ENCODE_CODE_POINTS, SHIFT_JIS_ENCODE_CODE_POINTS};
     round_trip(
         EUC_JP,
         JIS0208_ENCODE_CODE_POINTS
@@ -157,10 +163,12 @@ fn jis_round_trips() {
 
 /// The Japanese encoders fold U+2212 MINUS SIGN into U+FF0D FULLWIDTH HYPHEN-MINUS
 /// before looking it up, so it cannot come back.
+#[cfg(all(feature = "euc-jp", feature = "iso-2022-jp", feature = "shift-jis"))]
 const JIS_ENCODER_EXCEPTIONS: &[u32] = &[0x2212];
 
 /// Half-width katakana survives EUC-JP and Shift_JIS, but ISO-2022-JP has no
 /// half-width forms and maps them to their full-width equivalents.
+#[cfg(all(feature = "euc-jp", feature = "iso-2022-jp", feature = "shift-jis"))]
 #[test]
 fn half_width_katakana() {
     for scalar in 0xFF61..=0xFF9Fu32 {

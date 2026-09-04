@@ -5,9 +5,17 @@
 //! unambiguous.  Encode tables are two parallel arrays sorted by code point, giving
 //! the `index pointer for code point` operation as a binary search.
 
+#[cfg(feature = "gb18030")]
 use crate::tables::gb18030::GB18030_RANGES;
 
 /// `the index code point for pointer in index`, for a 16-bit table.
+#[cfg(any(
+    feature = "euc-jp",
+    feature = "euc-kr",
+    feature = "gb18030",
+    feature = "iso-2022-jp",
+    feature = "shift-jis"
+))]
 #[inline]
 pub(crate) fn code_point(table: &[u16], pointer: usize) -> Option<u32> {
     match table.get(pointer).copied() {
@@ -17,6 +25,7 @@ pub(crate) fn code_point(table: &[u16], pointer: usize) -> Option<u32> {
 }
 
 /// `the index code point for pointer in index`, for a 32-bit table (Big5 only).
+#[cfg(feature = "big5")]
 #[inline]
 pub(crate) fn code_point_wide(table: &[u32], pointer: usize) -> Option<u32> {
     match table.get(pointer).copied() {
@@ -26,6 +35,13 @@ pub(crate) fn code_point_wide(table: &[u32], pointer: usize) -> Option<u32> {
 }
 
 /// `the index pointer for code point in index`, for a 16-bit table.
+#[cfg(any(
+    feature = "euc-jp",
+    feature = "euc-kr",
+    feature = "gb18030",
+    feature = "iso-2022-jp",
+    feature = "shift-jis"
+))]
 #[inline]
 pub(crate) fn pointer(code_points: &[u16], pointers: &[u16], scalar: u32) -> Option<u16> {
     if scalar > 0xFFFF {
@@ -36,6 +52,7 @@ pub(crate) fn pointer(code_points: &[u16], pointers: &[u16], scalar: u32) -> Opt
 }
 
 /// `the index pointer for code point in index`, for a 32-bit table (Big5 only).
+#[cfg(feature = "big5")]
 #[inline]
 pub(crate) fn pointer_wide(code_points: &[u32], pointers: &[u16], scalar: u32) -> Option<u16> {
     let i = code_points.binary_search(&scalar).ok()?;
@@ -43,6 +60,7 @@ pub(crate) fn pointer_wide(code_points: &[u32], pointers: &[u16], scalar: u32) -
 }
 
 /// `the index gb18030 ranges code point for pointer`.
+#[cfg(feature = "gb18030")]
 pub(crate) fn gb18030_ranges_code_point(pointer: u32) -> Option<u32> {
     if (pointer > 39419 && pointer < 189_000) || pointer > 1_237_575 {
         return None;
@@ -58,6 +76,7 @@ pub(crate) fn gb18030_ranges_code_point(pointer: u32) -> Option<u32> {
 }
 
 /// `the index gb18030 ranges pointer for code point`.
+#[cfg(feature = "gb18030")]
 pub(crate) fn gb18030_ranges_pointer(scalar: u32) -> Option<u32> {
     if scalar == 0xE7C7 {
         return Some(7457);
@@ -71,8 +90,10 @@ pub(crate) fn gb18030_ranges_pointer(scalar: u32) -> Option<u32> {
 
 #[cfg(test)]
 mod tests {
+    #[allow(unused_imports)]
     use super::*;
 
+    #[cfg(feature = "gb18030")]
     #[test]
     fn ranges_round_trip() {
         for &pointer in &[0u32, 7457, 39419, 189_000, 1_237_575] {
@@ -90,6 +111,13 @@ mod tests {
         assert_eq!(gb18030_ranges_pointer(0x10FFFF), Some(1_237_575));
     }
 
+    #[cfg(any(
+        feature = "euc-jp",
+        feature = "euc-kr",
+        feature = "gb18030",
+        feature = "iso-2022-jp",
+        feature = "shift-jis"
+    ))]
     #[test]
     fn sentinel_means_unmapped() {
         assert_eq!(code_point(&[0, 0x41], 0), None);
