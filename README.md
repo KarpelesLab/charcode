@@ -17,7 +17,7 @@ behaviours that browsers actually use.
 
 ```toml
 [dependencies]
-charcode = "0.2"
+charcode = "0.1"
 ```
 
 ## Converting a buffer
@@ -258,7 +258,7 @@ The alias layer is independent of which tables you take:
 ```toml
 # Japanese and Unicode, with the standard's naming, plus the DOS code pages
 # available locally but not selectable by a remote label.
-charcode = { version = "0.2", default-features = false, features = [
+charcode = { version = "0.1", default-features = false, features = [
     "std", "whatwg-aliases", "shift-jis", "euc-jp", "iso-2022-jp", "dos",
 ] }
 ```
@@ -270,7 +270,7 @@ never touching a heap:
 
 ```toml
 [dependencies]
-charcode = { version = "0.2", default-features = false }
+charcode = { version = "0.1", default-features = false }
 ```
 
 ```rust

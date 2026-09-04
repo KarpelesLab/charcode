@@ -167,7 +167,7 @@
 //! ```toml
 //! # Japanese and Unicode, with the standard's naming for them, and the DOS
 //! # code pages available locally but not selectable by a remote label.
-//! charcode = { version = "0.2", default-features = false, features = [
+//! charcode = { version = "0.1", default-features = false, features = [
 //!     "std", "whatwg-aliases", "shift-jis", "euc-jp", "iso-2022-jp", "dos",
 //! ] }
 //! ```

@@ -177,13 +177,22 @@ jobs:
         with:
           python-version: "3"
 
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+
       # Regenerating from the checked-in copy of the standard's index data must
-      # be a no-op; if it is not, either the generator or src/tables/ drifted.
+      # be a no-op; if it is not, either the generator or the checked-in sources
+      # drifted.  rustfmt runs on both sides because the generator writes what
+      # is readable and rustfmt decides what is canonical.
       - name: Regenerate from tools/data
-        run: python3 tools/generate_tables.py --offline
+        run: |
+          python3 tools/generate_tables.py --offline
+          cargo fmt --all
 
       - name: Fail if regenerating changed anything
-        run: git diff --exit-code src/tables
+        run: git diff --exit-code src/
 
   docs:
     name: Docs build (warnings denied)
