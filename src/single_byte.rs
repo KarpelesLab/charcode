@@ -1,6 +1,6 @@
 //! The legacy single-byte encodings, which differ only in their 128-entry index.
 
-use crate::ascii::{ascii_prefix_len, ascii_prefix_len_str};
+use crate::ascii::ascii_prefix_len_capped;
 use crate::result::{DecoderResult, EncoderResult};
 use crate::sink::{ByteSink, DECODER_HEADROOM, ENCODER_HEADROOM};
 
@@ -27,7 +27,7 @@ impl SingleByteDecoder {
                 return (DecoderResult::InputEmpty, read);
             }
 
-            let run = core::cmp::min(ascii_prefix_len(rest), sink.room());
+            let run = ascii_prefix_len_capped(rest, sink.room());
             if run > 0 {
                 sink.write_slice(&rest[..run]);
                 read += run;
@@ -69,7 +69,7 @@ impl SingleByteEncoder {
                 return (EncoderResult::InputEmpty, read);
             };
 
-            let run = core::cmp::min(ascii_prefix_len_str(rest), sink.room());
+            let run = ascii_prefix_len_capped(rest.as_bytes(), sink.room());
             if run > 0 {
                 sink.write_slice(&rest.as_bytes()[..run]);
                 read += run;

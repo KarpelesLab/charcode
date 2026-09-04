@@ -1,6 +1,6 @@
 //! x-user-defined: ASCII below 0x80, and the private use area above it.
 
-use crate::ascii::{ascii_prefix_len, ascii_prefix_len_str};
+use crate::ascii::ascii_prefix_len_capped;
 use crate::result::{DecoderResult, EncoderResult};
 use crate::sink::{ByteSink, DECODER_HEADROOM, ENCODER_HEADROOM};
 
@@ -18,7 +18,7 @@ impl XUserDefinedDecoder {
             if rest.is_empty() {
                 return (DecoderResult::InputEmpty, read);
             }
-            let run = core::cmp::min(ascii_prefix_len(rest), sink.room());
+            let run = ascii_prefix_len_capped(rest, sink.room());
             if run > 0 {
                 sink.write_slice(&rest[..run]);
                 read += run;
@@ -44,7 +44,7 @@ impl XUserDefinedEncoder {
             let Some(c) = rest.chars().next() else {
                 return (EncoderResult::InputEmpty, read);
             };
-            let run = core::cmp::min(ascii_prefix_len_str(rest), sink.room());
+            let run = ascii_prefix_len_capped(rest.as_bytes(), sink.room());
             if run > 0 {
                 sink.write_slice(&rest.as_bytes()[..run]);
                 read += run;

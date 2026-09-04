@@ -5,7 +5,7 @@
 //! the encoder emits an escape whenever the character at hand needs a different
 //! mode than the one currently active.
 
-use crate::ascii::ascii_prefix_len_str;
+use crate::ascii::ascii_prefix_len_capped;
 use crate::index;
 use crate::result::{DecoderResult, EncoderResult};
 use crate::sink::{ByteSink, DECODER_HEADROOM, ENCODER_HEADROOM, Pushback};
@@ -265,7 +265,7 @@ impl Iso2022JpEncoder {
             };
 
             if self.state == EncoderState::Ascii {
-                let run = core::cmp::min(ascii_prefix_len_str(rest), sink.room());
+                let run = ascii_prefix_len_capped(rest.as_bytes(), sink.room());
                 let run = rest.as_bytes()[..run]
                     .iter()
                     .position(|&b| b == 0x0E || b == 0x0F || b == 0x1B)

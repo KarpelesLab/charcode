@@ -1,6 +1,6 @@
 //! Big5, including the Hong Kong Supplementary Character Set extensions.
 
-use crate::ascii::{ascii_prefix_len, ascii_prefix_len_str};
+use crate::ascii::ascii_prefix_len_capped;
 use crate::index;
 use crate::result::{DecoderResult, EncoderResult};
 use crate::sink::{ByteSink, DECODER_HEADROOM, ENCODER_HEADROOM};
@@ -41,7 +41,7 @@ impl Big5Decoder {
             }
 
             if self.leading == 0 {
-                let run = core::cmp::min(ascii_prefix_len(&src[read..]), sink.room());
+                let run = ascii_prefix_len_capped(&src[read..], sink.room());
                 if run > 0 {
                     sink.write_slice(&src[read..read + run]);
                     read += run;
@@ -113,7 +113,7 @@ impl Big5Encoder {
             let Some(c) = rest.chars().next() else {
                 return (EncoderResult::InputEmpty, read);
             };
-            let run = core::cmp::min(ascii_prefix_len_str(rest), sink.room());
+            let run = ascii_prefix_len_capped(rest.as_bytes(), sink.room());
             if run > 0 {
                 sink.write_slice(&rest.as_bytes()[..run]);
                 read += run;

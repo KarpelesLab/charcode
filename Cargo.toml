@@ -108,6 +108,12 @@ name = "charcode"
 path = "src/bin/charcode/main.rs"
 required-features = ["cli"]
 
+# A plain `fn main()` rather than a harness, so benchmarking needs no dependency.
+[[bench]]
+name = "throughput"
+harness = false
+required-features = ["whatwg"]
+
 [package.metadata.docs.rs]
 all-features = true
 

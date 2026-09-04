@@ -73,7 +73,15 @@ impl Utf8Decoder {
                 return (DecoderResult::InputEmpty, read);
             }
 
-            let (valid, error_len) = match core::str::from_utf8(rest) {
+            // Validate only as far as the output can take, plus enough slack to
+            // finish the sequence that lands on the boundary.  Validating all
+            // of `rest` every call, and then copying `room` bytes of it, is
+            // what turns a streaming decode into a quadratic one.
+            let window = core::cmp::min(rest.len(), sink.room() + 4);
+            let truncated = window < rest.len();
+            let chunk = &rest[..window];
+
+            let (valid, error_len) = match core::str::from_utf8(chunk) {
                 Ok(s) => (s.len(), None),
                 Err(e) => (e.valid_up_to(), Some(e.error_len())),
             };
@@ -97,6 +105,9 @@ impl Utf8Decoder {
                     read += bad;
                     return (DecoderResult::Malformed(bad as u8), read);
                 }
+                // A sequence cut off by the window rather than by the end of
+                // the input: nothing is wrong, so pick it up next time round.
+                Some(None) if truncated => {}
                 Some(None) => {
                     // The input ends in the middle of a sequence.
                     let tail = &rest[valid..];
