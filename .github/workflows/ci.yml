@@ -146,10 +146,13 @@ jobs:
           printf '\x80' | "$bin" -f latin1 | diff - <(printf '\xc2\x80')
           printf '\x80' | "$bin" -f windows-1252 | diff - <(printf '\xe2\x82\xac')
           # A label the standard reassigns is refused, and the diagnostic says
-          # what it would have meant there.
+          # what it would have meant there.  The message is captured rather
+          # than piped, since `pipefail` would see the non-zero exit that is
+          # the point of the check.
           ! "$bin" -f gb2312 </dev/null 2>/dev/null
-          "$bin" -f gb2312 </dev/null 2>&1 | grep -q 'WHATWG'
-          "$bin" -f gb2312 </dev/null 2>&1 | grep -q 'GBK' 
+          refusal="$("$bin" -f gb2312 </dev/null 2>&1 || true)"
+          grep -q 'WHATWG' <<<"$refusal"
+          grep -q 'GBK' <<<"$refusal"
           # A lossy conversion must report itself in the exit status.
           if printf 'a\xff' | "$bin" -c > /dev/null 2>&1; then
             echo "expected a non-zero exit for a lossy conversion" >&2
