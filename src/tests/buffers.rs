@@ -173,7 +173,10 @@ fn lookup_and_metadata_need_no_allocator() {
     assert_eq!(Encoding::for_label_no_replacement(b"iso-2022-kr"), None);
     assert_eq!(Encoding::for_bom(b"\xFF\xFEa\0"), Some((UTF_16LE, 2)));
     assert_eq!(UTF_16BE.output_encoding(), UTF_8);
+    // The extras add to this, so the exact count only holds without them.
+    #[cfg(not(any(feature = "dos", feature = "ebcdic", feature = "mac", feature = "misc")))]
     assert_eq!(Encoding::all().len(), 40);
+    assert!(Encoding::all().len() >= 40);
     assert!(IBM866.labels().any(|label| label == "cp866"));
     assert!(WINDOWS_1252.is_single_byte());
     assert!(!ISO_2022_JP.is_ascii_compatible());
@@ -261,7 +264,12 @@ fn code_pages_resolve_and_round_trip() {
     }
 
     // Code pages this crate has no encoding for.
-    for number in [0u32, 437, 850, 1361, 65000, 65005, 999_999] {
+    for number in [0u32, 1361, 65000, 65005, 999_999] {
+        assert_eq!(Encoding::for_windows_code_page(number), None, "{number}");
+    }
+    // These belong to the `dos` group rather than to the standard.
+    #[cfg(not(feature = "dos"))]
+    for number in [437u32, 850] {
         assert_eq!(Encoding::for_windows_code_page(number), None, "{number}");
     }
     assert_eq!(X_USER_DEFINED.windows_code_page(), None);

@@ -46,10 +46,11 @@ whatwg = [
     "iso-2022-jp",
     "shift-jis",
 ]
-# The standard's label table and its lookup rules, which is what makes
-# `iso-8859-1` resolve to windows-1252, `ascii` to windows-1252 and
-# `iso-8859-9` to windows-1254.  Enable it alongside a subset of the tables
-# below to get a subset of the standard with the standard's naming.
+# `Encoding::for_whatwg_label`, the standard's `get an encoding`, which answers
+# only with encodings the standard defines however many of the extra groups
+# below are compiled in.  Independent of which tables you take, so a build that
+# needs only Japanese and Unicode can pair this with `shift-jis`, `euc-jp` and
+# `iso-2022-jp`.
 whatwg-aliases = []
 
 # --- table groups -----------------------------------------------------------
@@ -58,7 +59,16 @@ whatwg-aliases = []
 # resolves to.
 #
 # The standard's 28 legacy single-byte encodings, about 22 KiB of tables.
-single-byte = []
+single-byte = ["half-byte"]
+
+# Two internal features, enabled automatically by the groups that need them.
+# Neither is meant to be selected directly.
+#
+# The decoder for an encoding whose bytes below 0x80 are plain ASCII, so only
+# the 128 above need a table.
+half-byte = []
+# The decoder for one whose whole byte range needs a table, such as EBCDIC.
+full-byte = []
 # The legacy multi-byte encodings, one feature each because their tables are
 # the large ones.
 big5 = []          # ~170 KiB
@@ -67,6 +77,23 @@ euc-kr = []        # ~115 KiB
 gb18030 = []       # ~145 KiB, also provides GBK
 iso-2022-jp = []   # ~55 KiB
 shift-jis = []     # ~55 KiB
+
+# --- charsets outside the standard ------------------------------------------
+# All off by default.  Their labels never collide with one the standard defines,
+# so enabling them cannot change what an existing lookup resolves to.
+#
+# Everything below at once.
+extras = ["dos", "ebcdic", "mac", "misc"]
+# IBM PC / OEM code pages: 437, 737, 775, 850, 852, 855, 856, 857, 860-865, 869,
+# 1006.  About 13 KiB.
+dos = ["full-byte", "half-byte"]
+# IBM mainframe EBCDIC: 037, 424, 500, 875, 1026.  About 6 KiB.
+ebcdic = ["full-byte"]
+# Apple's regional variants of Mac OS Roman: Arabic, Celtic, Central European,
+# Croatian, Farsi, Gaelic, Greek, Icelandic, Romanian, Turkish.  About 8 KiB.
+mac = ["half-byte"]
+# Atari ST and KZ-1048.  About 2 KiB.
+misc = ["half-byte"]
 
 [[bin]]
 name = "charcode"

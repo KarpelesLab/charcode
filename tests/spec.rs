@@ -67,6 +67,8 @@ fn replacement_labels_can_be_filtered_out() {
 
 #[test]
 fn every_encoding_is_reachable_by_its_own_name() {
+    // The charsets outside the standard add to this.
+    #[cfg(not(any(feature = "dos", feature = "ebcdic", feature = "mac", feature = "misc")))]
     assert_eq!(Encoding::all().len(), 40);
     for &encoding in Encoding::all() {
         assert_eq!(
@@ -445,4 +447,73 @@ fn encodings_compare_and_print_by_name() {
     assert!(!UTF_16LE.is_ascii_compatible());
     assert!(!ISO_2022_JP.is_ascii_compatible());
     assert!(!REPLACEMENT.is_ascii_compatible());
+}
+
+// --- the standard's lookup is a boundary, not a convenience ---------------
+
+#[test]
+fn the_whatwg_lookup_refuses_everything_outside_the_standard() {
+    // Every label the standard defines resolves through it...
+    assert_eq!(Encoding::for_whatwg_label(b"latin1"), Some(WINDOWS_1252));
+    assert_eq!(
+        Encoding::for_whatwg_label(b"\tShift-JIS\n"),
+        Some(SHIFT_JIS)
+    );
+    assert_eq!(Encoding::for_whatwg_label(b"hz-gb-2312"), Some(REPLACEMENT));
+    assert_eq!(
+        Encoding::for_whatwg_label_no_replacement(b"hz-gb-2312"),
+        None
+    );
+
+    // ...and every encoding it can return is one the standard defines.
+    for &encoding in Encoding::all() {
+        for label in encoding.labels() {
+            if let Some(found) = Encoding::for_whatwg_label(label.as_bytes()) {
+                assert!(found.is_whatwg(), "{label} reached {}", found.name());
+            }
+        }
+    }
+
+    // The charsets the extra groups add are never selectable this way, however
+    // many of them are compiled in.
+    for label in [
+        &b"cp437"[..],
+        b"ibm437",
+        b"cp037",
+        b"ebcdic-cp-us",
+        b"x-mac-greek",
+        b"atari-st",
+        b"kz-1048",
+    ] {
+        assert_eq!(Encoding::for_whatwg_label(label), None, "{label:?}");
+        // The general lookup still finds them when their group is compiled in.
+        #[cfg(feature = "extras")]
+        assert!(Encoding::for_label(label).is_some(), "{label:?}");
+    }
+}
+
+#[test]
+fn is_whatwg_marks_exactly_the_standards_encodings() {
+    for &encoding in Encoding::all() {
+        let standard = matches!(
+            encoding.name(),
+            "UTF-8" | "UTF-16BE" | "UTF-16LE" | "replacement" | "x-user-defined"
+        ) || encoding.name().starts_with("ISO-8859")
+            || encoding.name().starts_with("windows-")
+            || encoding.name().starts_with("KOI8")
+            || matches!(
+                encoding.name(),
+                "IBM866"
+                    | "macintosh"
+                    | "x-mac-cyrillic"
+                    | "GBK"
+                    | "gb18030"
+                    | "Big5"
+                    | "EUC-JP"
+                    | "ISO-2022-JP"
+                    | "Shift_JIS"
+                    | "EUC-KR"
+            );
+        assert_eq!(encoding.is_whatwg(), standard, "{}", encoding.name());
+    }
 }

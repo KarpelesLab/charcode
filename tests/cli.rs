@@ -149,14 +149,31 @@ fn output_can_go_to_a_file() {
 
 #[test]
 fn listings_cover_the_whole_standard() {
+    // Only the standard's own encodings are counted exactly; a build with the
+    // charsets outside it listed more.
+    const EXTRAS: bool = cfg!(any(
+        feature = "dos",
+        feature = "ebcdic",
+        feature = "mac",
+        feature = "misc"
+    ));
+
     let encodings = stdout(&["--list"], b"");
     let encodings = String::from_utf8(encodings).expect("UTF-8");
-    assert_eq!(encodings.lines().count(), 40);
+    if EXTRAS {
+        assert!(encodings.lines().count() > 40);
+    } else {
+        assert_eq!(encodings.lines().count(), 40);
+    }
     assert!(encodings.lines().any(|l| l == "windows-1252"));
 
     let labels = stdout(&["--list-labels"], b"");
     let labels = String::from_utf8(labels).expect("UTF-8");
-    assert_eq!(labels.lines().count(), 228);
+    if EXTRAS {
+        assert!(labels.lines().count() > 228);
+    } else {
+        assert_eq!(labels.lines().count(), 228);
+    }
     assert!(labels.lines().any(|l| l == "latin1\twindows-1252"));
     // The listing is sorted by label.
     let mut sorted: Vec<&str> = labels.lines().collect();

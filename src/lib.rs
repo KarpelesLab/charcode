@@ -31,17 +31,19 @@
 //! # fn main() {}
 //! ```
 //!
-//! Encodings are looked up by any of the labels the standard defines, which is
-//! what a `Content-Type` header or an HTML `<meta charset>` carries:
+//! Encodings are looked up by label.  For anything that came off the network —
+//! a `Content-Type` charset parameter, an HTML `<meta charset>` — use
+//! [`Encoding::for_whatwg_label`], which implements the standard's
+//! `get an encoding` and answers only with encodings the standard sanctions:
 //!
 //! ```
 //! # #[cfg(feature = "whatwg")]
 //! # fn main() {
 //! use charcode::Encoding;
 //!
-//! assert_eq!(Encoding::for_label(b"latin1").unwrap().name(), "windows-1252");
-//! assert_eq!(Encoding::for_label(b"  Shift-JIS ").unwrap().name(), "Shift_JIS");
-//! assert!(Encoding::for_label(b"not-an-encoding").is_none());
+//! assert_eq!(Encoding::for_whatwg_label(b"latin1").unwrap().name(), "windows-1252");
+//! assert_eq!(Encoding::for_whatwg_label(b"  Shift-JIS ").unwrap().name(), "Shift_JIS");
+//! assert!(Encoding::for_whatwg_label(b"not-an-encoding").is_none());
 //! # }
 //! # #[cfg(not(feature = "whatwg"))]
 //! # fn main() {}
@@ -115,28 +117,37 @@
 //!   `alloc`.
 //! - `cli`: builds the `charcode` command-line tool.  Needs `std`.
 //!
-//! Which encodings are compiled in:
+//! The encodings themselves come in table groups, all of which are independent:
 //!
-//! - `whatwg` (default): everything the standard defines, and its labels.
-//! - `whatwg-aliases`: the standard's label table and its lookup rules on their
-//!   own — this is what makes `iso-8859-1` resolve to [`WINDOWS_1252`] and
-//!   `iso-8859-9` to [`WINDOWS_1254`].  An entry appears only when the encoding
-//!   it names is compiled in, so pairing it with a subset of the table groups
-//!   below gives a subset of the standard under the standard's naming.
-//! - `single-byte`: the 28 legacy single-byte encodings.
+//! - `whatwg` (default): the standard's 40 encodings and `whatwg-aliases`.
+//! - `single-byte`: the standard's 28 legacy single-byte encodings.
 //! - `big5`, `euc-jp`, `euc-kr`, `gb18030`, `iso-2022-jp`, `shift-jis`: one per
 //!   legacy multi-byte encoding, because theirs are the large tables.
 //!   `gb18030` also provides [`GBK`].
+//! - `extras`: everything below at once.
+//! - `dos`: IBM PC / OEM code pages — 437, 737, 775, 850, 852, 855, 856, 857,
+//!   860 to 865, 869, 1006.
+//! - `ebcdic`: IBM mainframe code pages — 037, 424, 500, 875, 1026.
+//! - `mac`: Apple's regional variants of Mac OS Roman.
+//! - `misc`: Atari ST and KZ-1048.
 //!
 //! UTF-8, UTF-16BE/LE, `replacement` and `x-user-defined` need no tables and
 //! are always present; the first three are what byte order mark sniffing
 //! resolves to.  A build with no table group at all is about 1 KiB of static
-//! data; the full standard is about 540 KiB.
+//! data; the whole standard is about 540 KiB, and everything is about 560 KiB.
+//!
+//! Separately, `whatwg-aliases` adds [`Encoding::for_whatwg_label`], the
+//! standard's `get an encoding`.  It is independent of which tables you take,
+//! and it never answers with a charset from outside the standard, so adding
+//! `dos` or `ebcdic` for local use cannot widen what a label off the network
+//! can select:
 //!
 //! ```toml
-//! # Just Shift_JIS and Windows-1252, under the standard's naming.
-//! charcode = { version = "0.1", default-features = false,
-//!              features = ["std", "whatwg-aliases", "shift-jis", "single-byte"] }
+//! # Japanese and Unicode, with the standard's naming for them, and the DOS
+//! # code pages available locally but not selectable by a remote label.
+//! charcode = { version = "0.1", default-features = false, features = [
+//!     "std", "whatwg-aliases", "shift-jis", "euc-jp", "iso-2022-jp", "dos",
+//! ] }
 //! ```
 //!
 //! [WHATWG Encoding Standard]: https://encoding.spec.whatwg.org/
@@ -169,6 +180,8 @@ mod encoder;
 mod euc_jp;
 #[cfg(feature = "euc-kr")]
 mod euc_kr;
+#[cfg(feature = "full-byte")]
+mod full_byte;
 #[cfg(feature = "gb18030")]
 mod gb18030;
 #[cfg(any(
@@ -186,7 +199,7 @@ mod replacement;
 mod result;
 #[cfg(feature = "shift-jis")]
 mod shift_jis;
-#[cfg(feature = "single-byte")]
+#[cfg(feature = "half-byte")]
 mod single_byte;
 mod sink;
 mod tables;
@@ -198,6 +211,8 @@ mod variant;
 mod x_user_defined;
 
 mod encodings;
+#[cfg(any(feature = "dos", feature = "ebcdic", feature = "mac", feature = "misc"))]
+mod extra_encodings;
 
 #[cfg(feature = "serde")]
 mod serde_impl;
@@ -208,10 +223,13 @@ use alloc::{borrow::Cow, string::String, vec::Vec};
 pub use crate::decoder::{DECODER_MIN_BUFFER, Decoder, MalformedError};
 pub use crate::encoder::{ENCODER_MIN_BUFFER, Encoder, UnmappableError};
 pub use crate::encodings::*;
+#[cfg(any(feature = "dos", feature = "ebcdic", feature = "mac", feature = "misc"))]
+pub use crate::extra_encodings::*;
 pub use crate::result::{CoderResult, DecoderResult, EncoderResult};
 
 use crate::code_page::CODE_PAGES;
-use crate::tables::labels::{ALL_ENCODINGS, LABELS};
+use crate::tables::extra_labels::EXTRA_CODE_PAGES;
+use crate::tables::labels::{ALL_ENCODINGS, LABELS, Label};
 use crate::variant::VariantEncoding;
 
 /// The longest label in the standard is 19 bytes.
@@ -276,8 +294,8 @@ impl Encoding {
     pub fn labels(&'static self) -> impl Iterator<Item = &'static str> {
         LABELS
             .iter()
-            .filter(move |(_, encoding)| *encoding == self)
-            .map(|(label, _)| *label)
+            .filter(move |entry| entry.encoding == self)
+            .map(|entry| entry.text)
     }
 
     /// Looks up an encoding by label, implementing `get an encoding`.
@@ -297,6 +315,11 @@ impl Encoding {
     /// # fn main() {}
     /// ```
     pub fn for_label(label: &[u8]) -> Option<&'static Encoding> {
+        Encoding::look_up(label).map(|entry| entry.encoding)
+    }
+
+    /// The row in the label table for `label`, after normalization.
+    fn look_up(label: &[u8]) -> Option<&'static Label> {
         let trimmed = trim_ascii_whitespace(label);
         if trimmed.is_empty() || trimmed.len() > MAX_LABEL_LEN {
             return None;
@@ -307,9 +330,63 @@ impl Encoding {
         }
         let needle = &lowercased[..trimmed.len()];
         LABELS
-            .binary_search_by(|(label, _)| label.as_bytes().cmp(needle))
+            .binary_search_by(|entry| entry.text.as_bytes().cmp(needle))
             .ok()
-            .map(|i| LABELS[i].1)
+            .map(|i| &LABELS[i])
+    }
+
+    /// Implements the standard's `get an encoding`, and answers only with an
+    /// encoding the standard defines.
+    ///
+    /// This is the lookup to use on anything that came off the network — a
+    /// `Content-Type` charset parameter, an HTML `<meta charset>`, an XML
+    /// declaration.  It differs from [`Encoding::for_label`] in what it will
+    /// *refuse*: a charset outside the standard is never returned, however many
+    /// of the extra table groups are compiled in.  That matters because the
+    /// standard leaves some charsets out on purpose — UTF-7 and HZ-GB-2312 can
+    /// both be used to smuggle markup past a filter that only inspects the
+    /// bytes — so a build that adds them for local use must not thereby widen
+    /// what a remote label can select.
+    ///
+    /// ```
+    /// # #[cfg(all(feature = "whatwg-aliases", feature = "single-byte"))]
+    /// # fn main() {
+    /// # use charcode::{Encoding, WINDOWS_1252};
+    /// // The standard's own naming, including the labels it folds together.
+    /// assert_eq!(Encoding::for_whatwg_label(b"latin1"), Some(WINDOWS_1252));
+    /// assert_eq!(Encoding::for_whatwg_label(b"ISO-8859-1"), Some(WINDOWS_1252));
+    ///
+    /// // `cp437` names a real encoding here when the `dos` group is on, but it
+    /// // is not one the standard sanctions, so this lookup will not return it.
+    /// assert_eq!(Encoding::for_whatwg_label(b"cp437"), None);
+    /// # }
+    /// # #[cfg(not(all(feature = "whatwg-aliases", feature = "single-byte")))]
+    /// # fn main() {}
+    /// ```
+    #[cfg(feature = "whatwg-aliases")]
+    pub fn for_whatwg_label(label: &[u8]) -> Option<&'static Encoding> {
+        Encoding::look_up(label)
+            .filter(|entry| entry.whatwg)
+            .map(|entry| entry.encoding)
+    }
+
+    /// Like [`Encoding::for_whatwg_label`], but treats the labels that map to
+    /// [`REPLACEMENT`] as unknown.
+    #[cfg(feature = "whatwg-aliases")]
+    pub fn for_whatwg_label_no_replacement(label: &[u8]) -> Option<&'static Encoding> {
+        match Encoding::for_whatwg_label(label) {
+            Some(encoding) if encoding.variant == VariantEncoding::Replacement => None,
+            other => other,
+        }
+    }
+
+    /// Whether this encoding is one the WHATWG Encoding Standard defines.
+    ///
+    /// False for everything the extra table groups add.
+    pub fn is_whatwg(&self) -> bool {
+        LABELS
+            .iter()
+            .any(|entry| entry.whatwg && entry.encoding == self)
     }
 
     /// Like [`Encoding::for_label`], but treats the labels that map to
@@ -342,17 +419,20 @@ impl Encoding {
     /// assert_eq!(Encoding::for_windows_code_page(1252), Some(WINDOWS_1252));
     /// assert_eq!(Encoding::for_windows_code_page(932), Some(SHIFT_JIS));
     /// assert_eq!(Encoding::for_windows_code_page(950), Some(BIG5));
-    /// // Not an encoding this crate has.
+    /// // 437 is IBM437, which the off-by-default `dos` group carries.
+    /// # #[cfg(not(feature = "dos"))]
     /// assert_eq!(Encoding::for_windows_code_page(437), None);
     /// # }
     /// # #[cfg(not(feature = "whatwg"))]
     /// # fn main() {}
     /// ```
     pub fn for_windows_code_page(code_page: u32) -> Option<&'static Encoding> {
-        CODE_PAGES
-            .binary_search_by_key(&code_page, |entry| entry.number)
-            .ok()
-            .map(|i| CODE_PAGES[i].encoding)
+        for table in [CODE_PAGES, EXTRA_CODE_PAGES] {
+            if let Ok(i) = table.binary_search_by_key(&code_page, |entry| entry.number) {
+                return Some(table[i].encoding);
+            }
+        }
+        None
     }
 
     /// Looks up an encoding by code page number written the `cpNNN` way.
@@ -368,6 +448,7 @@ impl Encoding {
     /// # use charcode::{Encoding, IBM866, SHIFT_JIS};
     /// assert_eq!(Encoding::for_cp(932), Some(SHIFT_JIS));
     /// assert_eq!(Encoding::for_cp(866), Some(IBM866));
+    /// # #[cfg(not(feature = "dos"))]
     /// assert_eq!(Encoding::for_cp(437), None);
     /// # }
     /// # #[cfg(not(feature = "whatwg"))]
@@ -410,6 +491,7 @@ impl Encoding {
     pub fn windows_code_page(&self) -> Option<u32> {
         CODE_PAGES
             .iter()
+            .chain(EXTRA_CODE_PAGES)
             .find(|entry| entry.canonical && entry.encoding == self)
             .map(|entry| entry.number)
     }

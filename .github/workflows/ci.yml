@@ -58,13 +58,19 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for group in single-byte big5 euc-jp euc-kr gb18030 iso-2022-jp shift-jis; do
+          for group in single-byte big5 euc-jp euc-kr gb18030 iso-2022-jp \
+                       shift-jis dos ebcdic mac misc; do
             echo "::group::$group"
             cargo test --no-default-features --features "alloc,$group"
             echo "::endgroup::"
           done
-          # A subset of the standard, under the standard's naming.
-          cargo test --no-default-features --features alloc,whatwg-aliases,shift-jis,single-byte
+          # The alias layer is independent of which tables are taken, and adding
+          # a group outside the standard must not widen what it can select.
+          cargo test --no-default-features --features alloc,whatwg-aliases
+          cargo test --no-default-features \
+            --features alloc,whatwg-aliases,shift-jis,euc-jp,iso-2022-jp
+          cargo test --no-default-features --features alloc,whatwg-aliases,dos
+          cargo test --no-default-features --features alloc,extras
 
   no_std:
     name: no_std builds (${{ matrix.target }})

@@ -39,7 +39,7 @@ defines, which is what a `Content-Type` header or a `<meta charset>` carries:
 ```rust
 use charcode::Encoding;
 
-let encoding = Encoding::for_label(b"Shift-JIS").unwrap();
+let encoding = Encoding::for_whatwg_label(b"Shift-JIS").unwrap();
 assert_eq!(encoding.name(), "Shift_JIS");
 let (text, _) = encoding.decode_without_bom_handling(b"\x93\xFA\x96{");
 assert_eq!(text, "日本");
@@ -185,25 +185,51 @@ UTF-8, which is what the standard's `get an output encoding` prescribes.
 
 ### Which encodings are compiled in
 
-- `whatwg` *(default)* — everything the standard defines, and its labels.
-- `whatwg-aliases` — the standard's label table and lookup rules on their own.
-  This is what makes `iso-8859-1` resolve to windows-1252 and `iso-8859-9` to
-  windows-1254. An entry appears only when the encoding it names is compiled
-  in, so pairing this with a subset of the table groups gives a subset of the
-  standard under the standard's naming.
-- `single-byte` — the 28 legacy single-byte encodings.
+- `whatwg` *(default)* — the standard's 40 encodings, plus `whatwg-aliases`.
+- `single-byte` — the standard's 28 legacy single-byte encodings.
 - `big5`, `euc-jp`, `euc-kr`, `gb18030`, `iso-2022-jp`, `shift-jis` — one per
   legacy multi-byte encoding, because theirs are the large tables. `gb18030`
   also provides GBK.
+- `extras` — the four groups below at once.
+- `dos` — IBM PC / OEM code pages: 437, 737, 775, 850, 852, 855, 856, 857,
+  860–865, 869, 1006.
+- `ebcdic` — IBM mainframe code pages: 037, 424, 500, 875, 1026.
+- `mac` — Apple's regional variants of Mac OS Roman: Arabic, Celtic, Central
+  European, Croatian, Farsi, Gaelic, Greek, Icelandic, Romanian, Turkish.
+- `misc` — Atari ST and KZ-1048.
 
 UTF-8, UTF-16BE/LE, `replacement` and `x-user-defined` need no tables and are
-always present. Static data ranges from about 1 KiB with no table group to
-about 540 KiB for the full standard:
+always present. Static data ranges from about 1 KiB with no table group, to
+540 KiB for the whole standard, to 560 KiB for everything.
+
+### Two lookups, on purpose
+
+`Encoding::for_label` is the general lookup: it knows every label of every
+charset compiled in.
+
+`Encoding::for_whatwg_label` (behind `whatwg-aliases`) is the standard's
+`get an encoding`, and it answers **only** with encodings the standard
+sanctions. The standard leaves some charsets out deliberately — UTF-7 and
+HZ-GB-2312 can both be used to smuggle markup past a filter that only inspects
+the bytes — so a build that adds `dos` or `ebcdic` for local use does not
+thereby widen what a label off the network can select:
+
+```rust
+use charcode::{Encoding, WINDOWS_1252};
+
+assert_eq!(Encoding::for_whatwg_label(b"latin1"), Some(WINDOWS_1252));
+// A real encoding here when `dos` is on, but not one the standard sanctions.
+assert_eq!(Encoding::for_whatwg_label(b"cp437"), None);
+```
+
+The alias layer is independent of which tables you take:
 
 ```toml
-# Just Shift_JIS and windows-1252, under the standard's naming.
-charcode = { version = "0.1", default-features = false,
-             features = ["std", "whatwg-aliases", "shift-jis", "single-byte"] }
+# Japanese and Unicode, with the standard's naming, plus the DOS code pages
+# available locally but not selectable by a remote label.
+charcode = { version = "0.1", default-features = false, features = [
+    "std", "whatwg-aliases", "shift-jis", "euc-jp", "iso-2022-jp", "dos",
+] }
 ```
 
 With `default-features = false` and no `alloc`, what remains is the whole

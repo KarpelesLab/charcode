@@ -11,6 +11,9 @@
 pub mod big5;
 #[cfg(feature = "euc-kr")]
 pub mod euc_kr;
+#[cfg(any(feature = "dos", feature = "ebcdic", feature = "mac", feature = "misc"))]
+pub mod extra;
+pub mod extra_labels;
 #[cfg(feature = "gb18030")]
 pub mod gb18030;
 #[cfg(any(feature = "euc-jp", feature = "iso-2022-jp", feature = "shift-jis"))]

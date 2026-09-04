@@ -10,6 +10,8 @@ use crate::big5::{Big5Decoder, Big5Encoder};
 use crate::euc_jp::{EucJpDecoder, EucJpEncoder};
 #[cfg(feature = "euc-kr")]
 use crate::euc_kr::{EucKrDecoder, EucKrEncoder};
+#[cfg(feature = "full-byte")]
+use crate::full_byte::{FullByteDecoder, FullByteEncoder};
 #[cfg(feature = "gb18030")]
 use crate::gb18030::{Gb18030Decoder, Gb18030Encoder};
 #[cfg(feature = "iso-2022-jp")]
@@ -18,7 +20,7 @@ use crate::replacement::ReplacementDecoder;
 use crate::result::{DecoderResult, EncoderResult};
 #[cfg(feature = "shift-jis")]
 use crate::shift_jis::{ShiftJisDecoder, ShiftJisEncoder};
-#[cfg(feature = "single-byte")]
+#[cfg(feature = "half-byte")]
 use crate::single_byte::{SingleByteDecoder, SingleByteEncoder};
 use crate::sink::ByteSink;
 use crate::utf_8::{Utf8Decoder, Utf8Encoder};
@@ -30,8 +32,11 @@ use crate::x_user_defined::{XUserDefinedDecoder, XUserDefinedEncoder};
 pub(crate) enum VariantEncoding {
     Utf8,
     /// Decode table, then the encode table's code points and their bytes.
-    #[cfg(feature = "single-byte")]
+    #[cfg(feature = "half-byte")]
     SingleByte(&'static [u16; 128], &'static [u16], &'static [u8]),
+    /// The same, for an encoding whose low half is not plain ASCII.
+    #[cfg(feature = "full-byte")]
+    FullByte(&'static [u16; 256], &'static [u16], &'static [u8]),
     Utf16Be,
     Utf16Le,
     #[cfg(feature = "gb18030")]
@@ -56,11 +61,13 @@ impl VariantEncoding {
     pub(crate) fn new_decoder(self) -> VariantDecoder {
         match self {
             VariantEncoding::Utf8 => VariantDecoder::Utf8(Utf8Decoder::new()),
-            #[cfg(feature = "single-byte")]
-            VariantEncoding::SingleByte(table, _, _) =>
-            {
-                #[cfg(feature = "single-byte")]
+            #[cfg(feature = "half-byte")]
+            VariantEncoding::SingleByte(table, _, _) => {
                 VariantDecoder::SingleByte(SingleByteDecoder::new(table))
+            }
+            #[cfg(feature = "full-byte")]
+            VariantEncoding::FullByte(table, _, _) => {
+                VariantDecoder::FullByte(FullByteDecoder::new(table))
             }
             VariantEncoding::Utf16Be => VariantDecoder::Utf16(Utf16Decoder::new(true)),
             VariantEncoding::Utf16Le => VariantDecoder::Utf16(Utf16Decoder::new(false)),
@@ -91,16 +98,16 @@ impl VariantEncoding {
     /// first, which [`Encoding::new_encoder`](crate::Encoding::new_encoder) does.
     pub(crate) fn new_encoder(self) -> VariantEncoder {
         match self {
-            #[cfg(feature = "single-byte")]
-            VariantEncoding::SingleByte(_, code_points, bytes) =>
-            {
-                #[cfg(feature = "single-byte")]
+            #[cfg(feature = "half-byte")]
+            VariantEncoding::SingleByte(_, code_points, bytes) => {
                 VariantEncoder::SingleByte(SingleByteEncoder::new(code_points, bytes))
             }
+            #[cfg(feature = "full-byte")]
+            VariantEncoding::FullByte(_, code_points, bytes) => {
+                VariantEncoder::FullByte(FullByteEncoder::new(code_points, bytes))
+            }
             #[cfg(feature = "gb18030")]
-            VariantEncoding::Gb18030 { is_gbk } =>
-            {
-                #[cfg(feature = "gb18030")]
+            VariantEncoding::Gb18030 { is_gbk } => {
                 VariantEncoder::Gb18030(Gb18030Encoder::new(is_gbk))
             }
             #[cfg(feature = "big5")]
@@ -125,8 +132,10 @@ impl VariantEncoding {
     // `#[cfg]`, and the variants they name come and go with the features.
     pub(crate) fn is_single_byte(self) -> bool {
         match self {
-            #[cfg(feature = "single-byte")]
+            #[cfg(feature = "half-byte")]
             VariantEncoding::SingleByte(..) => true,
+            #[cfg(feature = "full-byte")]
+            VariantEncoding::FullByte(..) => true,
             VariantEncoding::XUserDefined => true,
             _ => false,
         }
@@ -141,6 +150,10 @@ impl VariantEncoding {
             }
             #[cfg(feature = "iso-2022-jp")]
             VariantEncoding::Iso2022Jp => false,
+            // A full-byte table may reassign bytes below 0x80, and the EBCDIC
+            // pages permute the range entirely.
+            #[cfg(feature = "full-byte")]
+            VariantEncoding::FullByte(..) => false,
             _ => true,
         }
     }
@@ -149,8 +162,10 @@ impl VariantEncoding {
 #[derive(Debug, Clone, Copy)]
 pub(crate) enum VariantDecoder {
     Utf8(Utf8Decoder),
-    #[cfg(feature = "single-byte")]
+    #[cfg(feature = "half-byte")]
     SingleByte(SingleByteDecoder),
+    #[cfg(feature = "full-byte")]
+    FullByte(FullByteDecoder),
     Utf16(Utf16Decoder),
     #[cfg(feature = "gb18030")]
     Gb18030(Gb18030Decoder),
@@ -177,8 +192,10 @@ impl VariantDecoder {
     ) -> (DecoderResult, usize) {
         match self {
             VariantDecoder::Utf8(d) => d.decode(src, sink, last),
-            #[cfg(feature = "single-byte")]
+            #[cfg(feature = "half-byte")]
             VariantDecoder::SingleByte(d) => d.decode(src, sink),
+            #[cfg(feature = "full-byte")]
+            VariantDecoder::FullByte(d) => d.decode(src, sink),
             VariantDecoder::Utf16(d) => d.decode(src, sink, last),
             #[cfg(feature = "gb18030")]
             VariantDecoder::Gb18030(d) => d.decode(src, sink, last),
@@ -211,8 +228,10 @@ impl VariantDecoder {
 #[derive(Debug, Clone, Copy)]
 pub(crate) enum VariantEncoder {
     Utf8(Utf8Encoder),
-    #[cfg(feature = "single-byte")]
+    #[cfg(feature = "half-byte")]
     SingleByte(SingleByteEncoder),
+    #[cfg(feature = "full-byte")]
+    FullByte(FullByteEncoder),
     #[cfg(feature = "gb18030")]
     Gb18030(Gb18030Encoder),
     #[cfg(feature = "big5")]
@@ -239,8 +258,10 @@ impl VariantEncoder {
         let _ = last;
         match self {
             VariantEncoder::Utf8(e) => e.encode(src, sink),
-            #[cfg(feature = "single-byte")]
+            #[cfg(feature = "half-byte")]
             VariantEncoder::SingleByte(e) => e.encode(src, sink),
+            #[cfg(feature = "full-byte")]
+            VariantEncoder::FullByte(e) => e.encode(src, sink),
             #[cfg(feature = "gb18030")]
             VariantEncoder::Gb18030(e) => e.encode(src, sink),
             #[cfg(feature = "big5")]

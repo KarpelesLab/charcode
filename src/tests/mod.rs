@@ -6,6 +6,11 @@
 
 mod buffers;
 
+#[cfg(all(
+    feature = "alloc",
+    any(feature = "dos", feature = "ebcdic", feature = "mac", feature = "misc")
+))]
+mod extra;
 #[cfg(feature = "alloc")]
 mod indexes;
 #[cfg(feature = "alloc")]

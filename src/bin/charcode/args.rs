@@ -383,8 +383,11 @@ mod tests {
         for bare in ["932", "1252", "65001", "0"] {
             assert!(parse_args(&["-f", bare]).is_err(), "{bare}");
         }
-        // Code pages for charsets this crate does not have stay unknown.
+        // Code pages for charsets this build does not have stay unknown.
+        #[cfg(not(feature = "dos"))]
         assert!(parse_args(&["-f", "cp437"]).is_err());
+        #[cfg(feature = "dos")]
+        assert_eq!(parse_options(&["-f", "cp437"]).from, charcode::IBM437);
         // And the neutralized ones are refused with the same explanation.
         let message = parse_args(&["-f", "cp50225"]).unwrap_err().0;
         assert!(message.contains("replacement"), "{message}");

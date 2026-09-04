@@ -299,21 +299,25 @@ fn utf_16_decodes_both_orders() {
 #[test]
 fn every_label_resolves() {
     use crate::tables::labels::LABELS;
+    // The extras add to this, so the exact count only holds without them.
+    #[cfg(not(any(feature = "dos", feature = "ebcdic", feature = "mac", feature = "misc")))]
     assert_eq!(LABELS.len(), 228);
-    for (label, expected) in LABELS.iter() {
+    assert!(LABELS.len() >= 228);
+    for entry in LABELS.iter() {
+        let (label, expected) = (entry.text, entry.encoding);
         assert_eq!(
             Encoding::for_label(label.as_bytes()),
-            Some(*expected),
+            Some(expected),
             "label {label:?}"
         );
         // The lookup is case-insensitive and trims ASCII whitespace.
         let upper = label.to_ascii_uppercase();
-        assert_eq!(Encoding::for_label(upper.as_bytes()), Some(*expected));
+        assert_eq!(Encoding::for_label(upper.as_bytes()), Some(expected));
         let padded = alloc::format!("\t {label} \r\n");
-        assert_eq!(Encoding::for_label(padded.as_bytes()), Some(*expected));
+        assert_eq!(Encoding::for_label(padded.as_bytes()), Some(expected));
     }
     // The table has to stay sorted for the binary search to be correct.
-    assert!(LABELS.windows(2).all(|w| w[0].0 < w[1].0));
+    assert!(LABELS.windows(2).all(|w| w[0].text < w[1].text));
 }
 
 #[cfg(feature = "gb18030")]

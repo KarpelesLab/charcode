@@ -258,6 +258,214 @@ CONST_NAMES = {
 }
 
 
+
+# --- charsets outside the Encoding Standard ---------------------------------
+#
+# Mapping data comes from the Unicode Consortium's MAPPINGS archive, whose files
+# are checked in under tools/data/mappings/.  `full` marks a charset whose bytes
+# below 0x80 are not plain ASCII, which needs a 256-entry table rather than the
+# 128-entry one the standard's single-byte encodings use.
+#
+# (group, name, ident, mapping file, Windows code page or None, labels, full)
+EXTRA = [
+    # IBM PC / OEM code pages.  437 and 874 are omitted: the standard already
+    # has IBM866 and windows-874, and CP866 is byte-for-byte identical.
+    ("dos", "IBM437", "IBM437", "CP437.TXT", 437,
+     ["cp437", "ibm437", "cspc8codepage437", "oem-us"], False),
+    ("dos", "IBM737", "IBM737", "CP737.TXT", 737, ["cp737", "ibm737"], False),
+    ("dos", "IBM775", "IBM775", "CP775.TXT", 775,
+     ["cp775", "ibm775", "cspc775baltic"], False),
+    ("dos", "IBM850", "IBM850", "CP850.TXT", 850,
+     ["cp850", "ibm850", "cspc850multilingual"], False),
+    ("dos", "IBM852", "IBM852", "CP852.TXT", 852, ["cp852", "ibm852", "cspcp852"], False),
+    ("dos", "IBM855", "IBM855", "CP855.TXT", 855, ["cp855", "ibm855", "csibm855"], False),
+    ("dos", "IBM856", "IBM856", "CP856.TXT", None, ["cp856", "ibm856"], False),
+    ("dos", "IBM857", "IBM857", "CP857.TXT", 857, ["cp857", "ibm857", "csibm857"], False),
+    ("dos", "IBM860", "IBM860", "CP860.TXT", 860, ["cp860", "ibm860", "csibm860"], False),
+    ("dos", "IBM861", "IBM861", "CP861.TXT", 861,
+     ["cp861", "ibm861", "cp-is", "csibm861"], False),
+    ("dos", "IBM862", "IBM862", "CP862.TXT", 862,
+     ["cp862", "ibm862", "dos-862", "cspc862latinhebrew"], False),
+    ("dos", "IBM863", "IBM863", "CP863.TXT", 863, ["cp863", "ibm863", "csibm863"], False),
+    ("dos", "IBM864", "IBM864", "CP864.TXT", 864, ["cp864", "ibm864", "csibm864"], True),
+    ("dos", "IBM865", "IBM865", "CP865.TXT", 865, ["cp865", "ibm865", "csibm865"], False),
+    ("dos", "IBM869", "IBM869", "CP869.TXT", 869,
+     ["cp869", "ibm869", "cp-gr", "csibm869"], False),
+    ("dos", "IBM1006", "IBM1006", "CP1006.TXT", None, ["cp1006", "ibm1006"], False),
+
+    # Apple's regional variants.  Mac OS Roman and Mac OS Cyrillic are the
+    # standard's `macintosh` and `x-mac-cyrillic`; Hebrew and Thai are omitted
+    # because Apple maps some of their bytes to two code points.
+    ("mac", "x-mac-arabic", "X_MAC_ARABIC", "ARABIC.TXT", 10004,
+     ["x-mac-arabic", "mac-arabic"], False),
+    ("mac", "x-mac-celtic", "X_MAC_CELTIC", "CELTIC.TXT", None,
+     ["x-mac-celtic", "mac-celtic"], False),
+    ("mac", "x-mac-centraleurroman", "X_MAC_CENTRALEURROMAN", "CENTEURO.TXT", 10029,
+     ["x-mac-centraleurroman", "mac-centraleurroman", "x-mac-ce"], False),
+    ("mac", "x-mac-croatian", "X_MAC_CROATIAN", "CROATIAN.TXT", 10082,
+     ["x-mac-croatian", "mac-croatian"], False),
+    ("mac", "x-mac-farsi", "X_MAC_FARSI", "FARSI.TXT", None,
+     ["x-mac-farsi", "mac-farsi"], False),
+    ("mac", "x-mac-gaelic", "X_MAC_GAELIC", "GAELIC.TXT", None,
+     ["x-mac-gaelic", "mac-gaelic"], False),
+    ("mac", "x-mac-greek", "X_MAC_GREEK", "GREEK.TXT", 10006,
+     ["x-mac-greek", "mac-greek"], False),
+    ("mac", "x-mac-icelandic", "X_MAC_ICELANDIC", "ICELAND.TXT", 10079,
+     ["x-mac-icelandic", "mac-icelandic"], False),
+    ("mac", "x-mac-romanian", "X_MAC_ROMANIAN", "ROMANIAN.TXT", 10010,
+     ["x-mac-romanian", "mac-romanian"], False),
+    ("mac", "x-mac-turkish", "X_MAC_TURKISH", "TURKISH.TXT", 10081,
+     ["x-mac-turkish", "mac-turkish"], False),
+
+    # IBM mainframe EBCDIC.  These permute the whole byte range.
+    ("ebcdic", "IBM037", "IBM037", "CP037.TXT", 37,
+     ["cp037", "ibm037", "ebcdic-cp-us", "ebcdic-cp-ca", "ebcdic-cp-wt",
+      "ebcdic-cp-nl", "csibm037"], True),
+    ("ebcdic", "IBM424", "IBM424", "CP424.TXT", 20424,
+     ["cp424", "ibm424", "ebcdic-cp-he", "csibm424"], True),
+    ("ebcdic", "IBM500", "IBM500", "CP500.TXT", 500,
+     ["cp500", "ibm500", "ebcdic-cp-be", "ebcdic-cp-ch", "csibm500"], True),
+    ("ebcdic", "IBM875", "IBM875", "CP875.TXT", 875, ["cp875", "ibm875"], True),
+    ("ebcdic", "IBM1026", "IBM1026", "CP1026.TXT", 1026,
+     ["cp1026", "ibm1026", "csibm1026"], True),
+
+    # Everything else.
+    ("misc", "Atari-ST", "ATARI_ST", "ATARIST.TXT", None, ["atari-st", "atarist"], False),
+    ("misc", "KZ-1048", "KZ_1048", "KZ1048.TXT", None,
+     ["kz-1048", "kz1048", "strk1048-2002", "rk1048", "cskz1048"], False),
+]
+
+MAPPINGS = os.path.join(HERE, "data", "mappings")
+
+
+def load_mapping(filename):
+    """Parses a Unicode MAPPINGS file into a 256-entry byte -> code point table."""
+    table = [None] * 256
+    with open(os.path.join(MAPPINGS, filename), encoding="utf-8", errors="replace") as f:
+        for line in f:
+            line = line.split("#", 1)[0].strip()
+            if not line:
+                continue
+            parts = line.split()
+            if len(parts) < 2:
+                continue
+            if not parts[0].lower().startswith("0x") or not parts[1].lower().startswith("0x"):
+                continue
+            assert "+" not in parts[1], "{}: multi-code-point mapping".format(filename)
+            byte = int(parts[0], 16)
+            if byte < 256:
+                table[byte] = int(parts[1], 16)
+    return table
+
+
+
+def emit_extra(indexes):
+    """Writes the tables, `Encoding`s, labels and code pages for EXTRA."""
+    groups = sorted({g for g, *_ in EXTRA})
+    parts = [HEADER, """
+//! Tables for the charsets outside the WHATWG Encoding Standard.
+//!
+//! Generated from the Unicode Consortium's MAPPINGS archive.  A `_DECODE` table
+//! holding 128 entries covers bytes 0x80 to 0xFF, with 0 for an unmapped byte;
+//! one holding 256 entries covers every byte, with 0xFFFF for an unmapped one,
+//! because those charsets map a byte to U+0000.
+
+"""]
+    used_labels = set()
+    code_pages = []
+    for group, name, ident, filename, cp, labels, full in EXTRA:
+        table = load_mapping(filename)
+        gate = '#[cfg(feature = "{}")]\n'.format(group)
+        if full:
+            values = [0xFFFF if v is None else v for v in table]
+            assert all(v <= 0xFFFF for v in values), name
+            assert 0xFFFF not in [v for v in table if v is not None], name
+            parts.append("\n/// {} ({})\n".format(name, filename))
+            parts.append(gate)
+            parts.append("#[rustfmt::skip]\npub static {}_DECODE: [u16; 256] = [\n{}\n];\n".format(
+                ident, rows(values, 12, u16_hex)))
+            pairs = sorted({v: b for b, v in reversed(list(enumerate(table))) if v is not None}.items())
+        else:
+            for b in range(0x80):
+                assert table[b] in (None, b), "{}: byte {:#04x} is not ASCII".format(name, b)
+            values = [0 if table[b] is None else table[b] for b in range(0x80, 0x100)]
+            assert 0 not in [v for v in table[0x80:] if v is not None], name
+            parts.append("\n/// {} ({})\n".format(name, filename))
+            parts.append(gate)
+            parts.append("#[rustfmt::skip]\npub static {}_DECODE: [u16; 128] = [\n{}\n];\n".format(
+                ident, rows(values, 12, u16_hex)))
+            pairs = sorted({v: b for b, v in reversed(list(enumerate(table)))
+                            if v is not None and b >= 0x80}.items())
+        cps = [cp_ for cp_, _ in pairs]
+        bytes_ = [b for _, b in pairs]
+        parts.append(gate)
+        parts.append("#[rustfmt::skip]\npub static {}_ENCODE_CODE_POINTS: [u16; {}] = [\n{}\n];\n".format(
+            ident, len(cps), rows(cps, 12, u16_hex)))
+        parts.append(gate)
+        parts.append("#[rustfmt::skip]\npub static {}_ENCODE_BYTES: [u8; {}] = [\n{}\n];\n".format(
+            ident, len(bytes_), rows(bytes_, 16, lambda v: "0x{:02X}".format(v))))
+        for label in labels:
+            assert label not in used_labels, "duplicate label " + label
+            used_labels.add(label)
+        if cp is not None:
+            code_pages.append((cp, ident, group))
+    write(os.path.join(OUT, "extra.rs"), "".join(parts))
+
+    # The Encoding constants and statics.
+    parts = [HEADER, """
+//! The [`Encoding`] instances for the charsets outside the standard.
+
+use crate::Encoding;
+use crate::tables::extra as t;
+use crate::variant::VariantEncoding;
+"""]
+    for group in groups:
+        parts.append("\n// {}\n".format(GROUP_DOCS[group]))
+        for g, name, ident, _f, _cp, _labels, full in EXTRA:
+            if g != group:
+                continue
+            arm = "FullByte" if full else "SingleByte"
+            parts.append(
+                '\n#[cfg(feature = "{g}")]\npub(crate) const {i}_INIT: Encoding = Encoding::new(\n'
+                '    "{n}",\n    VariantEncoding::{arm}(\n        &t::{i}_DECODE,\n'
+                '        &t::{i}_ENCODE_CODE_POINTS,\n        &t::{i}_ENCODE_BYTES,\n    ),\n);\n'
+                .format(g=g, i=ident, n=name, arm=arm))
+            parts.append('/// {n}\n#[cfg(feature = "{g}")]\npub static {i}: &Encoding = &{i}_INIT;\n'
+                         .format(g=g, i=ident, n=name))
+    write(os.path.join(ROOT, "src", "extra_encodings.rs"), "".join(parts))
+
+    # Labels and code pages, merged into the tables the lookups read.
+    label_rows = sorted((l, ident, group)
+                        for group, _n, ident, _f, _cp, labels, _full in EXTRA
+                        for l in labels)
+    parts = [HEADER, """
+//! Windows code pages for the charsets outside the standard.
+
+use crate::code_page::CodePage;
+// A group may have no Windows code pages of its own.
+#[cfg(any(feature = "dos", feature = "ebcdic", feature = "mac", feature = "misc"))]
+#[allow(unused_imports)]
+use crate::extra_encodings as x;
+"""]
+    parts.append("")
+    parts.append("\n/// Sorted by number, for binary search.\n")
+    parts.append("pub static EXTRA_CODE_PAGES: &[CodePage] = &[\n")
+    for cp, ident, group in sorted(code_pages):
+        parts.append('    #[cfg(feature = "{}")]\n    CodePage {{ number: {}, encoding: &x::{}_INIT, canonical: true }},\n'
+                     .format(group, cp, ident))
+    parts.append("];\n")
+    write(os.path.join(OUT, "extra_labels.rs"), "".join(parts))
+    return label_rows
+
+
+GROUP_DOCS = {
+    "dos": "IBM PC / OEM code pages",
+    "mac": "Apple's regional variants of Mac OS Roman",
+    "ebcdic": "IBM mainframe EBCDIC code pages",
+    "misc": "Everything else",
+}
+
+
 def write(path, text):
     with open(path, "w", newline="\n") as f:
         f.write(text)
@@ -345,6 +553,7 @@ def main():
     write(os.path.join(OUT, "euc_kr.rs"), "".join(parts))
 
     # --- labels ----------------------------------------------------------
+    extra_rows = emit_extra(indexes)
     labels = []
     names = []
     for group in encodings:
@@ -352,9 +561,13 @@ def main():
             names.append(enc["name"])
             for label in enc["labels"]:
                 labels.append((label, CONST_NAMES[enc["name"]]))
-    labels.sort(key=lambda kv: kv[0])
-    assert len(set(l for l, _ in labels)) == len(labels), "duplicate label"
-    by_const = {CONST_NAMES[name]: name for name in names}
+    # Merge in the charsets outside the standard; the generator asserts below
+    # that no label is claimed twice, in any feature combination.
+    by_const = {CONST_NAMES[n]: n for n in names}
+    all_labels = [(label, const, feature(by_const[const]), "e") for label, const in labels]
+    all_labels += [(label, ident + "_INIT", group, "x") for label, ident, group in extra_rows]
+    all_labels.sort(key=lambda r: r[0])
+    assert len(set(r[0] for r in all_labels)) == len(all_labels), "duplicate label"
     parts = [HEADER, """
 //! Every label the standard defines, sorted for binary search.
 //!
@@ -364,22 +577,34 @@ def main():
 
 use crate::Encoding;
 use crate::encodings as e;
+#[cfg(any(feature = "dos", feature = "ebcdic", feature = "mac", feature = "misc"))]
+use crate::extra_encodings as x;
 
-/// `(label, encoding)` pairs, sorted by label.  Labels are already lowercase and
-/// trimmed; callers must normalize before searching.
-pub static LABELS: &[(&str, &Encoding)] = &[
+/// Every label of every encoding compiled in, sorted for binary search.
+///
+/// Labels are already lowercase and trimmed; callers must normalize before
+/// searching.  `whatwg` marks a label the Encoding Standard defines, which is
+/// what lets the standard's own lookup refuse everything else.
+pub struct Label {
+    pub text: &'static str,
+    pub encoding: &'static Encoding,
+    pub whatwg: bool,
+}
+
+pub static LABELS: &[Label] = &[
 """]
-    for label, const in labels:
-        f = feature(by_const[const])
-        gate = ('#[cfg(feature = "whatwg-aliases")]' if f is None
-                else '#[cfg(all(feature = "whatwg-aliases", feature = "{}"))]'.format(f))
-        parts.append('    {}\n    ("{}", &e::{}),\n'.format(gate, label, const))
+    for label, const, group, module in all_labels:
+        gate = "" if group is None else '    #[cfg(feature = "{}")]\n'.format(group)
+        parts.append('{}    Label {{ text: "{}", encoding: &{}::{}, whatwg: {} }},\n'
+                     .format(gate, label, module, const, "true" if module == "e" else "false"))
     parts.append("];\n\n")
-    parts.append("/// Every encoding compiled in, in specification order.\n")
+    parts.append("/// Every encoding compiled in: the standard's first, then the rest.\n")
     parts.append("pub static ALL_ENCODINGS: &[&Encoding] = &[\n")
     for name in names:
         parts.append("    {}&e::{},\n".format(
             cfg(name).replace("\n", "\n    "), CONST_NAMES[name]))
+    for group, _n, ident, _f, _cp, _l, _full in EXTRA:
+        parts.append('    #[cfg(feature = "{}")]\n    &x::{}_INIT,\n'.format(group, ident))
     parts.append("];\n")
     write(os.path.join(OUT, "labels.rs"), "".join(parts))
 
@@ -438,6 +663,9 @@ pub mod euc_kr;
 pub mod gb18030;
 #[cfg(any(feature = "euc-jp", feature = "iso-2022-jp", feature = "shift-jis"))]
 pub mod jis;
+#[cfg(any(feature = "dos", feature = "ebcdic", feature = "mac", feature = "misc"))]
+pub mod extra;
+pub mod extra_labels;
 pub mod labels;
 #[cfg(feature = "single-byte")]
 pub mod single_byte;
