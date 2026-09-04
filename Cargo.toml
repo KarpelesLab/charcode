@@ -1,0 +1,28 @@
+[package]
+name = "charcode"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.88"
+license = "MIT"
+description = "Character encoding conversion implementing the WHATWG Encoding Standard, with no external dependencies."
+repository = "https://github.com/KarpelesLab/charcode"
+documentation = "https://docs.rs/charcode"
+readme = "README.md"
+keywords = ["encoding", "charset", "utf-8", "unicode", "conversion"]
+categories = ["encoding", "text-processing", "no-std"]
+exclude = ["/tools", "/.github"]
+
+[dependencies]
+serde = { version = "1", optional = true, default-features = false }
+
+[features]
+default = ["std"]
+std = []
+serde = ["dep:serde"]
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
+
+[profile.release]
+opt-level = 3
