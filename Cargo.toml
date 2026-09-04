@@ -86,6 +86,9 @@ iso-2022-cn = ["gb18030"]  # ~90 KiB
 # RFC 1554, which designates six sets: it needs the tables of all of them, and
 # brings none of its own.
 iso-2022-jp-2 = ["euc-jp", "euc-kr", "gb18030", "single-byte"]
+# UTS #6, which is a compression scheme rather than a charset.  No tables: its
+# eight windows move over Unicode instead.
+scsu = []
 shift-jis = []     # ~55 KiB
 
 # --- charsets outside the standard ------------------------------------------

@@ -583,6 +583,17 @@ pub(crate) const ISO_2022_JP_2_INIT: Encoding =
 #[cfg(feature = "iso-2022-jp-2")]
 pub static ISO_2022_JP_2: &Encoding = &ISO_2022_JP_2_INIT;
 
+#[cfg(feature = "scsu")]
+pub(crate) const SCSU_INIT: Encoding = Encoding::new("SCSU", VariantEncoding::Scsu);
+/// The Standard Compression Scheme for Unicode (UTS #6).
+///
+/// Not a charset but a compression scheme, which expresses all of Unicode at
+/// about the size a single-byte encoding would take.  It needs no table: eight
+/// 128-character windows move over Unicode instead, and tag bytes shift
+/// between them or drop into big-endian UTF-16.
+#[cfg(feature = "scsu")]
+pub static SCSU: &Encoding = &SCSU_INIT;
+
 #[cfg(feature = "unicode-extras")]
 pub(crate) const UTF_32BE_INIT: Encoding = Encoding::new("UTF-32BE", VariantEncoding::Utf32Be);
 /// UTF-32BE

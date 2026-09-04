@@ -582,6 +582,12 @@ pub static LABELS: &[Label] = &[
         encoding: &x::IBM852_INIT,
         whatwg: false,
     },
+    #[cfg(feature = "scsu")]
+    Label {
+        text: "csscsu",
+        encoding: &x::SCSU_INIT,
+        whatwg: false,
+    },
     #[cfg(feature = "shift-jis")]
     Label {
         text: "csshiftjis",
@@ -1711,6 +1717,12 @@ pub static LABELS: &[Label] = &[
     Label {
         text: "rk1048",
         encoding: &x::KZ_1048_INIT,
+        whatwg: false,
+    },
+    #[cfg(feature = "scsu")]
+    Label {
+        text: "scsu",
+        encoding: &x::SCSU_INIT,
         whatwg: false,
     },
     #[cfg(feature = "shift-jis")]
@@ -3682,6 +3694,8 @@ pub static ALL_ENCODINGS: &[&Encoding] = &[
     &x::ISO_2022_CN_INIT,
     #[cfg(feature = "iso-2022-jp-2")]
     &x::ISO_2022_JP_2_INIT,
+    #[cfg(feature = "scsu")]
+    &x::SCSU_INIT,
     #[cfg(feature = "unicode-extras")]
     &x::UTF_32BE_INIT,
     #[cfg(feature = "unicode-extras")]

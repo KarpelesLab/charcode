@@ -33,6 +33,8 @@ use crate::iso_2022_jp_1468::{Iso2022Jp1468Decoder, Iso2022Jp1468Encoder};
 use crate::iso_2022_kr::{Iso2022KrDecoder, Iso2022KrEncoder};
 use crate::replacement::ReplacementDecoder;
 use crate::result::{DecoderResult, EncoderResult};
+#[cfg(feature = "scsu")]
+use crate::scsu::{ScsuDecoder, ScsuEncoder};
 #[cfg(feature = "shift-jis")]
 use crate::shift_jis::{ShiftJisDecoder, ShiftJisEncoder};
 #[cfg(feature = "shift-jis")]
@@ -95,6 +97,8 @@ pub(crate) enum VariantEncoding {
     Iso2022Cn,
     #[cfg(feature = "iso-2022-jp-2")]
     Iso2022Jp2,
+    #[cfg(feature = "scsu")]
+    Scsu,
     #[cfg(feature = "shift-jis")]
     ShiftJis,
     #[cfg(feature = "euc-kr")]
@@ -153,6 +157,8 @@ impl VariantEncoding {
             VariantEncoding::Iso2022Cn => VariantDecoder::Iso2022Cn(Iso2022CnDecoder::new()),
             #[cfg(feature = "iso-2022-jp-2")]
             VariantEncoding::Iso2022Jp2 => VariantDecoder::Iso2022Jp2(Iso2022Jp2Decoder::new()),
+            #[cfg(feature = "scsu")]
+            VariantEncoding::Scsu => VariantDecoder::Scsu(ScsuDecoder::new()),
             #[cfg(feature = "shift-jis")]
             VariantEncoding::ShiftJis => VariantDecoder::ShiftJis(ShiftJisDecoder::new()),
             #[cfg(feature = "euc-kr")]
@@ -207,6 +213,8 @@ impl VariantEncoding {
             VariantEncoding::Iso2022Cn => VariantEncoder::Iso2022Cn(Iso2022CnEncoder::default()),
             #[cfg(feature = "iso-2022-jp-2")]
             VariantEncoding::Iso2022Jp2 => VariantEncoder::Iso2022Jp2(Iso2022Jp2Encoder::default()),
+            #[cfg(feature = "scsu")]
+            VariantEncoding::Scsu => VariantEncoder::Scsu(ScsuEncoder::default()),
             #[cfg(feature = "shift-jis")]
             VariantEncoding::ShiftJis => VariantEncoder::ShiftJis(ShiftJisEncoder),
             #[cfg(feature = "euc-kr")]
@@ -254,6 +262,9 @@ impl VariantEncoding {
             VariantEncoding::Iso2022Cn => false,
             #[cfg(feature = "iso-2022-jp-2")]
             VariantEncoding::Iso2022Jp2 => false,
+            // Bytes 0x01 to 0x08 and 0x0B to 0x1F are tags, not text.
+            #[cfg(feature = "scsu")]
+            VariantEncoding::Scsu => false,
             // A full-byte table may reassign bytes below 0x80, and the EBCDIC
             // pages permute the range entirely.
             #[cfg(feature = "full-byte")]
@@ -308,6 +319,8 @@ pub(crate) enum VariantDecoder {
     Iso2022Cn(Iso2022CnDecoder),
     #[cfg(feature = "iso-2022-jp-2")]
     Iso2022Jp2(Iso2022Jp2Decoder),
+    #[cfg(feature = "scsu")]
+    Scsu(ScsuDecoder),
     #[cfg(feature = "shift-jis")]
     ShiftJis(ShiftJisDecoder),
     #[cfg(feature = "euc-kr")]
@@ -359,6 +372,8 @@ impl VariantDecoder {
             VariantDecoder::Iso2022Cn(d) => d.decode(src, sink, last),
             #[cfg(feature = "iso-2022-jp-2")]
             VariantDecoder::Iso2022Jp2(d) => d.decode(src, sink, last),
+            #[cfg(feature = "scsu")]
+            VariantDecoder::Scsu(d) => d.decode(src, sink, last),
             #[cfg(feature = "shift-jis")]
             VariantDecoder::ShiftJis(d) => d.decode(src, sink, last),
             #[cfg(feature = "euc-kr")]
@@ -415,6 +430,8 @@ pub(crate) enum VariantEncoder {
     Iso2022Cn(Iso2022CnEncoder),
     #[cfg(feature = "iso-2022-jp-2")]
     Iso2022Jp2(Iso2022Jp2Encoder),
+    #[cfg(feature = "scsu")]
+    Scsu(ScsuEncoder),
     #[cfg(feature = "shift-jis")]
     ShiftJis(ShiftJisEncoder),
     #[cfg(feature = "euc-kr")]
@@ -466,6 +483,8 @@ impl VariantEncoder {
             VariantEncoder::Iso2022Cn(e) => e.encode(src, sink, last),
             #[cfg(feature = "iso-2022-jp-2")]
             VariantEncoder::Iso2022Jp2(e) => e.encode(src, sink, last),
+            #[cfg(feature = "scsu")]
+            VariantEncoder::Scsu(e) => e.encode(src, sink, last),
             #[cfg(feature = "shift-jis")]
             VariantEncoder::ShiftJis(e) => e.encode(src, sink),
             #[cfg(feature = "euc-kr")]
@@ -497,6 +516,10 @@ impl VariantEncoder {
             // taken from G2.
             #[cfg(feature = "iso-2022-jp-2")]
             VariantEncoder::Iso2022Jp2(_) => byte_length.checked_mul(8)?.checked_add(8),
+            // A window move before a character, or a quote before an ASCII
+            // byte in Unicode mode.
+            #[cfg(feature = "scsu")]
+            VariantEncoder::Scsu(_) => byte_length.checked_mul(4)?.checked_add(4),
             // A two-byte UTF-8 character can need a four-byte gb18030 sequence.
             #[cfg(feature = "gb18030")]
             VariantEncoder::Gb18030(_) => byte_length.checked_mul(2)?.checked_add(4),

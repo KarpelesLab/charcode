@@ -184,6 +184,8 @@
 //!   of its own.
 //! - `iso-2022-jp-2`: [`ISO_2022_JP_2`] (RFC 1554), which brings no tables of
 //!   its own — it designates six sets the groups above already carry.
+//! - `scsu`: [`SCSU`] (UTS #6), a compression scheme rather than a charset.
+//!   No tables and no dependencies; eight windows move over Unicode instead.
 //! - `extras`: everything below at once.
 //! - `dos`: IBM PC / OEM code pages — 437, 737, 775, 850, 852, 855, 856, 857,
 //!   860 to 865, 869, 1006.
@@ -280,6 +282,8 @@ mod jis0208_1997;
 mod options;
 mod replacement;
 mod result;
+#[cfg(feature = "scsu")]
+mod scsu;
 #[cfg(feature = "shift-jis")]
 mod shift_jis;
 #[cfg(feature = "shift-jis")]

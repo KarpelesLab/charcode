@@ -1158,3 +1158,180 @@ fn iso_2022_jp_2_is_ours_alone() {
         Some(crate::ISO_2022_JP)
     );
 }
+
+/// The four worked examples in UTS #6 section 9, which are the only byte
+/// sequences the specification itself pins down.
+#[cfg(feature = "scsu")]
+#[test]
+fn scsu_decodes_the_specifications_own_examples() {
+    let cases: [(&[u8], &str); 4] = [
+        // 9.1 German, which the default window 0 covers entirely.
+        (
+            b"\xD6\x6C\x20\x66\x6C\x69\x65\xDF\x74",
+            "\u{00D6}l flie\u{00DF}t",
+        ),
+        // 9.2 Russian, one locking shift to the default window 2.
+        (
+            b"\x12\x9C\xBE\xC1\xBA\xB2\xB0",
+            "\u{041C}\u{043E}\u{0441}\u{043A}\u{0432}\u{0430}",
+        ),
+        // 9.3 Japanese, 116 characters in 178 bytes: three quarters of what
+        // UTF-16 would take, moving between the kana and CJK windows.
+        (
+            b"\x08\x00\x1B\x4C\xEA\x16\xCA\xD3\x94\x0F\x53\xEF\x61\x1B\xE5\x84\
+         \xC4\x0F\x53\xEF\x61\x1B\xE5\x84\xC4\x16\xCA\xD3\x94\x08\x02\x0F\
+         \x53\x4A\x4E\x16\x7D\x00\x30\x82\x52\x4D\x30\x6B\x6D\x41\x88\x4C\
+         \xE5\x97\x9F\x08\x0C\x16\xCA\xD3\x94\x15\xAE\x0E\x6B\x4C\x08\x0D\
+         \x8C\xB4\xA3\x9F\xCA\x99\xCB\x8B\xC2\x97\xCC\xAA\x84\x08\x02\x0E\
+         \x7C\x73\xE2\x16\xA3\xB7\xCB\x93\xD3\xB4\xC5\xDC\x9F\x0E\x79\x3E\
+         \x06\xAE\xB1\x9D\x93\xD3\x08\x0C\xBE\xA3\x8F\x08\x88\xBE\xA3\x8D\
+         \xD3\xA8\xA3\x97\xC5\x17\x89\x08\x0D\x15\xD2\x08\x01\x93\xC8\xAA\
+         \x8F\x0E\x61\x1B\x99\xCB\x0E\x4E\xBA\x9F\xA1\xAE\x93\xA8\xA0\x08\
+         \x02\x08\x0C\xE2\x16\xA3\xB7\xCB\x0F\x4F\xE1\x80\x05\xEC\x60\x8D\
+         \xEA\x06\xD3\xE6\x0F\x8A\x00\x30\x44\x65\xB9\xE4\xFE\xE7\xC2\x06\
+         \xCB\x82",
+            "\u{3000}\u{266A}\u{30EA}\u{30F3}\u{30B4}\u{53EF}\u{611B}\u{3044}\u{3084}\u{53EF}\
+         \u{611B}\u{3044}\u{3084}\u{30EA}\u{30F3}\u{30B4}\u{3002}\u{534A}\u{4E16}\u{7D00}\
+         \u{3082}\u{524D}\u{306B}\u{6D41}\u{884C}\u{3057}\u{305F}\u{300C}\u{30EA}\u{30F3}\
+         \u{30B4}\u{306E}\u{6B4C}\u{300D}\u{304C}\u{3074}\u{3063}\u{305F}\u{308A}\u{3059}\
+         \u{308B}\u{304B}\u{3082}\u{3057}\u{308C}\u{306A}\u{3044}\u{3002}\u{7C73}\u{30A2}\
+         \u{30C3}\u{30D7}\u{30EB}\u{30B3}\u{30F3}\u{30D4}\u{30E5}\u{30FC}\u{30BF}\u{793E}\
+         \u{306E}\u{30D1}\u{30BD}\u{30B3}\u{30F3}\u{300C}\u{30DE}\u{30C3}\u{30AF}\u{FF08}\
+         \u{30DE}\u{30C3}\u{30AD}\u{30F3}\u{30C8}\u{30C3}\u{30B7}\u{30E5}\u{FF09}\u{300D}\
+         \u{3092}\u{3001}\u{3053}\u{3088}\u{306A}\u{304F}\u{611B}\u{3059}\u{308B}\u{4EBA}\
+         \u{305F}\u{3061}\u{306E}\u{3053}\u{3068}\u{3060}\u{3002}\u{300C}\u{30A2}\u{30C3}\
+         \u{30D7}\u{30EB}\u{4FE1}\u{8005}\u{300D}\u{306A}\u{3093}\u{3066}\u{8A00}\u{3044}\
+         \u{65B9}\u{307E}\u{3067}\u{3042}\u{308B}\u{3002}",
+        ),
+        // 9.4 All features: a representative of every tag, including SDX and
+        // a supplementary character reached through an extended window.
+        (
+            b"\x41\xDF\x12\x81\x03\x5F\x10\xDF\x1B\x03\xDF\x1C\x88\x80\x0B\xBF\
+         \xFF\xFF\x0D\x0A\x41\x10\xDF\x12\x81\x03\x5F\x10\xDF\x13\xDF\x14\
+         \x80\x15\xFF",
+            "\u{0041}\u{00DF}\u{0401}\u{015F}\u{00DF}\u{01DF}\u{F000}\u{10FFFF}\u{000D}\u{000A}\
+         \u{0041}\u{00DF}\u{0401}\u{015F}\u{00DF}\u{01DF}\u{F000}\u{10FFFF}",
+        ),
+    ];
+    for (bytes, text) in cases {
+        assert_eq!(
+            decode(crate::SCSU, bytes).as_deref(),
+            Some(text),
+            "{bytes:02X?}"
+        );
+    }
+
+    // The first two are forced: there is one sensible encoding of each, and
+    // this writes it.
+    for (bytes, text) in &cases[..2] {
+        let mut out = Vec::new();
+        crate::SCSU
+            .new_encoder()
+            .encode_from_str(text, &mut out, true)
+            .unwrap();
+        assert_eq!(&out, bytes, "{text:?}");
+    }
+}
+
+/// Every scalar value survives a round trip, and the windows earn their keep.
+#[cfg(feature = "scsu")]
+#[test]
+fn scsu_round_trips_all_of_unicode() {
+    let mut buffer = String::new();
+    for scalar in 0..=0x10FFFFu32 {
+        let Some(c) = char::from_u32(scalar) else {
+            continue;
+        };
+        buffer.clear();
+        buffer.push(c);
+        let mut out = Vec::new();
+        crate::SCSU
+            .new_encoder()
+            .encode_from_str(&buffer, &mut out, true)
+            .unwrap_or_else(|e| panic!("SCSU cannot encode U+{scalar:04X}: {e}"));
+        assert_eq!(
+            decode(crate::SCSU, &out).as_deref(),
+            Some(&*buffer),
+            "U+{scalar:04X} encoded to {out:02X?}"
+        );
+    }
+
+    // Runs in one alphabet cost about a byte a character, which is the point.
+    for (text, most) in [
+        ("Hello, world!", 13),
+        // Cyrillic: one locking shift, then a byte each.
+        ("\u{41C}\u{43E}\u{441}\u{43A}\u{432}\u{430}", 7),
+        // Kana and CJK, which UTF-8 spends three bytes a character on.
+        (
+            "\u{65E5}\u{672C}\u{8A9E}\u{306E}\u{30C6}\u{30AD}\u{30B9}\u{30C8}",
+            14,
+        ),
+        // Even the supplementary planes, through an extended window.
+        ("\u{1F600}\u{1F601}\u{1F602}\u{1F603}", 7),
+    ] {
+        let mut out = Vec::new();
+        crate::SCSU
+            .new_encoder()
+            .encode_from_str(text, &mut out, true)
+            .unwrap();
+        assert!(out.len() <= most, "{text:?} took {} bytes", out.len());
+        assert_eq!(decode(crate::SCSU, &out).as_deref(), Some(text));
+    }
+}
+
+/// The byte values the scheme reserves, and the sequences it leaves dangling.
+#[cfg(feature = "scsu")]
+#[test]
+fn scsu_refuses_what_the_scheme_reserves() {
+    let scsu = crate::SCSU;
+    // 0x0C in single-byte mode and 0xF2 in Unicode mode are reserved.
+    assert_eq!(decode(scsu, b"A\x0CB"), None);
+    assert_eq!(decode(scsu, b"\x0F\xF2\x00"), None);
+    // So are the window offset table's own gaps.
+    for index in [0x00u8, 0xA8, 0xF8] {
+        assert_eq!(decode(scsu, &[0x18, index]), None, "{index:02X}");
+    }
+    // A tag with its arguments cut off.
+    for truncated in [
+        b"\x0E".as_slice(), // SQU, no character
+        b"\x0E\x30",        // SQU, half a character
+        b"\x18",            // SD0, no index
+        b"\x0B\x88",        // SDX, one argument
+        b"\x01",            // SQ0, nothing quoted
+        b"\x0F\x30",        // Unicode mode, half a code unit
+    ] {
+        assert_eq!(decode(scsu, truncated), None, "{truncated:02X?}");
+    }
+    // A surrogate that never finds its partner, either way round.
+    assert_eq!(decode(scsu, b"\x0E\xD8\x00"), None);
+    assert_eq!(decode(scsu, b"\x0E\xDC\x00"), None);
+    assert_eq!(decode(scsu, b"\x0E\xD8\x00\x41"), None);
+    // ...and one that does, split across the two mechanisms that can carry it.
+    assert_eq!(
+        decode(scsu, b"\x0E\xD8\x00\x0F\xDC\x00").as_deref(),
+        Some("\u{10000}")
+    );
+
+    // The encoder never writes a byte the decoder would read as a tag, so the
+    // control characters that collide with one are quoted.
+    let mut out = Vec::new();
+    scsu.new_encoder()
+        .encode_from_str("\u{1}\u{B}\u{1B}", &mut out, true)
+        .unwrap();
+    assert_eq!(out, b"\x01\x01\x01\x0B\x01\x1B");
+    assert_eq!(decode(scsu, &out).as_deref(), Some("\u{1}\u{B}\u{1B}"));
+
+    // It is not ASCII-transparent, since 0x01 to 0x08 are tags.
+    assert!(!scsu.is_ascii_compatible());
+}
+
+/// Not a label the standard defines, so neither lookup can be surprised.
+#[cfg(all(feature = "scsu", feature = "whatwg-aliases"))]
+#[test]
+fn scsu_is_ours_alone() {
+    for label in [b"scsu".as_slice(), b"csscsu"] {
+        assert_eq!(Encoding::for_label(label), Some(crate::SCSU), "{label:?}");
+        assert_eq!(Encoding::for_whatwg_label(label), None, "{label:?}");
+    }
+    assert!(!crate::SCSU.is_whatwg());
+}

@@ -220,6 +220,12 @@ EXTRA_DOCS = {
 /// Not the standard's `gb2312` label, which resolves to GBK: a superset, but
 /// one that gives two of GB 2312's code points a different character.""",
     "ISO-2022-KR": "ISO-2022-KR (RFC 1557), which shifts between ASCII and KS X 1001.",
+    "SCSU": """The Standard Compression Scheme for Unicode (UTS #6).
+///
+/// Not a charset but a compression scheme, which expresses all of Unicode at
+/// about the size a single-byte encoding would take.  It needs no table: eight
+/// 128-character windows move over Unicode instead, and tag bytes shift
+/// between them or drop into big-endian UTF-16.""",
     "ISO-2022-JP-2": """ISO-2022-JP-2 (RFC 1554), which designates six sets rather than three.
 ///
 /// ISO-2022-JP plus GB 2312-80, KS X 1001, JIS X 0212 and the right halves of
@@ -529,6 +535,7 @@ ALGORITHMIC = [
      ["iso-2022-cn", "csiso2022cn", "iso2022cn"]),
     ("iso-2022-jp-2", "ISO-2022-JP-2", "ISO_2022_JP_2", "Iso2022Jp2", None,
      ["iso-2022-jp-2", "csiso2022jp2", "iso2022jp2"]),
+    ("scsu", "SCSU", "SCSU", "Scsu", None, ["scsu", "csscsu"]),
     ("unicode-extras", "UTF-32BE", "UTF_32BE", "Utf32Be", 12001,
      ["utf-32be", "utf32be"]),
     ("unicode-extras", "UTF-32LE", "UTF_32LE", "Utf32Le", 12000,
