@@ -27,3 +27,5 @@ pub mod jis;
 pub mod labels;
 #[cfg(feature = "single-byte")]
 pub mod single_byte;
+#[cfg(feature = "translit")]
+pub mod translit;

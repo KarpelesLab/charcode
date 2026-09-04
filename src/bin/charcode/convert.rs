@@ -1,12 +1,15 @@
 //! The streaming conversion itself: decode a chunk of input, encode the text it
 //! produced, write the bytes out, repeat.
+//!
+//! What happens to malformed input and to characters the target cannot
+//! represent is the library's business now; this only chooses the policy and
+//! reports what it did.
 
 use std::fmt;
 use std::io::{self, Write};
 
-use charcode::{Decoder, Encoder, Encoding};
-
-use crate::args::OnError;
+use charcode::{DecodeOptions, EncodeOptions, Encoder, Encoding, MalformedError, Tally};
+use charcode::{Decoder, UnmappableError};
 
 /// Where the bytes being converted came from, for diagnostics.
 pub struct Origin<'a> {
@@ -48,7 +51,8 @@ impl fmt::Display for ConvertError {
             } => write!(
                 f,
                 "{source}: U+{:04X} ({character:?}) cannot be represented in {encoding}\n\
-                 Use -c to omit it, or --substitute to write a numeric character reference.",
+                 Use -c to omit it, --substitute to write '?', --translit for a close\n\
+                 ASCII equivalent, or --html / --json for an escape.",
                 u32::from(*character)
             ),
         }
@@ -67,12 +71,6 @@ impl From<io::Error> for Error {
     }
 }
 
-impl From<ConvertError> for Error {
-    fn from(e: ConvertError) -> Self {
-        Error::Convert(e)
-    }
-}
-
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -82,41 +80,37 @@ impl fmt::Display for Error {
     }
 }
 
-/// How much had to be dropped or replaced along the way.
-#[derive(Debug, Default, Clone, Copy)]
-pub struct Tally {
-    pub omitted_malformed: u64,
-    pub omitted_unmappable: u64,
-    pub substituted_malformed: bool,
-    pub substituted_unmappable: bool,
-    pub bytes_in: u64,
-    pub bytes_out: u64,
-}
-
 pub struct Converter {
     decoder: Decoder,
     encoder: Encoder,
     to: &'static Encoding,
-    on_error: OnError,
     text: String,
     bytes: Vec<u8>,
-    pub tally: Tally,
+    pub bytes_in: u64,
+    pub bytes_out: u64,
 }
 
 impl Converter {
-    pub fn new(from: &'static Encoding, to: &'static Encoding, on_error: OnError) -> Converter {
+    pub fn new(
+        from: &'static Encoding,
+        to: &'static Encoding,
+        decode: DecodeOptions,
+        encode: EncodeOptions,
+    ) -> Converter {
         Converter {
-            // A byte order mark names the encoding more reliably than a label
-            // does, which is why the standard lets it win; -f says what to
-            // assume in its absence.
-            decoder: from.new_decoder(),
-            encoder: to.new_encoder(),
+            decoder: from.new_decoder_with(decode),
+            encoder: to.new_encoder_with(encode),
             to: to.output_encoding(),
-            on_error,
             text: String::new(),
             bytes: Vec::new(),
-            tally: Tally::default(),
+            bytes_in: 0,
+            bytes_out: 0,
         }
+    }
+
+    /// What the two halves had to substitute or drop.
+    pub fn tally(&self) -> (Tally, Tally) {
+        (self.decoder.tally(), self.encoder.tally())
     }
 
     /// Converts one chunk.  `last` must be true for the final chunk of the last
@@ -129,154 +123,98 @@ impl Converter {
         out: &mut dyn Write,
         origin: &Origin<'_>,
     ) -> Result<(), Error> {
-        self.tally.bytes_in += input.len() as u64;
-        self.decode(input, last, origin)?;
-        self.encode(last, origin)?;
-        out.write_all(&self.bytes)?;
-        self.tally.bytes_out += self.bytes.len() as u64;
-        Ok(())
-    }
-
-    fn decode(
-        &mut self,
-        input: &[u8],
-        last: bool,
-        origin: &Origin<'_>,
-    ) -> Result<(), ConvertError> {
+        self.bytes_in += input.len() as u64;
         self.text.clear();
-        if self.on_error == OnError::Substitute {
-            if self.decoder.decode_to_string(input, &mut self.text, last) {
-                self.tally.substituted_malformed = true;
-            }
-            return Ok(());
-        }
-        let mut pos = 0;
-        loop {
-            match self.decoder.decode_to_string_without_replacement(
-                &input[pos..],
-                &mut self.text,
-                last,
-            ) {
-                Ok(()) => return Ok(()),
-                Err(e) => {
-                    // `offset` is where decoding got to within the slice, just
-                    // past the malformed sequence.
-                    let end = origin.base + (pos + e.offset) as u64;
-                    if self.on_error == OnError::Fail {
-                        return Err(ConvertError::Malformed {
-                            source: origin.name.to_owned(),
-                            offset: end.saturating_sub(u64::from(e.len)),
-                            len: e.len,
-                        });
-                    }
-                    self.tally.omitted_malformed += 1;
-                    pos += e.offset;
-                }
-            }
-        }
-    }
+        self.decoder
+            .decode_to_string(input, &mut self.text, last)
+            .map_err(|MalformedError { offset, len }| {
+                Error::Convert(ConvertError::Malformed {
+                    source: origin.name.to_owned(),
+                    offset: (origin.base + offset as u64).saturating_sub(u64::from(len)),
+                    len,
+                })
+            })?;
 
-    fn encode(&mut self, last: bool, origin: &Origin<'_>) -> Result<(), ConvertError> {
         self.bytes.clear();
-        if self.on_error == OnError::Substitute {
-            if self
-                .encoder
-                .encode_from_str(&self.text, &mut self.bytes, last)
-            {
-                self.tally.substituted_unmappable = true;
-            }
-            return Ok(());
-        }
-        let mut pos = 0;
-        loop {
-            match self.encoder.encode_from_str_without_replacement(
-                &self.text[pos..],
-                &mut self.bytes,
-                last,
-            ) {
-                Ok(()) => return Ok(()),
-                Err(e) => {
-                    if self.on_error == OnError::Fail {
-                        return Err(ConvertError::Unmappable {
-                            source: origin.name.to_owned(),
-                            character: e.character,
-                            encoding: self.to.name(),
-                        });
-                    }
-                    self.tally.omitted_unmappable += 1;
-                    pos += e.offset;
-                }
-            }
-        }
+        self.encoder
+            .encode_from_str(&self.text, &mut self.bytes, last)
+            .map_err(|UnmappableError { character, .. }| {
+                Error::Convert(ConvertError::Unmappable {
+                    source: origin.name.to_owned(),
+                    character,
+                    encoding: self.to.name(),
+                })
+            })?;
+
+        out.write_all(&self.bytes)?;
+        self.bytes_out += self.bytes.len() as u64;
+        Ok(())
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use charcode::{Bom, Malformed, Unmappable};
 
     fn convert(
         from: &'static Encoding,
         to: &'static Encoding,
-        on_error: OnError,
+        decode: DecodeOptions,
+        encode: EncodeOptions,
         chunks: &[&[u8]],
-    ) -> Result<(Vec<u8>, Tally), Error> {
-        let mut converter = Converter::new(from, to, on_error);
+    ) -> Result<(Vec<u8>, u64), Error> {
+        let mut converter = Converter::new(from, to, decode, encode);
         let mut out = Vec::new();
-        let origin = Origin {
-            name: "test",
-            base: 0,
-        };
         let mut base = 0u64;
         for chunk in chunks {
-            let origin = Origin { base, ..origin };
+            let origin = Origin { name: "test", base };
             converter.feed(chunk, false, &mut out, &origin)?;
             base += chunk.len() as u64;
         }
-        let origin = Origin { base, ..origin };
+        let origin = Origin { name: "test", base };
         converter.feed(&[], true, &mut out, &origin)?;
-        Ok((out, converter.tally))
+        let (decoded, encoded) = converter.tally();
+        Ok((out, decoded.errors + encoded.errors))
+    }
+
+    fn strict(
+        from: &'static Encoding,
+        to: &'static Encoding,
+        chunks: &[&[u8]],
+    ) -> Result<(Vec<u8>, u64), Error> {
+        convert(
+            from,
+            to,
+            DecodeOptions::new().malformed(Malformed::Fail),
+            EncodeOptions::new(),
+            chunks,
+        )
     }
 
     #[test]
     fn transcodes_between_legacy_encodings() {
-        let (out, _) = convert(
-            charcode::WINDOWS_1252,
-            charcode::ISO_8859_2,
-            OnError::Fail,
-            &[b"caf\xE9"],
-        )
-        .expect("both encodings have e-acute");
+        let (out, _) = strict(charcode::WINDOWS_1252, charcode::ISO_8859_2, &[b"caf\xE9"])
+            .expect("both encodings have e-acute");
         assert_eq!(out, b"caf\xE9");
 
-        let (out, _) = convert(
-            charcode::SHIFT_JIS,
-            charcode::UTF_8,
-            OnError::Fail,
-            &[b"\x93\xFA\x96\x7B"],
-        )
-        .expect("valid Shift_JIS");
+        let (out, _) = strict(charcode::SHIFT_JIS, charcode::UTF_8, &[b"\x93\xFA\x96\x7B"])
+            .expect("valid Shift_JIS");
         assert_eq!(out, "\u{65E5}\u{672C}".as_bytes());
     }
 
     #[test]
     fn a_multi_byte_sequence_may_straddle_chunks() {
-        let (out, _) = convert(
-            charcode::SHIFT_JIS,
-            charcode::UTF_8,
-            OnError::Fail,
-            &[b"\x93", b"\xFA"],
-        )
-        .expect("the decoder carries the lead byte across");
+        let (out, _) = strict(charcode::SHIFT_JIS, charcode::UTF_8, &[b"\x93", b"\xFA"])
+            .expect("the decoder carries the lead byte across");
         assert_eq!(out, "\u{65E5}".as_bytes());
     }
 
     #[test]
     fn a_byte_order_mark_wins_over_the_named_encoding() {
-        let (out, _) = convert(
+        let (out, _) = strict(
             charcode::WINDOWS_1252,
             charcode::UTF_8,
-            OnError::Fail,
             &[b"\xEF\xBB\xBFcaf\xC3\xA9"],
         )
         .unwrap();
@@ -285,22 +223,15 @@ mod tests {
 
     #[test]
     fn failing_is_the_default_and_reports_where() {
-        let error = convert(
-            charcode::UTF_8,
-            charcode::UTF_8,
-            OnError::Fail,
-            &[b"ok then \xFF more"],
-        )
-        .unwrap_err();
+        let error = strict(charcode::UTF_8, charcode::UTF_8, &[b"ok then \xFF more"]).unwrap_err();
         let Error::Convert(ConvertError::Malformed { offset, len, .. }) = error else {
             panic!("expected a malformed-input error, got {error}");
         };
         assert_eq!((offset, len), (8, 1));
 
-        let error = convert(
+        let error = strict(
             charcode::UTF_8,
             charcode::WINDOWS_1252,
-            OnError::Fail,
             &["a\u{4E00}".as_bytes()],
         )
         .unwrap_err();
@@ -317,56 +248,51 @@ mod tests {
 
     #[test]
     fn omitting_drops_and_counts() {
-        let (out, tally) = convert(
+        let (out, errors) = convert(
             charcode::UTF_8,
             charcode::WINDOWS_1252,
-            OnError::Omit,
+            DecodeOptions::new().malformed(Malformed::Omit),
+            EncodeOptions::new().unmappable(Unmappable::Omit),
             &[b"a\xFFb\xE4\xB8\x80c"],
         )
         .unwrap();
         assert_eq!(out, b"abc");
-        assert_eq!(tally.omitted_malformed, 1);
-        assert_eq!(tally.omitted_unmappable, 1);
+        assert_eq!(errors, 2);
     }
 
     #[test]
-    fn substituting_matches_the_standards_web_behaviour() {
-        let (out, tally) = convert(
-            charcode::UTF_8,
-            charcode::WINDOWS_1252,
-            OnError::Substitute,
-            &[b"a\xFFb\xE4\xB8\x80c"],
-        )
-        .unwrap();
-        // U+FFFD is itself unmappable in windows-1252, so it becomes a reference.
-        assert_eq!(out, b"a&#65533;b&#19968;c");
-        assert!(tally.substituted_malformed);
-        assert!(tally.substituted_unmappable);
+    fn each_escape_policy_writes_its_own_syntax() {
+        let run = |unmappable| {
+            convert(
+                charcode::UTF_8,
+                charcode::WINDOWS_1252,
+                DecodeOptions::new(),
+                EncodeOptions::new().unmappable(unmappable),
+                &["a&b\u{4E00}c".as_bytes()],
+            )
+            .unwrap()
+            .0
+        };
+        assert_eq!(run(Unmappable::Replace('?')), b"a&b?c");
+        // The introducer is escaped so the reference reads back unambiguously.
+        assert_eq!(run(Unmappable::Html), b"a&amp;b&#19968;c");
+        assert_eq!(run(Unmappable::JsonEscape), b"a&b\\u4e00c");
     }
 
     #[test]
     fn stateful_output_is_flushed_at_the_end() {
-        let (out, _) = convert(
+        let (out, _) = strict(
             charcode::UTF_8,
             charcode::ISO_2022_JP,
-            OnError::Fail,
             &["\u{65E5}".as_bytes()],
         )
         .unwrap();
-        // The trailing escape back to ASCII only appears because of the final
-        // `last = true` call.
         assert_eq!(out, b"\x1B$B\x46\x7C\x1B(B");
     }
 
     #[test]
     fn a_truncated_sequence_at_end_of_input_is_an_error() {
-        let error = convert(
-            charcode::UTF_8,
-            charcode::UTF_8,
-            OnError::Fail,
-            &[b"good \xE2\x82"],
-        )
-        .unwrap_err();
+        let error = strict(charcode::UTF_8, charcode::UTF_8, &[b"good \xE2\x82"]).unwrap_err();
         assert!(matches!(
             error,
             Error::Convert(ConvertError::Malformed {
@@ -375,5 +301,35 @@ mod tests {
                 ..
             })
         ));
+    }
+
+    #[test]
+    fn bom_handling_is_selectable() {
+        let (out, _) = convert(
+            charcode::UTF_8,
+            charcode::UTF_8,
+            DecodeOptions::new().bom(Bom::Ignore),
+            EncodeOptions::new(),
+            &[b"\xEF\xBB\xBFa"],
+        )
+        .unwrap();
+        assert_eq!(out, "\u{FEFF}a".as_bytes());
+    }
+
+    #[test]
+    fn transliteration_falls_back_to_the_unmappable_policy() {
+        let (out, _) = convert(
+            charcode::UTF_8,
+            charcode::WINDOWS_1252,
+            DecodeOptions::new(),
+            EncodeOptions::new()
+                .transliterate(true)
+                .unmappable(Unmappable::Replace('?')),
+            &["caf\u{E9} \u{101}bc \u{2190} \u{65E5}".as_bytes()],
+        )
+        .unwrap();
+        // é and — are in windows-1252 already, so they are left alone; ā and ←
+        // are not, and fold; 日 has no ASCII form and hits the fallback.
+        assert_eq!(out, b"caf\xE9 abc <- ?");
     }
 }

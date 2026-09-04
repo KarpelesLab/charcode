@@ -14,8 +14,14 @@ use crate::encodings::*;
 /// exactly what a byte sequence maps to.
 fn decode_strict(encoding: &'static Encoding, bytes: &[u8]) -> Option<String> {
     encoding
-        .decode_without_bom_handling_and_without_replacement(bytes)
-        .map(|cow| cow.into_owned())
+        .try_decode(
+            bytes,
+            crate::DecodeOptions::new()
+                .bom(crate::Bom::Ignore)
+                .malformed(crate::Malformed::Fail),
+        )
+        .ok()
+        .map(|(text, _, _)| text.into_owned())
 }
 
 fn expect_char(encoding: &'static Encoding, bytes: &[u8], code_point: u32) {
@@ -334,7 +340,7 @@ fn gb18030_encoder_side_table() {
         let mut out = alloc::vec::Vec::new();
         GB18030
             .new_encoder()
-            .encode_from_str_without_replacement(&alloc::string::String::from(c), &mut out, true)
+            .encode_from_str(&alloc::string::String::from(c), &mut out, true)
             .expect("side table entries are encodable");
         assert_eq!(out, bytes, "U+{scalar:04X}");
     }

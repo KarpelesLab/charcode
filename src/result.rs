@@ -1,17 +1,9 @@
 //! The result types reported by the streaming [`Decoder`](crate::Decoder) and
 //! [`Encoder`](crate::Encoder).
-
-/// Why a conversion that substitutes errors stopped.
-///
-/// Both variants are ordinary control flow: `InputEmpty` means the caller should
-/// supply more input, `OutputFull` means it should drain the output buffer.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum CoderResult {
-    /// All of the input was consumed.
-    InputEmpty,
-    /// The output buffer ran out of room before the input was consumed.
-    OutputFull,
-}
+//!
+//! `Malformed` and `Unmappable` appear only under the failing policies; every
+//! other [`Malformed`](crate::Malformed) or [`Unmappable`](crate::Unmappable)
+//! setting handles the problem and keeps going.
 
 /// Why a decode that reports errors stopped.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -39,25 +31,4 @@ pub enum EncoderResult {
     /// The given character has no representation in the target encoding, and was
     /// consumed without producing output.
     Unmappable(char),
-}
-
-impl DecoderResult {
-    /// Converts to a [`CoderResult`], panicking on `Malformed`.
-    pub(crate) fn as_coder_result(self) -> CoderResult {
-        match self {
-            DecoderResult::InputEmpty => CoderResult::InputEmpty,
-            DecoderResult::OutputFull => CoderResult::OutputFull,
-            DecoderResult::Malformed(_) => unreachable!("errors are handled by the caller"),
-        }
-    }
-}
-
-impl EncoderResult {
-    pub(crate) fn as_coder_result(self) -> CoderResult {
-        match self {
-            EncoderResult::InputEmpty => CoderResult::InputEmpty,
-            EncoderResult::OutputFull => CoderResult::OutputFull,
-            EncoderResult::Unmappable(_) => unreachable!("errors are handled by the caller"),
-        }
-    }
 }

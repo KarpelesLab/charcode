@@ -494,6 +494,91 @@ GROUP_DOCS = {
 }
 
 
+
+# --- transliteration --------------------------------------------------------
+#
+# Unicode's own decompositions do most of the work: recursively expand a
+# character, drop the combining marks, and if what remains is ASCII that is the
+# fold.  The table below covers what does not decompose at all — ligatures,
+# stroked letters, punctuation and symbols — and the non-ASCII characters that
+# appear inside a decomposition, such as U+2044 FRACTION SLASH in `½`.
+TRANSLIT_EXTRA = {
+    # Letters with no decomposition.
+    0x00C6: "AE", 0x00E6: "ae", 0x0152: "OE", 0x0153: "oe",
+    0x00DF: "ss", 0x1E9E: "SS", 0x00D8: "O", 0x00F8: "o",
+    0x0110: "D", 0x0111: "d", 0x0141: "L", 0x0142: "l",
+    0x00DE: "TH", 0x00FE: "th", 0x00D0: "D", 0x00F0: "d",
+    0x014A: "NG", 0x014B: "ng", 0x0138: "k", 0x017F: "s",
+    0x0131: "i", 0x0132: "IJ", 0x0133: "ij", 0x0126: "H", 0x0127: "h",
+    0x0166: "T", 0x0167: "t", 0x018F: "E", 0x0259: "e",
+    0x0180: "b", 0x0183: "b", 0x0288: "t", 0x01BF: "w", 0x01BD: "z",
+    # Punctuation.
+    0x2010: "-", 0x2011: "-", 0x2012: "-", 0x2013: "-", 0x2014: "-", 0x2015: "-",
+    0x2018: "'", 0x2019: "'", 0x201A: "'", 0x201B: "'",
+    0x201C: '"', 0x201D: '"', 0x201E: '"', 0x201F: '"',
+    0x2032: "'", 0x2033: '"', 0x2035: "'", 0x2036: '"',
+    0x00AB: "<<", 0x00BB: ">>", 0x2039: "<", 0x203A: ">",
+    0x2026: "...", 0x2022: "*", 0x2023: ">", 0x00B7: ".", 0x2027: ".",
+    0x203E: "-", 0x2044: "/", 0x2215: "/", 0x2212: "-",
+    0x00A1: "!", 0x00BF: "?", 0x00AD: "-",
+    # Symbols.
+    0x00A9: "(C)", 0x00AE: "(R)", 0x2122: "(TM)", 0x2117: "(P)",
+    0x00B0: "deg", 0x00B1: "+/-", 0x00D7: "x", 0x00F7: "/",
+    0x00AC: "!", 0x00A6: "|", 0x00A7: "S", 0x00B6: "P",
+    0x2020: "+", 0x2021: "++", 0x2030: "%o", 0x2031: "%oo", 0x2116: "No",
+    0x2190: "<-", 0x2192: "->", 0x2194: "<->", 0x21D2: "=>", 0x21D4: "<=>",
+    0x2264: "<=", 0x2265: ">=", 0x2260: "!=", 0x2248: "~", 0x221E: "inf",
+    0x221A: "sqrt", 0x2211: "sum", 0x220F: "prod", 0x222B: "int", 0x2202: "d",
+    0x25CF: "*", 0x25CB: "o", 0x25A0: "#", 0x25A1: "#",
+    # Currency.
+    0x20AC: "EUR", 0x00A3: "GBP", 0x00A5: "JPY", 0x00A2: "c", 0x00A4: "$",
+    0x20A9: "KRW", 0x20B9: "INR", 0x20BD: "RUB", 0x20B4: "UAH", 0x20AB: "VND",
+}
+
+
+def build_translit():
+    """Code point -> ASCII replacement, for every BMP character that has one."""
+    decomposition = {}
+    category = {}
+    with open(os.path.join(DATA, "UnicodeData.txt"), encoding="utf-8") as f:
+        for line in f:
+            fields = line.split(";")
+            code_point = int(fields[0], 16)
+            category[code_point] = fields[2]
+            if fields[5]:
+                decomposition[code_point] = fields[5]
+
+    def expand(code_point, depth=0):
+        if depth > 8 or code_point not in decomposition:
+            return [code_point]
+        parts = decomposition[code_point].split()
+        if parts and parts[0].startswith("<"):
+            parts = parts[1:]
+        out = []
+        for part in parts:
+            out.extend(expand(int(part, 16), depth + 1))
+        return out
+
+    folds = {}
+    for code_point in range(0x20, 0x10000):
+        if code_point <= 0x7E:
+            continue
+        text = TRANSLIT_EXTRA.get(code_point)
+        if text is None:
+            expanded = [c for c in expand(code_point) if category.get(c) != "Mn"]
+            # Substitute any non-ASCII piece from the table above, once.
+            pieces = []
+            for c in expanded:
+                pieces.append(chr(c) if c <= 0x7E else TRANSLIT_EXTRA.get(c, "\uFFFF"))
+            text = "".join(pieces)
+        if not text or any(ch < " " or ch > "~" for ch in text):
+            continue
+        if text == chr(code_point):
+            continue
+        folds[code_point] = text
+    return dict(sorted(folds.items()))
+
+
 def write(path, text):
     with open(path, "w", newline="\n") as f:
         f.write(text)
@@ -678,6 +763,44 @@ use crate::variant::VariantEncoding;
                          .format(doc, gate, const[:-len("_INIT")], const))
     write(os.path.join(ROOT, "src", "encodings.rs"), "".join(parts))
 
+    # --- transliteration -------------------------------------------------
+    folds = build_translit()
+    blob = ""
+    spans = []
+    for text in folds.values():
+        at = blob.find(text)
+        if at < 0:
+            at = len(blob)
+            blob += text
+        spans.append((at, len(text)))
+    assert len(blob) < 0x10000 and all(l < 256 for _, l in spans)
+    parts = [HEADER, """
+//! ASCII folds for transliteration.
+//!
+//! Derived from Unicode's own decompositions, with a table in the generator for
+//! what does not decompose.  Keys are sorted for binary search; each span is an
+//! offset and length into the one shared blob.
+
+#[rustfmt::skip]
+pub static KEYS: [u16; %d] = [
+%s
+];
+
+#[rustfmt::skip]
+pub static SPANS: [(u16, u8); %d] = [
+%s
+];
+
+pub static DATA: &str = %s;
+""" % (
+        len(folds), rows(list(folds), 12, u16_hex),
+        len(spans),
+        "\n".join("    " + " ".join("(0x{:04X}, {}),".format(o, l) for o, l in spans[i:i + 8])
+                   for i in range(0, len(spans), 8)),
+        json.dumps(blob),
+    )]
+    write(os.path.join(OUT, "translit.rs"), "".join(parts))
+
     # --- module root -----------------------------------------------------
     write(os.path.join(OUT, "mod.rs"), HEADER + """
 //! Static index tables derived from the WHATWG Encoding Standard.
@@ -699,6 +822,8 @@ pub mod extra_labels;
 pub mod labels;
 #[cfg(feature = "single-byte")]
 pub mod single_byte;
+#[cfg(feature = "translit")]
+pub mod translit;
 """)
 
 

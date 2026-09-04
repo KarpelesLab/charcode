@@ -1,6 +1,6 @@
 [package]
 name = "charcode"
-version = "0.1.1"
+version = "0.2.0"
 edition = "2024"
 rust-version = "1.88"
 license = "MIT"
@@ -32,7 +32,8 @@ alloc = []
 serde = ["dep:serde"]
 # The `charcode` command-line tool, an iconv-style converter (gates the binary
 # target below).  It adds no dependencies.
-cli = ["std", "whatwg"]
+# The tool supports //TRANSLIT, so it takes that table; the library does not.
+cli = ["std", "whatwg", "translit"]
 
 # --- the WHATWG Encoding Standard -------------------------------------------
 # Everything the standard defines: all 40 encodings and all 228 of their labels.
@@ -94,6 +95,9 @@ ebcdic = ["full-byte"]
 mac = ["half-byte"]
 # Atari ST and KZ-1048.  About 2 KiB.
 misc = ["half-byte"]
+# Best-effort ASCII transliteration for the encoders: `EncodeOptions::transliterate`.
+# About 30 KiB of table, derived from Unicode's decompositions.
+translit = []
 # UTF-32BE/LE and UTF-7.  No tables at all; these are algorithmic.  The standard
 # leaves UTF-7 out deliberately, and `Encoding::for_whatwg_label` will not return
 # it however this is set.

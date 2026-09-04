@@ -17,7 +17,7 @@ behaviours that browsers actually use.
 
 ```toml
 [dependencies]
-charcode = "0.1"
+charcode = "0.2"
 ```
 
 ## Converting a buffer
@@ -25,10 +25,10 @@ charcode = "0.1"
 ```rust
 use charcode::{Encoding, WINDOWS_1252};
 
-let (text, encoding, had_errors) = WINDOWS_1252.decode(b"caf\xE9");
+let (text, encoding, tally) = WINDOWS_1252.decode(b"caf\xE9");
 assert_eq!(text, "café");
 assert_eq!(encoding, WINDOWS_1252);
-assert!(!had_errors);
+assert!(tally.is_lossless());
 ```
 
 `decode` implements the standard's `decode` hook: a byte order mark wins over the
@@ -41,19 +41,26 @@ use charcode::Encoding;
 
 let encoding = Encoding::for_whatwg_label(b"Shift-JIS").unwrap();
 assert_eq!(encoding.name(), "Shift_JIS");
-let (text, _) = encoding.decode_without_bom_handling(b"\x93\xFA\x96{");
+let (text, _, _) = encoding.decode(b"\x93\xFA\x96{");
 assert_eq!(text, "日本");
 ```
 
-Encoding goes the other way. Characters the target cannot represent become HTML
-numeric character references, the way form submission does:
+Encoding goes the other way, and **stops** at the first character the target
+cannot represent — quietly mangling text is never the default:
 
 ```rust
-use charcode::EUC_KR;
+use charcode::{EncodeOptions, EUC_KR, Unmappable};
 
-let (bytes, _, had_unmappable) = EUC_KR.encode("한국어 😀");
-assert_eq!(&bytes[..], b"\xC7\xD1\xB1\xB9\xBE\xEE &#128512;");
-assert!(had_unmappable);
+let (bytes, _, _) = EUC_KR.encode("한국어").unwrap();
+assert_eq!(&bytes[..], b"\xC7\xD1\xB1\xB9\xBE\xEE");
+
+// An emoji is not in EUC-KR, so say what should happen to it.
+assert!(EUC_KR.encode("한국어 😀").is_err());
+
+let options = EncodeOptions::new().unmappable(Unmappable::Replace('?'));
+let (bytes, _, tally) = EUC_KR.encode_with("한국어 😀", options).unwrap();
+assert_eq!(&bytes[..], b"\xC7\xD1\xB1\xB9\xBE\xEE ?");
+assert_eq!(tally.errors, 1);
 ```
 
 Both return a [`Cow`], borrowed when the input already is the output, so ASCII
@@ -70,8 +77,8 @@ use charcode::BIG5;
 
 let mut decoder = BIG5.new_decoder();
 let mut text = String::new();
-decoder.decode_to_string(&[0xA4], &mut text, false);
-decoder.decode_to_string(&[0x40], &mut text, true);
+decoder.decode_to_string(&[0xA4], &mut text, false).unwrap();
+decoder.decode_to_string(&[0x40], &mut text, true).unwrap();
 assert_eq!(text, "一");
 ```
 
@@ -79,27 +86,48 @@ assert_eq!(text, "一");
 allocation-free forms, writing into a `&mut [u8]` you provide. They work with an
 output buffer as small as four bytes.
 
-## Handling errors instead of substituting them
+## Error policies
 
-Every conversion comes in two flavours. The default substitutes, as the standard
-requires for web content. The `without_replacement` forms stop at the first
-problem and report it, for callers that need to reject bad input:
+`DecodeOptions` and `EncodeOptions` say what to do about input that does not
+decode and characters the target cannot represent. Decoding substitutes U+FFFD
+by default, as the standard requires; encoding fails by default, because every
+alternative changes the text.
+
+| | `Malformed` | `Unmappable` |
+| --- | --- | --- |
+| stop and report | `Fail` | `Fail` *(default)* |
+| drop it | `Omit` | `Omit` |
+| write a character | `Replace(c)` *(default U+FFFD)* | `Replace(c)` |
+| `&#19968;` | | `Html` |
+| `\u4e00` | | `JsonEscape` |
 
 ```rust
-use charcode::{SHIFT_JIS, WINDOWS_1252};
+use charcode::{Bom, DecodeOptions, EncodeOptions, Malformed, Unmappable, WINDOWS_1252};
 
-assert!(SHIFT_JIS
-    .decode_without_bom_handling_and_without_replacement(b"\x81\x20")
-    .is_none());
+// Reject anything that does not decode cleanly.
+let strict = DecodeOptions::new().malformed(Malformed::Fail);
+assert!(WINDOWS_1252.try_decode(b"\x81", strict).is_ok()); // windows-1252 maps every byte
+assert!(charcode::UTF_8.try_decode(b"\xFF", strict).is_err());
 
-let mut bytes = Vec::new();
-let error = WINDOWS_1252
-    .new_encoder()
-    .encode_from_str_without_replacement("ab一", &mut bytes, true)
-    .unwrap_err();
-assert_eq!(error.character, '一');
-assert_eq!(bytes, b"ab");
+// Escape what windows-1252 cannot hold, as JSON would.
+let options = EncodeOptions::new().unmappable(Unmappable::JsonEscape);
+let (bytes, _, _) = WINDOWS_1252.encode_with("a\\b一", options).unwrap();
+assert_eq!(&bytes[..], b"a\\\\b\\u4e00");
 ```
+
+`Html` and `JsonEscape` also rewrite their own introducer — `&` becomes `&amp;`,
+`\` becomes `\\` — so what they write reads back unambiguously. Without that, a
+literal `&#65;` in the input would come back as `A`.
+
+The `translit` feature adds `EncodeOptions::transliterate`, `iconv`'s
+`//TRANSLIT`: try a close ASCII equivalent first — `é` as `e`, `œ` as `oe`, `—`
+as `-`, `€` as `EUR` — and fall through to the policy above for a character with
+no sensible one. It carries about 30 KiB of table derived from Unicode's own
+decompositions, and is off by default.
+
+For HTML form submission specifically, `Encoding::encode_html_form` is the
+standard's `encode` hook: numeric references, and no `&` escaping, which is the
+ambiguity form submission has always had.
 
 ## Windows code pages
 
@@ -230,7 +258,7 @@ The alias layer is independent of which tables you take:
 ```toml
 # Japanese and Unicode, with the standard's naming, plus the DOS code pages
 # available locally but not selectable by a remote label.
-charcode = { version = "0.1", default-features = false, features = [
+charcode = { version = "0.2", default-features = false, features = [
     "std", "whatwg-aliases", "shift-jis", "euc-jp", "iso-2022-jp", "dos",
 ] }
 ```
@@ -242,17 +270,16 @@ never touching a heap:
 
 ```toml
 [dependencies]
-charcode = { version = "0.1", default-features = false }
+charcode = { version = "0.2", default-features = false }
 ```
 
 ```rust
-use charcode::{CoderResult, WINDOWS_1252};
+use charcode::{Bom, DecodeOptions, DecoderResult, WINDOWS_1252};
 
-let mut decoder = WINDOWS_1252.new_decoder_without_bom_handling();
+let mut decoder = WINDOWS_1252.new_decoder_with(DecodeOptions::new().bom(Bom::Ignore));
 let mut buffer = [0u8; 64];
-let (result, _read, written, _had_errors) =
-    decoder.decode_to_utf8_with_replacement(b"caf\xE9", &mut buffer, true);
-assert_eq!(result, CoderResult::InputEmpty);
+let (result, _read, written) = decoder.decode_to_utf8(b"caf\xE9", &mut buffer, true);
+assert_eq!(result, DecoderResult::InputEmpty);
 assert_eq!(core::str::from_utf8(&buffer[..written]).unwrap(), "café");
 ```
 
