@@ -26,38 +26,45 @@ impl<'a> ByteSink<'a> {
         ByteSink { dst, written: 0 }
     }
 
+    #[inline]
     pub(crate) fn written(&self) -> usize {
         self.written
     }
 
+    #[inline]
     pub(crate) fn room(&self) -> usize {
         self.dst.len() - self.written
     }
 
+    #[inline]
     pub(crate) fn has_room(&self, needed: usize) -> bool {
         self.room() >= needed
     }
 
     /// Writes a scalar value as UTF-8.  The caller must have checked for room.
+    #[inline]
     pub(crate) fn write_char(&mut self, c: char) {
         self.written += c.encode_utf8(&mut self.dst[self.written..]).len();
     }
 
     /// Writes a code point coming out of an index table.
     ///
-    /// No index in the standard contains a surrogate or an out-of-range value, so the
-    /// fallback is unreachable; it is here so that table lookups stay panic-free.
+    /// No index contains a surrogate or an out-of-range value, so the fallback
+    /// is unreachable; it is here so that table lookups stay panic-free.
+    #[inline]
     pub(crate) fn write_code_point(&mut self, code_point: u32) {
         self.write_char(char::from_u32(code_point).unwrap_or(char::REPLACEMENT_CHARACTER));
     }
 
     /// Writes a single byte verbatim.  The caller must have checked for room.
+    #[inline]
     pub(crate) fn write_byte(&mut self, byte: u8) {
         self.dst[self.written] = byte;
         self.written += 1;
     }
 
     /// Copies `bytes` verbatim.  The caller must have checked for room.
+    #[inline]
     pub(crate) fn write_slice(&mut self, bytes: &[u8]) {
         self.dst[self.written..self.written + bytes.len()].copy_from_slice(bytes);
         self.written += bytes.len();

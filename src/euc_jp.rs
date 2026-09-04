@@ -6,7 +6,8 @@ use crate::index;
 use crate::result::{DecoderResult, EncoderResult};
 use crate::sink::{ByteSink, DECODER_HEADROOM, ENCODER_HEADROOM};
 use crate::tables::jis::{
-    JIS0208_DECODE, JIS0208_ENCODE_CODE_POINTS, JIS0208_ENCODE_POINTERS, JIS0212_DECODE,
+    JIS0208_DECODE, JIS0208_ENCODE_BUCKETS, JIS0208_ENCODE_CODE_POINTS, JIS0208_ENCODE_POINTERS,
+    JIS0212_DECODE,
 };
 
 #[derive(Debug, Clone, Copy, Default)]
@@ -149,6 +150,7 @@ impl EucJpEncoder {
             let Some(pointer) = index::pointer(
                 &JIS0208_ENCODE_CODE_POINTS,
                 &JIS0208_ENCODE_POINTERS,
+                &JIS0208_ENCODE_BUCKETS,
                 scalar,
             ) else {
                 return (EncoderResult::Unmappable(c), read);

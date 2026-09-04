@@ -210,3 +210,8 @@ jobs:
 
       - name: cargo doc --no-deps --all-features
         run: cargo doc --no-deps --all-features
+
+      # Not run here — the numbers would be meaningless on a shared runner —
+      # but it must keep compiling, or it rots.
+      - name: cargo bench --no-run
+        run: cargo bench --no-run --all-features

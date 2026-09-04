@@ -4,7 +4,9 @@ use crate::ascii::ascii_prefix_len_capped;
 use crate::index;
 use crate::result::{DecoderResult, EncoderResult};
 use crate::sink::{ByteSink, DECODER_HEADROOM, ENCODER_HEADROOM};
-use crate::tables::euc_kr::{EUC_KR_DECODE, EUC_KR_ENCODE_CODE_POINTS, EUC_KR_ENCODE_POINTERS};
+use crate::tables::euc_kr::{
+    EUC_KR_DECODE, EUC_KR_ENCODE_BUCKETS, EUC_KR_ENCODE_CODE_POINTS, EUC_KR_ENCODE_POINTERS,
+};
 
 #[derive(Debug, Clone, Copy, Default)]
 pub(crate) struct EucKrDecoder {
@@ -105,6 +107,7 @@ impl EucKrEncoder {
             let Some(pointer) = index::pointer(
                 &EUC_KR_ENCODE_CODE_POINTS,
                 &EUC_KR_ENCODE_POINTERS,
+                &EUC_KR_ENCODE_BUCKETS,
                 u32::from(c),
             ) else {
                 return (EncoderResult::Unmappable(c), read);

@@ -34,6 +34,17 @@ pub(crate) fn code_point_wide(table: &[u32], pointer: usize) -> Option<u32> {
     }
 }
 
+/// The slice of `code_points` that could hold `scalar`, per the bucket index.
+///
+/// Searching one bucket rather than the whole table is what keeps an encode
+/// lookup to a few probes over a contiguous run instead of fifteen scattered
+/// ones.
+#[inline]
+fn bucket(buckets: &[u16; 258], scalar: u32) -> core::ops::Range<usize> {
+    let high = core::cmp::min(scalar >> 8, 0x100) as usize;
+    usize::from(buckets[high])..usize::from(buckets[high + 1])
+}
+
 /// `the index pointer for code point in index`, for a 16-bit table.
 #[cfg(any(
     feature = "euc-jp",
@@ -43,20 +54,34 @@ pub(crate) fn code_point_wide(table: &[u32], pointer: usize) -> Option<u32> {
     feature = "shift-jis"
 ))]
 #[inline]
-pub(crate) fn pointer(code_points: &[u16], pointers: &[u16], scalar: u32) -> Option<u16> {
+pub(crate) fn pointer(
+    code_points: &[u16],
+    pointers: &[u16],
+    buckets: &[u16; 258],
+    scalar: u32,
+) -> Option<u16> {
     if scalar > 0xFFFF {
         return None;
     }
-    let i = code_points.binary_search(&(scalar as u16)).ok()?;
-    pointers.get(i).copied()
+    let range = bucket(buckets, scalar);
+    let found = code_points[range.clone()]
+        .binary_search(&(scalar as u16))
+        .ok()?;
+    pointers.get(range.start + found).copied()
 }
 
 /// `the index pointer for code point in index`, for a 32-bit table (Big5 only).
 #[cfg(feature = "big5")]
 #[inline]
-pub(crate) fn pointer_wide(code_points: &[u32], pointers: &[u16], scalar: u32) -> Option<u16> {
-    let i = code_points.binary_search(&scalar).ok()?;
-    pointers.get(i).copied()
+pub(crate) fn pointer_wide(
+    code_points: &[u32],
+    pointers: &[u16],
+    buckets: &[u16; 258],
+    scalar: u32,
+) -> Option<u16> {
+    let range = bucket(buckets, scalar);
+    let found = code_points[range.clone()].binary_search(&scalar).ok()?;
+    pointers.get(range.start + found).copied()
 }
 
 /// `the index gb18030 ranges code point for pointer`.

@@ -75,20 +75,38 @@ def decode_table(name, index, width):
 
 
 def encode_table(name, pairs, cp_width, gate=None):
-    """Two parallel arrays sorted by code point, for binary search by the encoders.
+    """Parallel arrays sorted by code point, plus a bucket index over the high byte.
 
-    `gate` repeats the caller's `#[cfg(...)]` on the second array, since an
+    The encoders binary search these, and searching all of a 24000-entry table
+    costs fifteen unpredictable branches over data that does not fit in cache.
+    `BUCKETS[h]` is where code points whose high byte is `h` begin, so a lookup
+    searches only its own bucket: a few probes over a contiguous run.  Code
+    points above the basic multilingual plane share the final bucket.
+
+    `gate` repeats the caller's `#[cfg(...)]` on the later arrays, since an
     attribute written above the call only covers the first."""
     cps = [cp for cp, _ in pairs]
     ptrs = [p for _, p in pairs]
     assert cps == sorted(cps)
     assert all(p <= 0xFFFF for p in ptrs)
+    assert len(cps) < 0x10000, "bucket offsets are u16"
+    # buckets[h] is the first index whose code point has a high byte >= h; the
+    # 257th entry closes the last bucket.
+    buckets = []
+    at = 0
+    for high in range(257):
+        while at < len(cps) and min(cps[at] >> 8, 0x100) < high:
+            at += 1
+        buckets.append(at)
+    buckets.append(len(cps))
     cp_ty = "u16" if cp_width == 16 else "u32"
-    second = "#[cfg({})]\n".format(gate) if gate else ""
+    also = "#[cfg({})]\n".format(gate) if gate else ""
     out = "#[rustfmt::skip]\npub static {}_CODE_POINTS: [{}; {}] = [\n{}\n];\n\n".format(
         name, cp_ty, len(cps), rows(cps, 16 if cp_width == 16 else 12, u32_hex))
-    out += "{}#[rustfmt::skip]\npub static {}_POINTERS: [u16; {}] = [\n{}\n];\n".format(
-        second, name, len(ptrs), rows(ptrs, 16, u16_hex))
+    out += "{}#[rustfmt::skip]\npub static {}_POINTERS: [u16; {}] = [\n{}\n];\n\n".format(
+        also, name, len(ptrs), rows(ptrs, 16, u16_hex))
+    out += "{}#[rustfmt::skip]\npub static {}_BUCKETS: [u16; {}] = [\n{}\n];\n".format(
+        also, name, len(buckets), rows(buckets, 16, u16_hex))
     return out
 
 

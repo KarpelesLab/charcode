@@ -4,7 +4,10 @@ use crate::ascii::ascii_prefix_len_capped;
 use crate::index;
 use crate::result::{DecoderResult, EncoderResult};
 use crate::sink::{ByteSink, DECODER_HEADROOM, ENCODER_HEADROOM};
-use crate::tables::jis::{JIS0208_DECODE, SHIFT_JIS_ENCODE_CODE_POINTS, SHIFT_JIS_ENCODE_POINTERS};
+use crate::tables::jis::{
+    JIS0208_DECODE, SHIFT_JIS_ENCODE_BUCKETS, SHIFT_JIS_ENCODE_CODE_POINTS,
+    SHIFT_JIS_ENCODE_POINTERS,
+};
 
 #[derive(Debug, Clone, Copy, Default)]
 pub(crate) struct ShiftJisDecoder {
@@ -142,6 +145,7 @@ impl ShiftJisEncoder {
             let Some(pointer) = index::pointer(
                 &SHIFT_JIS_ENCODE_CODE_POINTS,
                 &SHIFT_JIS_ENCODE_POINTERS,
+                &SHIFT_JIS_ENCODE_BUCKETS,
                 scalar,
             ) else {
                 return (EncoderResult::Unmappable(c), read);

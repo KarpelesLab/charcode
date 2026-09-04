@@ -10,7 +10,8 @@ use crate::index;
 use crate::result::{DecoderResult, EncoderResult};
 use crate::sink::{ByteSink, DECODER_HEADROOM, ENCODER_HEADROOM, Pushback};
 use crate::tables::jis::{
-    ISO_2022_JP_KATAKANA, JIS0208_DECODE, JIS0208_ENCODE_CODE_POINTS, JIS0208_ENCODE_POINTERS,
+    ISO_2022_JP_KATAKANA, JIS0208_DECODE, JIS0208_ENCODE_BUCKETS, JIS0208_ENCODE_CODE_POINTS,
+    JIS0208_ENCODE_POINTERS,
 };
 
 const ESCAPE_ASCII: [u8; 3] = [0x1B, 0x28, 0x42];
@@ -338,6 +339,7 @@ impl Iso2022JpEncoder {
             let Some(pointer) = index::pointer(
                 &JIS0208_ENCODE_CODE_POINTS,
                 &JIS0208_ENCODE_POINTERS,
+                &JIS0208_ENCODE_BUCKETS,
                 scalar,
             ) else {
                 if self.state == EncoderState::Jis0208 {

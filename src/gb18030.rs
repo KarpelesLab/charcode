@@ -4,7 +4,9 @@ use crate::ascii::ascii_prefix_len_capped;
 use crate::index;
 use crate::result::{DecoderResult, EncoderResult};
 use crate::sink::{ByteSink, DECODER_HEADROOM, ENCODER_HEADROOM, Pushback};
-use crate::tables::gb18030::{GB18030_DECODE, GB18030_ENCODE_CODE_POINTS, GB18030_ENCODE_POINTERS};
+use crate::tables::gb18030::{
+    GB18030_DECODE, GB18030_ENCODE_BUCKETS, GB18030_ENCODE_CODE_POINTS, GB18030_ENCODE_POINTERS,
+};
 
 /// Code points the encoder maps asymmetrically, to stay compatible with how
 /// GB18030-2005 encoded them before the 2022 revision moved them into ranges.
@@ -217,6 +219,7 @@ impl Gb18030Encoder {
             if let Some(pointer) = index::pointer(
                 &GB18030_ENCODE_CODE_POINTS,
                 &GB18030_ENCODE_POINTERS,
+                &GB18030_ENCODE_BUCKETS,
                 scalar,
             ) {
                 let pointer = u32::from(pointer);

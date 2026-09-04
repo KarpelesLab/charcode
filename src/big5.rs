@@ -4,7 +4,9 @@ use crate::ascii::ascii_prefix_len_capped;
 use crate::index;
 use crate::result::{DecoderResult, EncoderResult};
 use crate::sink::{ByteSink, DECODER_HEADROOM, ENCODER_HEADROOM};
-use crate::tables::big5::{BIG5_DECODE, BIG5_ENCODE_CODE_POINTS, BIG5_ENCODE_POINTERS};
+use crate::tables::big5::{
+    BIG5_DECODE, BIG5_ENCODE_BUCKETS, BIG5_ENCODE_CODE_POINTS, BIG5_ENCODE_POINTERS,
+};
 
 /// The four pointers that decode to a base letter plus a combining mark; an index
 /// entry can only hold a single code point, so the standard lists them separately.
@@ -124,6 +126,7 @@ impl Big5Encoder {
             let Some(pointer) = index::pointer_wide(
                 &BIG5_ENCODE_CODE_POINTS,
                 &BIG5_ENCODE_POINTERS,
+                &BIG5_ENCODE_BUCKETS,
                 u32::from(c),
             ) else {
                 return (EncoderResult::Unmappable(c), read);

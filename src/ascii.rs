@@ -6,6 +6,7 @@ const CHUNK: usize = 8;
 const HIGH_BITS: u64 = 0x8080_8080_8080_8080;
 
 /// Returns the length of the leading run of ASCII bytes in `bytes`.
+#[inline]
 pub(crate) fn ascii_prefix_len(bytes: &[u8]) -> usize {
     let mut offset = 0;
     let (chunks, _) = bytes.as_chunks::<CHUNK>();
@@ -30,11 +31,18 @@ pub(crate) fn ascii_prefix_len(bytes: &[u8]) -> usize {
 ///
 /// On a `&str` the result is always a character boundary, since a non-ASCII
 /// scalar value never begins with an ASCII byte in UTF-8.
+#[inline]
 pub(crate) fn ascii_prefix_len_capped(bytes: &[u8], limit: usize) -> usize {
+    // Text in a non-Latin script takes this path on every character, so answer
+    // before touching the word-at-a-time loop.
+    if bytes.first().is_none_or(|&b| b >= 0x80) {
+        return 0;
+    }
     ascii_prefix_len(&bytes[..core::cmp::min(bytes.len(), limit)])
 }
 
 /// Returns true if every byte is ASCII.
+#[inline]
 ///
 /// Only the borrowing `Cow` fast paths ask, and those need an allocator.
 #[cfg(any(feature = "alloc", test))]
