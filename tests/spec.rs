@@ -10,11 +10,16 @@
 use charcode::*;
 
 fn decode(encoding: &'static Encoding, bytes: &[u8]) -> String {
-    encoding.decode_without_bom_handling(bytes).0.into_owned()
+    encoding
+        .decode_with(bytes, DecodeOptions::new().bom(Bom::Ignore))
+        .0
+        .into_owned()
 }
 
+/// Encodes the way the standard's `encode` hook does, which is what most of
+/// these tests are checking.
 fn encode(encoding: &'static Encoding, text: &str) -> Vec<u8> {
-    encoding.encode(text).0.into_owned()
+    encoding.encode_html_form(text).0.into_owned()
 }
 
 // --- 4.2 Names and labels ------------------------------------------------
@@ -93,7 +98,7 @@ fn output_encoding_replaces_the_three_that_cannot_encode() {
         assert_eq!(output.output_encoding(), output, "{}", encoding.name());
     }
     // Encoding to UTF-16 gives UTF-8, and says so.
-    let (bytes, encoding, _) = UTF_16LE.encode("hi");
+    let (bytes, encoding, _) = UTF_16LE.encode("hi").unwrap();
     assert_eq!(&bytes[..], b"hi");
     assert_eq!(encoding, UTF_8);
 }
@@ -117,14 +122,15 @@ fn a_bom_overrides_the_named_encoding() {
 
 #[test]
 fn bom_removal_only_strips_this_encodings_own_mark() {
-    assert_eq!(UTF_8.decode_with_bom_removal(b"\xEF\xBB\xBFa").0, "a");
+    let remove = DecodeOptions::new().bom(Bom::Remove);
+    assert_eq!(UTF_8.decode_with(b"\xEF\xBB\xBFa", remove).0, "a");
     // A UTF-16 mark is not UTF-8's, so it decodes as content.
     assert_eq!(
-        UTF_8.decode_with_bom_removal(b"\xFF\xFEa").0,
+        UTF_8.decode_with(b"\xFF\xFEa", remove).0,
         "\u{FFFD}\u{FFFD}a"
     );
     assert_eq!(
-        WINDOWS_1252.decode_with_bom_removal(b"\xEF\xBB\xBFa").0,
+        WINDOWS_1252.decode_with(b"\xEF\xBB\xBFa", remove).0,
         "\u{EF}\u{BB}\u{BF}a"
     );
 }
@@ -132,7 +138,9 @@ fn bom_removal_only_strips_this_encodings_own_mark() {
 #[test]
 fn without_bom_handling_keeps_the_mark_as_content() {
     assert_eq!(
-        UTF_8.decode_without_bom_handling(b"\xEF\xBB\xBFa").0,
+        UTF_8
+            .decode_with(b"\xEF\xBB\xBFa", DecodeOptions::new().bom(Bom::Ignore))
+            .0,
         "\u{FEFF}a"
     );
     assert_eq!(Encoding::for_bom(b"\xEF\xBB\xBF"), Some((UTF_8, 3)));
@@ -144,9 +152,11 @@ fn without_bom_handling_keeps_the_mark_as_content() {
 fn a_bom_split_across_chunks_is_still_recognized() {
     let mut decoder = WINDOWS_1252.new_decoder();
     let mut text = String::new();
-    decoder.decode_to_string(b"\xEF", &mut text, false);
-    decoder.decode_to_string(b"\xBB", &mut text, false);
-    decoder.decode_to_string(b"\xBFcaf\xC3\xA9", &mut text, true);
+    decoder.decode_to_string(b"\xEF", &mut text, false).unwrap();
+    decoder.decode_to_string(b"\xBB", &mut text, false).unwrap();
+    decoder
+        .decode_to_string(b"\xBFcaf\xC3\xA9", &mut text, true)
+        .unwrap();
     assert_eq!(text, "caf\u{E9}");
     assert_eq!(decoder.encoding(), UTF_8);
 }
@@ -155,8 +165,10 @@ fn a_bom_split_across_chunks_is_still_recognized() {
 fn a_near_miss_bom_is_decoded_as_content() {
     let mut decoder = WINDOWS_1252.new_decoder();
     let mut text = String::new();
-    decoder.decode_to_string(b"\xEF\xBB", &mut text, false);
-    decoder.decode_to_string(b"\x41", &mut text, true);
+    decoder
+        .decode_to_string(b"\xEF\xBB", &mut text, false)
+        .unwrap();
+    decoder.decode_to_string(b"\x41", &mut text, true).unwrap();
     assert_eq!(text, "\u{EF}\u{BB}A");
     assert_eq!(decoder.encoding(), WINDOWS_1252);
 }
@@ -185,19 +197,20 @@ fn utf8_substitutes_maximal_subparts() {
 
 #[test]
 fn valid_utf8_is_borrowed_not_copied() {
+    let ignore = DecodeOptions::new().bom(Bom::Ignore);
     let bytes = "caf\u{E9}".as_bytes();
     assert!(matches!(
-        UTF_8.decode_without_bom_handling(bytes).0,
+        UTF_8.decode_with(bytes, ignore).0,
         std::borrow::Cow::Borrowed(_)
     ));
     // An ASCII-compatible encoding borrows ASCII too.
     assert!(matches!(
-        WINDOWS_1252.decode_without_bom_handling(b"ascii").0,
+        WINDOWS_1252.decode_with(b"ascii", ignore).0,
         std::borrow::Cow::Borrowed(_)
     ));
     // But not once a byte means something other than itself.
     assert!(matches!(
-        WINDOWS_1252.decode_without_bom_handling(b"caf\xE9").0,
+        WINDOWS_1252.decode_with(b"caf\xE9", ignore).0,
         std::borrow::Cow::Owned(_)
     ));
 }
@@ -369,7 +382,12 @@ fn replacement_decodes_anything_to_one_error() {
     assert_eq!(decode(REPLACEMENT, b""), "");
     assert_eq!(decode(REPLACEMENT, b"a"), "\u{FFFD}");
     assert_eq!(decode(REPLACEMENT, b"a long stretch of bytes"), "\u{FFFD}");
-    assert!(REPLACEMENT.decode_without_bom_handling(b"x").1);
+    assert!(
+        !REPLACEMENT
+            .decode_with(b"x", DecodeOptions::new().bom(Bom::Ignore))
+            .2
+            .is_lossless()
+    );
 }
 
 // --- 14.5 x-user-defined -------------------------------------------------
@@ -385,12 +403,12 @@ fn x_user_defined_maps_the_upper_half_to_private_use() {
 
 #[test]
 fn unmappable_characters_become_numeric_references() {
-    let (bytes, _, had_unmappable) = WINDOWS_1252.encode("a\u{4E00}b");
+    let (bytes, _, tally) = WINDOWS_1252.encode_html_form("a\u{4E00}b");
     assert_eq!(&bytes[..], b"a&#19968;b");
-    assert!(had_unmappable);
+    assert_eq!(tally.errors, 1);
     assert_eq!(encode(WINDOWS_1252, "\u{10FFFF}"), b"&#1114111;");
-    let (_, _, had_unmappable) = WINDOWS_1252.encode("plain");
-    assert!(!had_unmappable);
+    let (_, _, tally) = WINDOWS_1252.encode_html_form("plain");
+    assert!(tally.is_lossless());
 }
 
 #[test]
@@ -398,37 +416,37 @@ fn without_replacement_reports_the_offending_character() {
     let mut bytes = Vec::new();
     let error = WINDOWS_1252
         .new_encoder()
-        .encode_from_str_without_replacement("ab\u{4E00}", &mut bytes, true)
+        .encode_from_str("ab\u{4E00}", &mut bytes, true)
         .unwrap_err();
     assert_eq!(error.character, '\u{4E00}');
     assert_eq!(error.offset, 5);
     assert_eq!(bytes, b"ab");
 
+    let strict = DecodeOptions::new()
+        .bom(Bom::Ignore)
+        .malformed(Malformed::Fail);
     assert_eq!(
-        WINDOWS_1252.decode_without_bom_handling_and_without_replacement(b"caf\xE9"),
-        Some(std::borrow::Cow::Owned(String::from("caf\u{E9}")))
+        WINDOWS_1252
+            .try_decode(b"caf\xE9", strict)
+            .map(|(t, _, _)| t),
+        Ok(std::borrow::Cow::Owned(String::from("caf\u{E9}")))
     );
-    assert_eq!(
-        ISO_8859_6.decode_without_bom_handling_and_without_replacement(b"\xA1"),
-        None
-    );
+    assert!(ISO_8859_6.try_decode(b"\xA1", strict).is_err());
 }
 
 #[test]
 fn a_four_byte_output_buffer_is_enough_to_make_progress() {
-    let mut decoder = BIG5.new_decoder_without_bom_handling();
+    let mut decoder = BIG5.new_decoder_with(DecodeOptions::new().bom(Bom::Ignore));
     let mut buffer = [0u8; DECODER_MIN_BUFFER];
-    let (result, read, written, _) =
-        decoder.decode_to_utf8_with_replacement(b"\x88\x62\x41", &mut buffer, true);
-    assert_eq!(result, CoderResult::OutputFull);
+    let (result, read, written) = decoder.decode_to_utf8(b"\x88\x62\x41", &mut buffer, true);
+    assert_eq!(result, DecoderResult::OutputFull);
     assert_eq!((read, written), (2, 4));
     assert_eq!(&buffer[..4], "\u{CA}\u{304}".as_bytes());
 
     let mut encoder = GB18030.new_encoder();
     let mut buffer = [0u8; ENCODER_MIN_BUFFER];
-    let (result, _, written, _) =
-        encoder.encode_from_utf8_with_replacement("\u{10000}\u{10001}", &mut buffer, true);
-    assert_eq!(result, CoderResult::OutputFull);
+    let (result, _, written) = encoder.encode_from_utf8("\u{10000}\u{10001}", &mut buffer, true);
+    assert_eq!(result, EncoderResult::OutputFull);
     assert_eq!(&buffer[..written], b"\x900\x810");
 }
 

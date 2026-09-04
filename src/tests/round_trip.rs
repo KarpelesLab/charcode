@@ -15,7 +15,7 @@ fn encode_char(encoding: &'static Encoding, c: char) -> alloc::vec::Vec<u8> {
     string.push(c);
     encoding
         .new_encoder()
-        .encode_from_str_without_replacement(&string, &mut buffer, true)
+        .encode_from_str(&string, &mut buffer, true)
         .unwrap_or_else(|e| panic!("{} cannot encode {e}", encoding.name()));
     buffer
 }
@@ -26,9 +26,10 @@ fn round_trip(encoding: &'static Encoding, code_points: impl Iterator<Item = u32
             continue;
         };
         let bytes = encode_char(encoding, c);
-        let (decoded, had_errors) = encoding.decode_without_bom_handling(&bytes);
+        let (decoded, _, tally) =
+            encoding.decode_with(&bytes, crate::DecodeOptions::new().bom(crate::Bom::Ignore));
         assert!(
-            !had_errors,
+            tally.is_lossless(),
             "{}: U+{scalar:04X} encoded to {bytes:02X?}, which does not decode",
             encoding.name()
         );
@@ -176,7 +177,8 @@ fn half_width_katakana() {
         round_trip(EUC_JP, core::iter::once(scalar));
         round_trip(SHIFT_JIS, core::iter::once(scalar));
         let bytes = encode_char(ISO_2022_JP, c);
-        let (decoded, _) = ISO_2022_JP.decode_without_bom_handling(&bytes);
+        let (decoded, _, _) =
+            ISO_2022_JP.decode_with(&bytes, crate::DecodeOptions::new().bom(crate::Bom::Ignore));
         assert_ne!(decoded, alloc::string::String::from(c));
     }
 }

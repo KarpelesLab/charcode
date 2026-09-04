@@ -3,10 +3,12 @@
 //! Nothing here allocates, so these run in the `no_std`, no-allocator build as
 //! well — which is the configuration in which they are the only tests there are.
 
-use crate::CoderResult;
 use crate::encodings::*;
 #[allow(unused_imports)]
-use crate::{DECODER_MIN_BUFFER, DecoderResult, ENCODER_MIN_BUFFER, EncoderResult};
+use crate::{
+    Bom, DECODER_MIN_BUFFER, DecodeOptions, DecoderResult, ENCODER_MIN_BUFFER, EncodeOptions,
+    EncoderResult, Malformed, Unmappable,
+};
 
 /// Decodes all of `bytes` into `out`, substituting errors, and returns the text
 /// and whether anything was substituted.
@@ -15,13 +17,16 @@ fn decode<'a>(
     bytes: &[u8],
     out: &'a mut [u8],
 ) -> (&'a str, bool) {
-    let mut decoder = encoding.new_decoder_without_bom_handling();
-    let (result, read, written, had_errors) =
-        decoder.decode_to_utf8_with_replacement(bytes, out, true);
-    assert_eq!(result, CoderResult::InputEmpty, "the buffer was big enough");
+    let mut decoder = encoding.new_decoder_with(DecodeOptions::new().bom(Bom::Ignore));
+    let (result, read, written) = decoder.decode_to_utf8(bytes, out, true);
+    assert_eq!(
+        result,
+        DecoderResult::InputEmpty,
+        "the buffer was big enough"
+    );
     assert_eq!(read, bytes.len());
     let text = core::str::from_utf8(&out[..written]).expect("decoders emit valid UTF-8");
-    (text, had_errors)
+    (text, !decoder.tally().is_lossless())
 }
 
 fn encode<'a>(
@@ -29,12 +34,15 @@ fn encode<'a>(
     text: &str,
     out: &'a mut [u8],
 ) -> (&'a [u8], bool) {
-    let mut encoder = encoding.new_encoder();
-    let (result, read, written, unmappable) =
-        encoder.encode_from_utf8_with_replacement(text, out, true);
-    assert_eq!(result, CoderResult::InputEmpty, "the buffer was big enough");
+    let mut encoder = encoding.new_encoder_with(EncodeOptions::new().unmappable(Unmappable::Html));
+    let (result, read, written) = encoder.encode_from_utf8(text, out, true);
+    assert_eq!(
+        result,
+        EncoderResult::InputEmpty,
+        "the buffer was big enough"
+    );
     assert_eq!(read, text.len());
-    (&out[..written], unmappable)
+    (&out[..written], !encoder.tally().is_lossless())
 }
 
 /// The always-present encodings: these need no table group at all.
@@ -98,7 +106,11 @@ fn errors_are_substituted_without_allocating() {
 #[test]
 fn errors_can_be_reported_instead() {
     let mut buffer = [0u8; 64];
-    let mut decoder = UTF_8.new_decoder_without_bom_handling();
+    let mut decoder = UTF_8.new_decoder_with(
+        DecodeOptions::new()
+            .bom(Bom::Ignore)
+            .malformed(Malformed::Fail),
+    );
     let (result, read, written) = decoder.decode_to_utf8(b"ab\xFFc", &mut buffer, true);
     assert_eq!(result, DecoderResult::Malformed(1));
     assert_eq!((read, written), (3, 2));
@@ -114,20 +126,19 @@ fn errors_can_be_reported_instead() {
 #[cfg(all(feature = "big5", feature = "gb18030"))]
 #[test]
 fn the_minimum_buffer_size_makes_progress() {
-    let mut decoder = BIG5.new_decoder_without_bom_handling();
+    let mut decoder = BIG5.new_decoder_with(DecodeOptions::new().bom(Bom::Ignore));
     let mut buffer = [0u8; DECODER_MIN_BUFFER];
     let input = b"\xA4\x40\xA4\x40";
     let mut read = 0;
     let mut chars = 0;
     loop {
-        let (result, n, written, _) =
-            decoder.decode_to_utf8_with_replacement(&input[read..], &mut buffer, true);
+        let (result, n, written) = decoder.decode_to_utf8(&input[read..], &mut buffer, true);
         read += n;
         chars += core::str::from_utf8(&buffer[..written])
             .expect("valid UTF-8")
             .chars()
             .count();
-        if result == CoderResult::InputEmpty {
+        if result == DecoderResult::InputEmpty {
             break;
         }
     }
@@ -138,11 +149,10 @@ fn the_minimum_buffer_size_makes_progress() {
     let text = "\u{10000}\u{10001}";
     let (mut read, mut written_total) = (0, 0);
     loop {
-        let (result, n, written, _) =
-            encoder.encode_from_utf8_with_replacement(&text[read..], &mut buffer, true);
+        let (result, n, written) = encoder.encode_from_utf8(&text[read..], &mut buffer, true);
         read += n;
         written_total += written;
-        if result == CoderResult::InputEmpty {
+        if result == EncoderResult::InputEmpty {
             break;
         }
     }
@@ -154,9 +164,9 @@ fn the_minimum_buffer_size_makes_progress() {
 fn a_byte_order_mark_still_switches_encoding() {
     let mut buffer = [0u8; 64];
     let mut decoder = WINDOWS_1252.new_decoder();
-    let (result, _, written, _) =
-        decoder.decode_to_utf8_with_replacement(b"\xEF\xBB\xBFcaf\xC3\xA9", &mut buffer, true);
-    assert_eq!(result, CoderResult::InputEmpty);
+    let (result, _, written) =
+        decoder.decode_to_utf8(b"\xEF\xBB\xBFcaf\xC3\xA9", &mut buffer, true);
+    assert_eq!(result, DecoderResult::InputEmpty);
     assert_eq!(
         core::str::from_utf8(&buffer[..written]).expect("valid UTF-8"),
         "caf\u{E9}"

@@ -17,10 +17,10 @@
 //! # fn main() {
 //! use charcode::{Encoding, WINDOWS_1252};
 //!
-//! let (text, encoding, had_errors) = WINDOWS_1252.decode(b"caf\xE9");
+//! let (text, encoding, tally) = WINDOWS_1252.decode(b"caf\xE9");
 //! assert_eq!(text, "caf\u{E9}");
 //! assert_eq!(encoding, WINDOWS_1252);
-//! assert!(!had_errors);
+//! assert!(tally.is_lossless());
 //!
 //! // A byte order mark wins over the encoding you name.
 //! let (text, encoding, _) = WINDOWS_1252.decode(b"\xEF\xBB\xBFcaf\xC3\xA9");
@@ -49,22 +49,48 @@
 //! # fn main() {}
 //! ```
 //!
-//! Encoding goes the other way.  Characters the target cannot represent become
-//! HTML numeric character references, matching form submission:
+//! Encoding goes the other way, and stops at the first character the target
+//! cannot represent — silently mangling text is never the default:
 //!
 //! ```
 //! # #[cfg(all(feature = "alloc", feature = "whatwg"))]
 //! # fn main() {
-//! use charcode::EUC_KR;
+//! use charcode::{EncodeOptions, EUC_KR, Unmappable};
 //!
-//! let (bytes, encoding, had_unmappable) = EUC_KR.encode("\u{D55C}\u{1F600}");
-//! assert_eq!(&bytes[..], b"\xC7\xD1&#128512;");
+//! let (bytes, encoding, _) = EUC_KR.encode("\u{D55C}").unwrap();
+//! assert_eq!(&bytes[..], b"\xC7\xD1");
 //! assert_eq!(encoding, EUC_KR);
-//! assert!(had_unmappable);
+//!
+//! // An emoji is not in EUC-KR, so say what should happen to it.
+//! assert!(EUC_KR.encode("\u{D55C}\u{1F600}").is_err());
+//! let options = EncodeOptions::new().unmappable(Unmappable::Replace('?'));
+//! let (bytes, _, tally) = EUC_KR.encode_with("\u{D55C}\u{1F600}", options).unwrap();
+//! assert_eq!(&bytes[..], b"\xC7\xD1?");
+//! assert_eq!(tally.errors, 1);
 //! # }
 //! # #[cfg(not(all(feature = "alloc", feature = "whatwg")))]
 //! # fn main() {}
 //! ```
+//!
+//! # Error policies
+//!
+//! [`DecodeOptions`] and [`EncodeOptions`] say what to do about input that does
+//! not decode and characters the target cannot represent.  Decoding substitutes
+//! U+FFFD by default, as the standard requires; encoding fails by default,
+//! because every alternative changes the text:
+//!
+//! | | [`Malformed`] | [`Unmappable`] |
+//! | --- | --- | --- |
+//! | stop and report | `Fail` | `Fail` *(default)* |
+//! | drop it | `Omit` | `Omit` |
+//! | write a character | `Replace(c)` *(default U+FFFD)* | `Replace(c)` |
+//! | `&#19968;` | | `Html` |
+//! | `\u4e00` | | `JsonEscape` |
+//!
+//! The two escaping policies also rewrite their own introducer — `&` becomes
+//! `&amp;`, `\` becomes `\\` — so what they write reads back unambiguously.
+//! With the `translit` feature, [`EncodeOptions::transliterate`] tries a close
+//! ASCII equivalent first and falls through to the policy above.
 //!
 //! Both return a [`Cow`], borrowed when the input is already the answer, so
 //! passing ASCII through an ASCII-compatible encoding costs nothing but the scan.
@@ -83,8 +109,8 @@
 //!
 //! let mut decoder = BIG5.new_decoder();
 //! let mut text = String::new();
-//! decoder.decode_to_string(&[0xA4], &mut text, false);
-//! decoder.decode_to_string(&[0x40], &mut text, true);
+//! decoder.decode_to_string(&[0xA4], &mut text, false).unwrap();
+//! decoder.decode_to_string(&[0x40], &mut text, true).unwrap();
 //! assert_eq!(text, "\u{4E00}");
 //! # }
 //! # #[cfg(not(all(feature = "alloc", feature = "whatwg")))]
@@ -95,11 +121,6 @@
 //! allocation-free forms, writing into a caller-provided `&mut [u8]`.
 //!
 //! # Errors
-//!
-//! Every conversion comes in two flavours.  The default substitutes errors, as
-//! the standard requires of web content: U+FFFD when decoding, a numeric
-//! character reference when encoding.  The `without_replacement` forms instead
-//! stop and report, for callers that need to reject bad input.
 //!
 //! # Features
 //!
@@ -196,6 +217,7 @@ mod gb18030;
 mod index;
 #[cfg(feature = "iso-2022-jp")]
 mod iso_2022_jp;
+mod options;
 mod replacement;
 mod result;
 #[cfg(feature = "shift-jis")]
@@ -203,6 +225,9 @@ mod shift_jis;
 #[cfg(feature = "half-byte")]
 mod single_byte;
 mod sink;
+#[cfg(feature = "translit")]
+mod translit;
+
 mod tables;
 #[cfg(test)]
 mod tests;
@@ -242,7 +267,8 @@ pub use crate::encodings::*;
     feature = "unicode-extras"
 ))]
 pub use crate::extra_encodings::*;
-pub use crate::result::{CoderResult, DecoderResult, EncoderResult};
+pub use crate::options::{Bom, DecodeOptions, EncodeOptions, Malformed, Tally, Unmappable};
+pub use crate::result::{DecoderResult, EncoderResult};
 
 use crate::code_page::CODE_PAGES;
 use crate::tables::extra_labels::EXTRA_CODE_PAGES;
@@ -561,105 +587,155 @@ impl Encoding {
         self.variant.is_ascii_compatible()
     }
 
-    /// A decoder that sniffs for a byte order mark.
+    /// A decoder with the default options: sniff for a byte order mark, and
+    /// substitute U+FFFD for malformed input.
     ///
-    /// If the stream starts with one, the decoder switches to the encoding the
-    /// mark names and [`Decoder::encoding`] reports the change.
+    /// If the stream starts with a byte order mark, the decoder switches to the
+    /// encoding it names and [`Decoder::encoding`] reports the change.
     pub fn new_decoder(&'static self) -> Decoder {
-        Decoder::new(self, true, false)
+        Decoder::new(self, DecodeOptions::new())
     }
 
-    /// A decoder that strips this encoding's own byte order mark, if present, and
-    /// ignores any other.
-    pub fn new_decoder_with_bom_removal(&'static self) -> Decoder {
-        Decoder::new(self, false, true)
+    /// A decoder with the given options.
+    pub fn new_decoder_with(&'static self, options: DecodeOptions) -> Decoder {
+        Decoder::new(self, options)
     }
 
-    /// A decoder that treats a byte order mark as ordinary content.
-    pub fn new_decoder_without_bom_handling(&'static self) -> Decoder {
-        Decoder::new(self, false, false)
-    }
-
-    /// An encoder for this encoding's [output encoding](Encoding::output_encoding).
+    /// An encoder for this encoding's [output encoding](Encoding::output_encoding),
+    /// which stops at the first character the encoding cannot represent.
     pub fn new_encoder(&'static self) -> Encoder {
-        Encoder::new(self.output_encoding())
+        Encoder::new(self.output_encoding(), EncodeOptions::new())
     }
 
-    #[cfg(feature = "alloc")]
-    /// Decodes `bytes`, honouring a leading byte order mark.
+    /// An encoder with the given options.
+    pub fn new_encoder_with(&'static self, options: EncodeOptions) -> Encoder {
+        Encoder::new(self.output_encoding(), options)
+    }
+
+    /// Decodes `bytes` with the default options: a leading byte order mark wins
+    /// over `self`, and malformed sequences become U+FFFD.
     ///
-    /// Implements the standard's `decode` hook: a byte order mark takes priority
-    /// over `self`, malformed sequences become U+FFFD, and the returned flag says
-    /// whether any did.  The second element is the encoding actually used.
-    pub fn decode<'a>(&'static self, bytes: &'a [u8]) -> (Cow<'a, str>, &'static Encoding, bool) {
-        let (encoding, bom_len) = Encoding::for_bom(bytes).unwrap_or((self, 0));
-        let (text, had_errors) = encoding.decode_without_bom_handling(&bytes[bom_len..]);
-        (text, encoding, had_errors)
+    /// The second element is the encoding actually used, which differs from
+    /// `self` when a byte order mark named another one.
+    #[cfg(feature = "alloc")]
+    pub fn decode<'a>(&'static self, bytes: &'a [u8]) -> (Cow<'a, str>, &'static Encoding, Tally) {
+        self.decode_with(bytes, DecodeOptions::new())
     }
 
+    /// Decodes `bytes` with the given options.
+    ///
+    /// Under [`Malformed::Fail`] this stops at the first bad sequence and the
+    /// [`Tally`] says so; use [`Encoding::try_decode`] to get the error itself.
     #[cfg(feature = "alloc")]
-    /// Decodes `bytes`, first removing this encoding's own byte order mark if it
-    /// is there.  A mark belonging to another encoding is decoded as content.
-    pub fn decode_with_bom_removal<'a>(&'static self, bytes: &'a [u8]) -> (Cow<'a, str>, bool) {
-        let bom_len = match self.bom() {
-            Some(bom) if bytes.starts_with(bom) => bom.len(),
-            _ => 0,
-        };
-        self.decode_without_bom_handling(&bytes[bom_len..])
-    }
-
-    #[cfg(feature = "alloc")]
-    /// Decodes `bytes`, treating a byte order mark as ordinary content.
-    pub fn decode_without_bom_handling<'a>(&'static self, bytes: &'a [u8]) -> (Cow<'a, str>, bool) {
-        if let Some(borrowed) = self.borrow_as_str(bytes) {
-            return (Cow::Borrowed(borrowed), false);
-        }
-        let mut text = String::with_capacity(bytes.len());
-        let had_errors = self
-            .new_decoder_without_bom_handling()
-            .decode_to_string(bytes, &mut text, true);
-        (Cow::Owned(text), had_errors)
-    }
-
-    #[cfg(feature = "alloc")]
-    /// Decodes `bytes` and fails, returning `None`, on the first malformed
-    /// sequence.  A byte order mark is treated as ordinary content.
-    pub fn decode_without_bom_handling_and_without_replacement<'a>(
+    pub fn decode_with<'a>(
         &'static self,
         bytes: &'a [u8],
-    ) -> Option<Cow<'a, str>> {
-        if let Some(borrowed) = self.borrow_as_str(bytes) {
-            return Some(Cow::Borrowed(borrowed));
+        options: DecodeOptions,
+    ) -> (Cow<'a, str>, &'static Encoding, Tally) {
+        match self.try_decode(bytes, options) {
+            Ok((text, encoding, tally)) => (text, encoding, tally),
+            Err((text, encoding, _)) => (Cow::Owned(text), encoding, Tally { errors: 1 }),
+        }
+    }
+
+    /// Decodes `bytes`, returning the first malformed sequence as an error.
+    ///
+    /// The error carries what had been decoded before it, so a caller can
+    /// report where the input went wrong.
+    #[cfg(feature = "alloc")]
+    #[allow(clippy::type_complexity)]
+    pub fn try_decode<'a>(
+        &'static self,
+        bytes: &'a [u8],
+        options: DecodeOptions,
+    ) -> Result<(Cow<'a, str>, &'static Encoding, Tally), (String, &'static Encoding, MalformedError)>
+    {
+        let (encoding, skip) = match options.bom {
+            Bom::Sniff => Encoding::for_bom(bytes).unwrap_or((self, 0)),
+            Bom::Remove => match self.bom() {
+                Some(bom) if bytes.starts_with(bom) => (self, bom.len()),
+                _ => (self, 0),
+            },
+            Bom::Ignore => (self, 0),
+        };
+        let bytes = &bytes[skip..];
+        if let Some(borrowed) = encoding.borrow_as_str(bytes) {
+            return Ok((Cow::Borrowed(borrowed), encoding, Tally::default()));
         }
         let mut text = String::with_capacity(bytes.len());
-        self.new_decoder_without_bom_handling()
-            .decode_to_string_without_replacement(bytes, &mut text, true)
-            .ok()?;
-        Some(Cow::Owned(text))
+        // The mark is already gone, so the decoder must not look for one again.
+        let mut decoder = encoding.new_decoder_with(DecodeOptions {
+            bom: Bom::Ignore,
+            ..options
+        });
+        match decoder.decode_to_string(bytes, &mut text, true) {
+            Ok(()) => Ok((Cow::Owned(text), encoding, decoder.tally())),
+            Err(e) => Err((text, encoding, e)),
+        }
     }
 
-    #[cfg(feature = "alloc")]
     /// Encodes `string` into this encoding's
-    /// [output encoding](Encoding::output_encoding).
+    /// [output encoding](Encoding::output_encoding), failing on the first
+    /// character it cannot represent.
     ///
-    /// Characters the encoding cannot represent become decimal numeric character
-    /// references, as in HTML form submission, and the returned flag says whether
-    /// any did.
-    pub fn encode<'a>(&'static self, string: &'a str) -> (Cow<'a, [u8]>, &'static Encoding, bool) {
+    /// Pass [`EncodeOptions`] to [`Encoding::encode_with`] to substitute, drop
+    /// or escape those characters instead.
+    #[cfg(feature = "alloc")]
+    #[allow(clippy::type_complexity)]
+    pub fn encode<'a>(
+        &'static self,
+        string: &'a str,
+    ) -> Result<(Cow<'a, [u8]>, &'static Encoding, Tally), UnmappableError> {
+        self.encode_with(string, EncodeOptions::new())
+    }
+
+    /// Encodes `string` with the given options.
+    #[cfg(feature = "alloc")]
+    #[allow(clippy::type_complexity)]
+    pub fn encode_with<'a>(
+        &'static self,
+        string: &'a str,
+        options: EncodeOptions,
+    ) -> Result<(Cow<'a, [u8]>, &'static Encoding, Tally), UnmappableError> {
         let output = self.output_encoding();
-        if output.borrow_as_str(string.as_bytes()).is_some() {
-            return (Cow::Borrowed(string.as_bytes()), output, false);
+        // Nothing to escape or replace means the bytes may already be the answer.
+        if options.unmappable != Unmappable::Html
+            && options.unmappable != Unmappable::JsonEscape
+            && output.borrow_as_str(string.as_bytes()).is_some()
+        {
+            return Ok((Cow::Borrowed(string.as_bytes()), output, Tally::default()));
         }
         let mut bytes = Vec::with_capacity(string.len());
-        let had_unmappable = output
-            .new_encoder()
-            .encode_from_str(string, &mut bytes, true);
-        (Cow::Owned(bytes), output, had_unmappable)
+        let mut encoder = output.new_encoder_with(options);
+        encoder.encode_from_str(string, &mut bytes, true)?;
+        Ok((Cow::Owned(bytes), output, encoder.tally()))
     }
 
+    /// The standard's `encode` hook, for HTML form submission.
+    ///
+    /// Unmappable characters become decimal numeric character references, and
+    /// `&` is **not** escaped — an ambiguity form submission has always had.
+    /// For general use prefer [`Unmappable::Html`], which does escape it.
     #[cfg(feature = "alloc")]
+    pub fn encode_html_form<'a>(
+        &'static self,
+        string: &'a str,
+    ) -> (Cow<'a, [u8]>, &'static Encoding, Tally) {
+        let output = self.output_encoding();
+        if output.borrow_as_str(string.as_bytes()).is_some() {
+            return (Cow::Borrowed(string.as_bytes()), output, Tally::default());
+        }
+        let mut bytes = Vec::with_capacity(string.len());
+        let mut encoder = Encoder::new_html_form(output);
+        encoder
+            .encode_from_str(string, &mut bytes, true)
+            .expect("numeric character references never fail");
+        (Cow::Owned(bytes), output, encoder.tally())
+    }
+
     /// Returns `bytes` as a `&str` when this encoding decodes them to exactly
     /// themselves, which is what makes the borrowing `Cow` cases possible.
+    #[cfg(feature = "alloc")]
     fn borrow_as_str<'a>(&self, bytes: &'a [u8]) -> Option<&'a str> {
         let decodes_verbatim = match self.variant {
             VariantEncoding::Utf8 => true,

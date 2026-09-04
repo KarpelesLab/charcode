@@ -66,7 +66,7 @@ fn check_byte(encoding: &'static Encoding, byte: u8, expected: Option<u32>) {
             string.push(c);
             encoding
                 .new_encoder()
-                .encode_from_str_without_replacement(&string, &mut out, true)
+                .encode_from_str(&string, &mut out, true)
                 .unwrap_or_else(|e| panic!("{} cannot encode {e}", encoding.name()));
             assert_eq!(out.len(), 1, "{} U+{code_point:04X}", encoding.name());
             assert_eq!(
@@ -87,8 +87,14 @@ fn check_byte(encoding: &'static Encoding, byte: u8, expected: Option<u32>) {
 
 fn decode(encoding: &'static Encoding, bytes: &[u8]) -> Option<String> {
     encoding
-        .decode_without_bom_handling_and_without_replacement(bytes)
-        .map(|cow| cow.into_owned())
+        .try_decode(
+            bytes,
+            crate::DecodeOptions::new()
+                .bom(crate::Bom::Ignore)
+                .malformed(crate::Malformed::Fail),
+        )
+        .ok()
+        .map(|(text, _, _)| text.into_owned())
 }
 
 #[cfg(feature = "dos")]
@@ -252,7 +258,7 @@ fn utf_32_both_orders() {
         let mut bytes = Vec::new();
         encoding
             .new_encoder()
-            .encode_from_str_without_replacement(text, &mut bytes, true)
+            .encode_from_str(text, &mut bytes, true)
             .expect("UTF-32 can encode anything");
         assert_eq!(bytes.len(), text.chars().count() * 4);
         assert_eq!(decode(encoding, &bytes).as_deref(), Some(text));
@@ -298,7 +304,7 @@ fn utf_7_matches_rfc_2152() {
         let mut bytes = Vec::new();
         UTF_7
             .new_encoder()
-            .encode_from_str_without_replacement(text, &mut bytes, true)
+            .encode_from_str(text, &mut bytes, true)
             .expect("UTF-7 can encode anything");
         bytes
     };

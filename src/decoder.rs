@@ -5,7 +5,8 @@ use alloc::string::String;
 
 use crate::Encoding;
 use crate::encodings::{UTF_8, UTF_16BE, UTF_16LE};
-use crate::result::{CoderResult, DecoderResult};
+use crate::options::{Bom, DecodeOptions, Malformed, Tally};
+use crate::result::DecoderResult;
 use crate::sink::ByteSink;
 use crate::variant::VariantDecoder;
 
@@ -22,16 +23,6 @@ const BOMS: [(&[u8], &Encoding); 3] = [
     (&[0xFE, 0xFF], UTF_16BE),
     (&[0xFF, 0xFE], UTF_16LE),
 ];
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum BomHandling {
-    /// Look for any BOM and switch to the encoding it names.
-    Sniff,
-    /// Strip only this decoder's own BOM.
-    Remove,
-    /// Treat a BOM as ordinary content.
-    Off,
-}
 
 enum Decision {
     /// More bytes are needed before a BOM can be ruled in or out.
@@ -68,7 +59,9 @@ enum Decision {
 pub struct Decoder {
     encoding: &'static Encoding,
     variant: VariantDecoder,
-    bom: BomHandling,
+    options: DecodeOptions,
+    /// Cleared once the byte order mark question is settled.
+    sniffing: bool,
     /// Bytes held back while deciding whether they start a BOM.
     bom_buf: [u8; 3],
     bom_len: u8,
@@ -76,26 +69,34 @@ pub struct Decoder {
     prefix: [u8; 3],
     prefix_pos: u8,
     prefix_len: u8,
+    /// A replacement character not yet written in full.
+    pending: [u8; 4],
+    pending_pos: u8,
+    pending_len: u8,
+    tally: Tally,
 }
 
 impl Decoder {
-    pub(crate) fn new(encoding: &'static Encoding, sniff: bool, remove: bool) -> Decoder {
-        let bom = if sniff {
-            BomHandling::Sniff
-        } else if remove && encoding.bom().is_some() {
-            BomHandling::Remove
-        } else {
-            BomHandling::Off
+    pub(crate) fn new(encoding: &'static Encoding, options: DecodeOptions) -> Decoder {
+        let sniffing = match options.bom {
+            Bom::Sniff => true,
+            Bom::Remove => encoding.bom().is_some(),
+            Bom::Ignore => false,
         };
         Decoder {
             encoding,
             variant: encoding.variant().new_decoder(),
-            bom,
+            options,
+            sniffing,
             bom_buf: [0; 3],
             bom_len: 0,
             prefix: [0; 3],
             prefix_pos: 0,
             prefix_len: 0,
+            pending: [0; 4],
+            pending_pos: 0,
+            pending_len: 0,
+            tally: Tally::default(),
         }
     }
 
@@ -113,12 +114,15 @@ impl Decoder {
         self.variant.max_utf8_buffer_length(byte_length)
     }
 
-    /// Decodes into `dst`, reporting malformed sequences instead of substituting
-    /// them.
+    /// Decodes into `dst`.
     ///
-    /// Returns why it stopped, how many bytes of `src` were consumed and how many
-    /// bytes were written.  The written bytes are always valid UTF-8.  `dst` must
-    /// be at least [`DECODER_MIN_BUFFER`] bytes long or no progress is possible.
+    /// Returns why it stopped, how many bytes of `src` were consumed and how
+    /// many bytes were written.  The written bytes are always valid UTF-8.
+    /// `dst` must be at least [`DECODER_MIN_BUFFER`] bytes long or no progress
+    /// is possible.
+    ///
+    /// `Malformed` comes back only under [`Malformed::Fail`]; every other
+    /// policy handles the sequence and keeps going.
     ///
     /// Pass `last = true` only with the final buffer of the stream.
     pub fn decode_to_utf8(
@@ -127,10 +131,105 @@ impl Decoder {
         dst: &mut [u8],
         last: bool,
     ) -> (DecoderResult, usize, usize) {
+        let mut total_read = 0usize;
+        let mut total_written = 0usize;
+        loop {
+            {
+                let mut sink = ByteSink::new(&mut dst[total_written..]);
+                if !self.drain_pending(&mut sink) {
+                    return (
+                        DecoderResult::OutputFull,
+                        total_read,
+                        total_written + sink.written(),
+                    );
+                }
+                total_written += sink.written();
+            }
+            let (result, read, written) =
+                self.decode_step(&src[total_read..], &mut dst[total_written..], last);
+            total_read += read;
+            total_written += written;
+            match result {
+                DecoderResult::Malformed(len) => match self.options.malformed {
+                    Malformed::Fail => {
+                        return (DecoderResult::Malformed(len), total_read, total_written);
+                    }
+                    Malformed::Omit => {
+                        self.tally.errors += 1;
+                    }
+                    Malformed::Replace(c) => {
+                        self.tally.errors += 1;
+                        let mut buf = [0u8; 4];
+                        let encoded = c.encode_utf8(&mut buf).as_bytes();
+                        self.pending[..encoded.len()].copy_from_slice(encoded);
+                        self.pending_pos = 0;
+                        self.pending_len = encoded.len() as u8;
+                    }
+                },
+                other => return (other, total_read, total_written),
+            }
+        }
+    }
+
+    /// How much has been substituted or dropped so far.
+    pub fn tally(&self) -> Tally {
+        self.tally
+    }
+
+    /// Writes as much of a carried-over replacement character as fits.
+    fn drain_pending(&mut self, sink: &mut ByteSink) -> bool {
+        if self.pending_pos == self.pending_len {
+            return true;
+        }
+        let (start, end) = (usize::from(self.pending_pos), usize::from(self.pending_len));
+        let written = sink.write_slice_partial(&self.pending[start..end]);
+        self.pending_pos += written as u8;
+        if self.pending_pos == self.pending_len {
+            self.pending_pos = 0;
+            self.pending_len = 0;
+            true
+        } else {
+            false
+        }
+    }
+
+    /// Decodes all of `src`, appending to `dst`.
+    #[cfg(feature = "alloc")]
+    pub fn decode_to_string(
+        &mut self,
+        src: &[u8],
+        dst: &mut String,
+        last: bool,
+    ) -> Result<(), MalformedError> {
+        let mut buffer = [0u8; 1024];
+        let mut read = 0usize;
+        loop {
+            let (result, n, written) = self.decode_to_utf8(&src[read..], &mut buffer, last);
+            read += n;
+            dst.push_str(
+                core::str::from_utf8(&buffer[..written]).expect("decoders emit valid UTF-8"),
+            );
+            match result {
+                DecoderResult::InputEmpty => return Ok(()),
+                DecoderResult::OutputFull => {}
+                DecoderResult::Malformed(len) => {
+                    return Err(MalformedError { offset: read, len });
+                }
+            }
+        }
+    }
+
+    /// One pass over the variant decoder, after byte order mark handling.
+    fn decode_step(
+        &mut self,
+        src: &[u8],
+        dst: &mut [u8],
+        last: bool,
+    ) -> (DecoderResult, usize, usize) {
         let mut sink = ByteSink::new(dst);
         let mut read = 0usize;
 
-        if self.bom != BomHandling::Off {
+        if self.sniffing {
             match self.consume_bom(src, last) {
                 Some(consumed) => read = consumed,
                 None => return (DecoderResult::InputEmpty, src.len(), 0),
@@ -156,101 +255,6 @@ impl Decoder {
         (result, read + n, sink.written())
     }
 
-    /// Decodes into `dst`, writing U+FFFD for each malformed sequence.
-    ///
-    /// The final `bool` is true if at least one substitution was made.
-    pub fn decode_to_utf8_with_replacement(
-        &mut self,
-        src: &[u8],
-        dst: &mut [u8],
-        last: bool,
-    ) -> (CoderResult, usize, usize, bool) {
-        let mut total_read = 0usize;
-        let mut total_written = 0usize;
-        let mut had_errors = false;
-        loop {
-            let (result, read, written) =
-                self.decode_to_utf8(&src[total_read..], &mut dst[total_written..], last);
-            total_read += read;
-            total_written += written;
-            match result {
-                DecoderResult::Malformed(_) => {
-                    had_errors = true;
-                    let replacement = "\u{FFFD}".as_bytes();
-                    if dst.len() - total_written < replacement.len() {
-                        // Decoders reserve room for a substitution before reporting
-                        // an error, so this is unreachable in practice.
-                        return (
-                            CoderResult::OutputFull,
-                            total_read,
-                            total_written,
-                            had_errors,
-                        );
-                    }
-                    dst[total_written..total_written + replacement.len()]
-                        .copy_from_slice(replacement);
-                    total_written += replacement.len();
-                }
-                other => {
-                    return (
-                        other.as_coder_result(),
-                        total_read,
-                        total_written,
-                        had_errors,
-                    );
-                }
-            }
-        }
-    }
-
-    #[cfg(feature = "alloc")]
-    /// Decodes all of `src`, appending to `dst` and writing U+FFFD for each
-    /// malformed sequence.  Returns true if at least one substitution was made.
-    pub fn decode_to_string(&mut self, src: &[u8], dst: &mut String, last: bool) -> bool {
-        let mut buffer = [0u8; 1024];
-        let mut read = 0usize;
-        let mut had_errors = false;
-        loop {
-            let (result, n, written, errors) =
-                self.decode_to_utf8_with_replacement(&src[read..], &mut buffer, last);
-            read += n;
-            had_errors |= errors;
-            dst.push_str(
-                core::str::from_utf8(&buffer[..written]).expect("decoders emit valid UTF-8"),
-            );
-            if result == CoderResult::InputEmpty {
-                return had_errors;
-            }
-        }
-    }
-
-    #[cfg(feature = "alloc")]
-    /// Decodes all of `src`, appending to `dst` and stopping at the first
-    /// malformed sequence, which is reported as `Err`.
-    pub fn decode_to_string_without_replacement(
-        &mut self,
-        src: &[u8],
-        dst: &mut String,
-        last: bool,
-    ) -> Result<(), MalformedError> {
-        let mut buffer = [0u8; 1024];
-        let mut read = 0usize;
-        loop {
-            let (result, n, written) = self.decode_to_utf8(&src[read..], &mut buffer, last);
-            read += n;
-            dst.push_str(
-                core::str::from_utf8(&buffer[..written]).expect("decoders emit valid UTF-8"),
-            );
-            match result {
-                DecoderResult::InputEmpty => return Ok(()),
-                DecoderResult::OutputFull => {}
-                DecoderResult::Malformed(len) => {
-                    return Err(MalformedError { offset: read, len });
-                }
-            }
-        }
-    }
-
     /// Feeds `src` to the BOM state machine.
     ///
     /// Returns how many bytes of `src` the byte order mark consumed, or `None` if
@@ -273,7 +277,7 @@ impl Decoder {
                 }
                 Decision::Bom(encoding) => {
                     self.bom_len = 0;
-                    self.bom = BomHandling::Off;
+                    self.sniffing = false;
                     if encoding != self.encoding {
                         self.encoding = encoding;
                         self.variant = encoding.variant().new_decoder();
@@ -290,13 +294,13 @@ impl Decoder {
 
     fn bom_decision(&self) -> Decision {
         let seen = &self.bom_buf[..usize::from(self.bom_len)];
-        match self.bom {
-            BomHandling::Sniff => prefix_decision(&BOMS, seen),
-            BomHandling::Remove => match self.encoding.bom() {
+        match self.options.bom {
+            Bom::Sniff => prefix_decision(&BOMS, seen),
+            Bom::Remove => match self.encoding.bom() {
                 Some(bom) => prefix_decision(&[(bom, self.encoding)], seen),
                 None => Decision::NoBom,
             },
-            BomHandling::Off => Decision::NoBom,
+            Bom::Ignore => Decision::NoBom,
         }
     }
 
@@ -305,7 +309,7 @@ impl Decoder {
         self.prefix_pos = 0;
         self.prefix_len = self.bom_len;
         self.bom_len = 0;
-        self.bom = BomHandling::Off;
+        self.sniffing = false;
     }
 }
 

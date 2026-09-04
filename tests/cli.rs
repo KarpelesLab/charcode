@@ -106,16 +106,6 @@ fn dash_c_omits_and_reports_a_lossy_conversion() {
 }
 
 #[test]
-fn substitute_matches_the_standards_web_behaviour() {
-    let output = run(
-        &["--substitute", "-t", "windows-1252"],
-        b"a\xFFb\xE4\xB8\x80c",
-    );
-    assert_eq!(output.stdout, b"a&#65533;b&#19968;c");
-    assert!(output.status.success());
-}
-
-#[test]
 fn iconv_ignore_suffix_is_accepted() {
     let output = run(&["-t", "ascii//IGNORE"], "一X".as_bytes());
     assert_eq!(output.stdout, b"X");
@@ -186,7 +176,8 @@ fn bad_usage_is_diagnosed_and_exits_non_zero() {
     for args in [
         &["-f", "bogus"][..],
         &["--nope"],
-        &["-t", "utf-8//TRANSLIT"],
+        &["-t", "utf-8//NOPE"],
+        &["--bom=sideways"],
     ] {
         let output = run(args, b"");
         assert!(!output.status.success(), "{args:?}");

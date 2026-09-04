@@ -71,6 +71,8 @@ jobs:
             --features alloc,whatwg-aliases,shift-jis,euc-jp,iso-2022-jp
           cargo test --no-default-features --features alloc,whatwg-aliases,dos
           cargo test --no-default-features --features alloc,extras
+          # Transliteration carries a table of its own and stays opt-in.
+          cargo test --no-default-features --features alloc,translit,single-byte
 
   no_std:
     name: no_std builds (${{ matrix.target }})

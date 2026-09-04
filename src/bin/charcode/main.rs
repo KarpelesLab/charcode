@@ -69,7 +69,7 @@ fn convert(options: Options) -> Result<ExitCode, String> {
         None => Box::new(BufWriter::new(io::stdout().lock())),
     };
 
-    let mut converter = Converter::new(options.from, options.to, options.on_error);
+    let mut converter = Converter::new(options.from, options.to, options.decode, options.encode);
     let mut buffer = vec![0u8; CHUNK];
     let last_input = options.inputs.len() - 1;
 
@@ -106,13 +106,13 @@ fn convert(options: Options) -> Result<ExitCode, String> {
     drop(out);
 
     summarize(&converter, &options);
-    // Anything omitted means the output is not a faithful conversion, which the
-    // exit status should say even though the run finished.
-    let lossy = converter.tally.omitted_malformed > 0 || converter.tally.omitted_unmappable > 0;
-    Ok(if lossy {
-        ExitCode::FAILURE
-    } else {
+    // Anything substituted or dropped means the output is not a faithful
+    // conversion, which the exit status should say even though the run finished.
+    let (decoded, encoded) = converter.tally();
+    Ok(if decoded.is_lossless() && encoded.is_lossless() {
         ExitCode::SUCCESS
+    } else {
+        ExitCode::FAILURE
     })
 }
 
@@ -129,40 +129,32 @@ fn report(result: Result<(), Error>, name: &str) -> Result<(), String> {
 }
 
 fn summarize(converter: &Converter, options: &Options) {
-    let tally = converter.tally;
+    let (decoded, encoded) = converter.tally();
     if options.verbose {
         eprintln!(
             "charcode: {} -> {}: {} byte(s) in, {} byte(s) out",
             options.from.name(),
             options.to.output_encoding().name(),
-            tally.bytes_in,
-            tally.bytes_out
+            converter.bytes_in,
+            converter.bytes_out
         );
     }
     if options.silent {
         return;
     }
-    if tally.omitted_malformed > 0 {
+    if decoded.errors > 0 {
         eprintln!(
-            "charcode: omitted {} malformed byte sequence(s)",
-            tally.omitted_malformed
+            "charcode: {} malformed byte sequence(s) were {}",
+            decoded.errors,
+            args::malformed_description(&options.decode)
         );
     }
-    if tally.omitted_unmappable > 0 {
+    if encoded.errors > 0 {
         eprintln!(
-            "charcode: omitted {} character(s) that {} cannot represent",
-            tally.omitted_unmappable,
-            options.to.output_encoding().name()
-        );
-    }
-    if tally.substituted_malformed {
-        eprintln!("charcode: malformed input was replaced with U+FFFD");
-    }
-    if tally.substituted_unmappable {
-        eprintln!(
-            "charcode: characters {} cannot represent were written as numeric \
-             character references",
-            options.to.output_encoding().name()
+            "charcode: {} character(s) that {} cannot represent were {}",
+            encoded.errors,
+            options.to.output_encoding().name(),
+            args::unmappable_description(&options.encode)
         );
     }
 }

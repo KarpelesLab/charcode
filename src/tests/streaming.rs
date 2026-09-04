@@ -5,7 +5,10 @@
 use alloc::string::String;
 use alloc::vec::Vec;
 
-use crate::{CoderResult, DECODER_MIN_BUFFER, ENCODER_MIN_BUFFER, Encoding};
+use crate::{
+    Bom, DECODER_MIN_BUFFER, DecodeOptions, DecoderResult, ENCODER_MIN_BUFFER, EncodeOptions,
+    EncoderResult, Encoding, Unmappable,
+};
 
 /// A xorshift generator, so the corpus is reproducible without a dependency.
 struct Rng(u64);
@@ -74,10 +77,11 @@ fn text_corpus() -> Vec<String> {
 /// Decodes the whole input in one call, as the reference result.
 fn decode_all(encoding: &'static Encoding, bytes: &[u8]) -> (String, bool) {
     let mut text = String::new();
-    let errors = encoding
-        .new_decoder_without_bom_handling()
-        .decode_to_string(bytes, &mut text, true);
-    (text, errors)
+    let mut decoder = encoding.new_decoder_with(DecodeOptions::new().bom(Bom::Ignore));
+    decoder
+        .decode_to_string(bytes, &mut text, true)
+        .expect("substituting never fails");
+    (text, !decoder.tally().is_lossless())
 }
 
 /// Decodes feeding `chunk` bytes at a time into a `dst`-byte output buffer.
@@ -87,31 +91,26 @@ fn decode_chunked(
     chunk: usize,
     dst_len: usize,
 ) -> (String, bool) {
-    let mut decoder = encoding.new_decoder_without_bom_handling();
+    let mut decoder = encoding.new_decoder_with(DecodeOptions::new().bom(Bom::Ignore));
     let mut buffer = alloc::vec![0u8; dst_len];
     let mut text = String::new();
-    let mut had_errors = false;
     let mut offset = 0;
     loop {
         let end = core::cmp::min(offset + chunk, bytes.len());
         let last = end == bytes.len();
         let mut read = 0;
         loop {
-            let (result, n, written, errors) = decoder.decode_to_utf8_with_replacement(
-                &bytes[offset + read..end],
-                &mut buffer,
-                last,
-            );
+            let (result, n, written) =
+                decoder.decode_to_utf8(&bytes[offset + read..end], &mut buffer, last);
             read += n;
-            had_errors |= errors;
             text.push_str(core::str::from_utf8(&buffer[..written]).expect("valid UTF-8"));
-            if result == CoderResult::InputEmpty {
+            if result == DecoderResult::InputEmpty {
                 break;
             }
         }
         offset = end;
         if last {
-            return (text, had_errors);
+            return (text, !decoder.tally().is_lossless());
         }
     }
 }
@@ -136,12 +135,19 @@ fn decoding_is_independent_of_chunking() {
     }
 }
 
+/// Encoding substitutes, so a corpus item is never rejected outright and the
+/// comparison is about chunking rather than about policy.
+fn encoder(encoding: &'static Encoding) -> crate::Encoder {
+    encoding.new_encoder_with(EncodeOptions::new().unmappable(Unmappable::Html))
+}
+
 fn encode_all(encoding: &'static Encoding, text: &str) -> (Vec<u8>, bool) {
     let mut bytes = Vec::new();
-    let unmappable = encoding
-        .new_encoder()
-        .encode_from_str(text, &mut bytes, true);
-    (bytes, unmappable)
+    let mut encoder = encoder(encoding);
+    encoder
+        .encode_from_str(text, &mut bytes, true)
+        .expect("references never fail");
+    (bytes, !encoder.tally().is_lossless())
 }
 
 fn encode_chunked(
@@ -150,10 +156,9 @@ fn encode_chunked(
     chars_per_chunk: usize,
     dst_len: usize,
 ) -> (Vec<u8>, bool) {
-    let mut encoder = encoding.new_encoder();
+    let mut encoder = encoder(encoding);
     let mut buffer = alloc::vec![0u8; dst_len];
     let mut out = Vec::new();
-    let mut had_unmappable = false;
     let boundaries: Vec<usize> = text
         .char_indices()
         .map(|(i, _)| i)
@@ -167,20 +172,16 @@ fn encode_chunked(
         let last = end == text.len();
         let mut read = 0;
         loop {
-            let (result, n, written, unmappable) = encoder.encode_from_utf8_with_replacement(
-                &text[start + read..end],
-                &mut buffer,
-                last,
-            );
+            let (result, n, written) =
+                encoder.encode_from_utf8(&text[start + read..end], &mut buffer, last);
             read += n;
-            had_unmappable |= unmappable;
             out.extend_from_slice(&buffer[..written]);
-            if result == CoderResult::InputEmpty {
+            if result == EncoderResult::InputEmpty {
                 break;
             }
         }
         if last {
-            return (out, had_unmappable);
+            return (out, !encoder.tally().is_lossless());
         }
     }
 }
