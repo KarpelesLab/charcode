@@ -129,6 +129,7 @@ struct Readme;
 
 mod ascii;
 mod big5;
+mod code_page;
 mod decoder;
 mod encoder;
 mod euc_jp;
@@ -162,6 +163,7 @@ pub use crate::encoder::{ENCODER_MIN_BUFFER, Encoder, UnmappableError};
 pub use crate::encodings::*;
 pub use crate::result::{CoderResult, DecoderResult, EncoderResult};
 
+use crate::code_page::CODE_PAGES;
 use crate::tables::labels::{ALL_ENCODINGS, LABELS};
 use crate::variant::VariantEncoding;
 
@@ -264,6 +266,62 @@ impl Encoding {
             Some(encoding) if encoding.variant == VariantEncoding::Replacement => None,
             other => other,
         }
+    }
+
+    /// Looks up an encoding by Windows code page identifier.
+    ///
+    /// Code page numbers come from Microsoft's registry rather than from the
+    /// Encoding Standard, and are what `GetACP`, a .NET `Encoding.CodePage` or
+    /// an old database column reports.
+    ///
+    /// A number for an encoding the standard folds into a superset resolves to
+    /// that superset, exactly as the equivalent label does: 28591 (ISO-8859-1)
+    /// gives [`WINDOWS_1252`], and 20127 (US-ASCII) does too.
+    ///
+    /// ```
+    /// # use charcode::{Encoding, BIG5, SHIFT_JIS, WINDOWS_1252};
+    /// assert_eq!(Encoding::for_windows_code_page(1252), Some(WINDOWS_1252));
+    /// assert_eq!(Encoding::for_windows_code_page(932), Some(SHIFT_JIS));
+    /// assert_eq!(Encoding::for_windows_code_page(950), Some(BIG5));
+    /// // Not an encoding this crate has.
+    /// assert_eq!(Encoding::for_windows_code_page(437), None);
+    /// ```
+    pub fn for_windows_code_page(code_page: u32) -> Option<&'static Encoding> {
+        CODE_PAGES
+            .binary_search_by_key(&code_page, |entry| entry.number)
+            .ok()
+            .map(|i| CODE_PAGES[i].encoding)
+    }
+
+    /// Like [`Encoding::for_windows_code_page`], but treats the numbers that
+    /// map to [`REPLACEMENT`] — 50225, 50227, 50229 and 52936 — as unknown.
+    pub fn for_windows_code_page_no_replacement(code_page: u32) -> Option<&'static Encoding> {
+        match Encoding::for_windows_code_page(code_page) {
+            Some(encoding) if encoding.variant == VariantEncoding::Replacement => None,
+            other => other,
+        }
+    }
+
+    /// The Windows code page identifier for this encoding, if it has one.
+    ///
+    /// An encoding reachable through several numbers reports the one Microsoft
+    /// treats as its own, so this is the inverse of
+    /// [`Encoding::for_windows_code_page`] only up to those aliases.
+    ///
+    /// ```
+    /// # use charcode::{Encoding, SHIFT_JIS, WINDOWS_1252, X_USER_DEFINED};
+    /// assert_eq!(WINDOWS_1252.windows_code_page(), Some(1252));
+    /// assert_eq!(SHIFT_JIS.windows_code_page(), Some(932));
+    /// // 28591 also resolves to windows-1252, but 1252 is its own number.
+    /// assert_eq!(Encoding::for_windows_code_page(28591), Some(WINDOWS_1252));
+    /// // Microsoft has no number for this one.
+    /// assert_eq!(X_USER_DEFINED.windows_code_page(), None);
+    /// ```
+    pub fn windows_code_page(&self) -> Option<u32> {
+        CODE_PAGES
+            .iter()
+            .find(|entry| entry.canonical && entry.encoding == self)
+            .map(|entry| entry.number)
     }
 
     /// Implements `BOM sniff`: if `buffer` starts with a byte order mark, returns

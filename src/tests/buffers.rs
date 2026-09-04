@@ -142,3 +142,91 @@ fn lookup_and_metadata_need_no_allocator() {
     assert!(WINDOWS_1252.is_single_byte());
     assert!(!ISO_2022_JP.is_ascii_compatible());
 }
+
+#[test]
+fn code_pages_resolve_and_round_trip() {
+    use crate::Encoding;
+
+    // Sorted, so the binary search is correct.
+    assert!(
+        crate::code_page::CODE_PAGES
+            .windows(2)
+            .all(|w| w[0].number < w[1].number)
+    );
+
+    for (number, expected) in [
+        (866u32, IBM866),
+        (874, WINDOWS_874),
+        (932, SHIFT_JIS),
+        (936, GBK),
+        (949, EUC_KR),
+        (950, BIG5),
+        (1200, UTF_16LE),
+        (1201, UTF_16BE),
+        (1252, WINDOWS_1252),
+        (10000, MACINTOSH),
+        (10007, X_MAC_CYRILLIC),
+        (20866, KOI8_R),
+        (21866, KOI8_U),
+        (28592, ISO_8859_2),
+        (38598, ISO_8859_8_I),
+        (50220, ISO_2022_JP),
+        (51932, EUC_JP),
+        (54936, GB18030),
+        (65001, UTF_8),
+    ] {
+        assert_eq!(
+            Encoding::for_windows_code_page(number),
+            Some(expected),
+            "code page {number}"
+        );
+    }
+
+    // Every canonical entry is the one the reverse lookup reports.
+    for entry in &crate::code_page::CODE_PAGES {
+        if entry.canonical {
+            assert_eq!(
+                entry.encoding.windows_code_page(),
+                Some(entry.number),
+                "{}",
+                entry.encoding.name()
+            );
+        }
+        // And every number resolves to an encoding that agrees.
+        assert_eq!(
+            Encoding::for_windows_code_page(entry.number),
+            Some(entry.encoding)
+        );
+    }
+    // Exactly one canonical number per encoding that has any.
+    for encoding in Encoding::all() {
+        let canonical = crate::code_page::CODE_PAGES
+            .iter()
+            .filter(|entry| entry.canonical && entry.encoding == *encoding)
+            .count();
+        assert!(canonical <= 1, "{} has {canonical}", encoding.name());
+    }
+
+    // The numbers the standard folds into a superset behave like their labels.
+    assert_eq!(Encoding::for_windows_code_page(28591), Some(WINDOWS_1252));
+    assert_eq!(Encoding::for_windows_code_page(20127), Some(WINDOWS_1252));
+    assert_eq!(Encoding::for_windows_code_page(28599), Some(WINDOWS_1254));
+    assert_eq!(Encoding::for_windows_code_page(10017), Some(X_MAC_CYRILLIC));
+
+    // The neutralized ones, and the filtered variant.
+    for number in [50225u32, 50227, 50229, 52936] {
+        assert_eq!(Encoding::for_windows_code_page(number), Some(REPLACEMENT));
+        assert_eq!(
+            Encoding::for_windows_code_page_no_replacement(number),
+            None,
+            "code page {number}"
+        );
+    }
+
+    // Code pages this crate has no encoding for.
+    for number in [0u32, 437, 850, 1361, 65000, 65005, 999_999] {
+        assert_eq!(Encoding::for_windows_code_page(number), None, "{number}");
+    }
+    assert_eq!(X_USER_DEFINED.windows_code_page(), None);
+    assert_eq!(REPLACEMENT.windows_code_page(), Some(50225));
+}

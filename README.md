@@ -101,6 +101,24 @@ assert_eq!(error.character, '一');
 assert_eq!(bytes, b"ab");
 ```
 
+## Windows code pages
+
+Encodings can also be looked up by Microsoft code page number, which is what
+`GetACP`, a .NET `Encoding.CodePage` or an old database column reports:
+
+```rust
+use charcode::{Encoding, SHIFT_JIS, WINDOWS_1252};
+
+assert_eq!(Encoding::for_windows_code_page(932), Some(SHIFT_JIS));
+assert_eq!(Encoding::for_windows_code_page(1252), Some(WINDOWS_1252));
+assert_eq!(WINDOWS_1252.windows_code_page(), Some(1252));
+```
+
+A number for an encoding the standard folds into a superset resolves to that
+superset, exactly as the equivalent label does — 28591 (ISO-8859-1) and 20127
+(US-ASCII) both give windows-1252. The CLI accepts these too, bare or prefixed:
+`charcode -f cp932`, `-f 932` and `-f x-cp20936` all work.
+
 ## Command-line tool
 
 The `cli` feature builds `charcode`, an `iconv`-style converter that adds no
