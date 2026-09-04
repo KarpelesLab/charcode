@@ -405,10 +405,10 @@ pub static GB18030: &Encoding = &GB18030_INIT;
 // Legacy multi-byte Chinese (traditional) encodings
 
 #[cfg(feature = "big5")]
-pub(crate) const BIG5_INIT: Encoding = Encoding::new("Big5", VariantEncoding::Big5);
-/// Big5, with the Hong Kong Supplementary Character Set extensions.
+pub(crate) const BIG5_HKSCS_INIT: Encoding = Encoding::new("Big5-HKSCS", VariantEncoding::Big5);
+/// The standard's Big5: Big5 plus the Hong Kong Supplementary Character Set and other common extensions.  For Big5 itself see [`BIG5`].
 #[cfg(feature = "big5")]
-pub static BIG5: &Encoding = &BIG5_INIT;
+pub static BIG5_HKSCS: &Encoding = &BIG5_HKSCS_INIT;
 
 // Legacy multi-byte Japanese encodings
 

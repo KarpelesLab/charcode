@@ -364,10 +364,10 @@ fn gb18030_has_an_asymmetric_private_use_table() {
 
 #[test]
 fn big5_pointers_that_decode_to_two_scalar_values() {
-    assert_eq!(decode(BIG5, b"\x88\x62"), "\u{CA}\u{304}");
-    assert_eq!(decode(BIG5, b"\x88\x64"), "\u{CA}\u{30C}");
-    assert_eq!(decode(BIG5, b"\x88\xA3"), "\u{EA}\u{304}");
-    assert_eq!(decode(BIG5, b"\x88\xA5"), "\u{EA}\u{30C}");
+    assert_eq!(decode(BIG5_HKSCS, b"\x88\x62"), "\u{CA}\u{304}");
+    assert_eq!(decode(BIG5_HKSCS, b"\x88\x64"), "\u{CA}\u{30C}");
+    assert_eq!(decode(BIG5_HKSCS, b"\x88\xA3"), "\u{EA}\u{304}");
+    assert_eq!(decode(BIG5_HKSCS, b"\x88\xA5"), "\u{EA}\u{30C}");
 }
 
 #[test]
@@ -382,16 +382,16 @@ fn big5_encoder_avoids_the_hkscs_extensions() {
         ("\u{5341}", b"\xA4\x51"),
         ("\u{5345}", b"\xA4\xCA"),
     ] {
-        assert_eq!(encode(BIG5, text), bytes, "{text:?}");
-        assert_eq!(decode(BIG5, bytes), text);
+        assert_eq!(encode(BIG5_HKSCS, text), bytes, "{text:?}");
+        assert_eq!(decode(BIG5_HKSCS, bytes), text);
     }
 }
 
 #[test]
 fn big5_restores_an_ascii_trail_byte() {
     // 0x81 is a lead byte but 0x21 cannot follow it, so 0x21 is decoded again.
-    assert_eq!(decode(BIG5, b"\x81\x21"), "\u{FFFD}!");
-    assert_eq!(decode(BIG5, b"\x81\xFF"), "\u{FFFD}");
+    assert_eq!(decode(BIG5_HKSCS, b"\x81\x21"), "\u{FFFD}!");
+    assert_eq!(decode(BIG5_HKSCS, b"\x81\xFF"), "\u{FFFD}");
 }
 
 // --- 12 Japanese ---------------------------------------------------------
@@ -519,7 +519,7 @@ fn without_replacement_reports_the_offending_character() {
 
 #[test]
 fn a_four_byte_output_buffer_is_enough_to_make_progress() {
-    let mut decoder = BIG5.new_decoder_with(DecodeOptions::new().bom(Bom::Ignore));
+    let mut decoder = BIG5_HKSCS.new_decoder_with(DecodeOptions::new().bom(Bom::Ignore));
     let mut buffer = [0u8; DECODER_MIN_BUFFER];
     let (result, read, written) = decoder.decode_to_utf8(b"\x88\x62\x41", &mut buffer, true);
     assert_eq!(result, DecoderResult::OutputFull);
@@ -543,7 +543,7 @@ fn encodings_compare_and_print_by_name() {
     assert_eq!(format!("{UTF_8:?}"), "Encoding(UTF-8)");
     assert!(WINDOWS_1252.is_single_byte());
     assert!(X_USER_DEFINED.is_single_byte());
-    assert!(!BIG5.is_single_byte());
+    assert!(!BIG5_HKSCS.is_single_byte());
     assert!(WINDOWS_1252.is_ascii_compatible());
     assert!(!UTF_16LE.is_ascii_compatible());
     assert!(!ISO_2022_JP.is_ascii_compatible());
@@ -619,7 +619,7 @@ fn is_whatwg_marks_exactly_the_standards_encodings() {
                     | "x-mac-cyrillic"
                     | "GBK"
                     | "gb18030"
-                    | "Big5"
+                    | "Big5-HKSCS"
                     | "EUC-JP"
                     | "ISO-2022-JP"
                     | "Shift_JIS"

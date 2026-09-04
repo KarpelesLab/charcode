@@ -9,6 +9,8 @@
 
 #[cfg(feature = "big5")]
 pub mod big5;
+#[cfg(feature = "big5")]
+pub mod big5_1984;
 #[cfg(feature = "euc-kr")]
 pub mod euc_kr;
 #[cfg(any(

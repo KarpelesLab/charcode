@@ -500,14 +500,30 @@ pub static US_ASCII: &Encoding = &US_ASCII_INIT;
 
 #[cfg(feature = "gb18030")]
 pub(crate) const GB2312_INIT: Encoding = Encoding::new("GB2312", VariantEncoding::Gb2312);
-/// GB2312
+/// GB 2312-80, in its EUC-CN form.
+///
+/// Not the standard's `gb2312` label, which resolves to GBK: a superset, but
+/// one that gives two of GB 2312's code points a different character.
 #[cfg(feature = "gb18030")]
 pub static GB2312: &Encoding = &GB2312_INIT;
+
+#[cfg(feature = "big5")]
+pub(crate) const BIG5_INIT: Encoding = Encoding::new("Big5", VariantEncoding::Big5_1984);
+/// Big5, as the Unicode Consortium maps it in `BIG5.TXT`.
+///
+/// Not the standard's index of the same name, which is Big5 plus the Hong Kong
+/// Supplementary Character Set and gives 260 of Big5's own pointers a different
+/// character; that one is [`BIG5_HKSCS`](crate::BIG5_HKSCS).  Big5 has no single
+/// official Unicode mapping, and at eleven punctuation cells this follows the
+/// Unicode Consortium rather than Microsoft's code page 950 — 0xA1E3 is U+223C
+/// TILDE OPERATOR here and U+FF5E in Microsoft's table, and so on.
+#[cfg(feature = "big5")]
+pub static BIG5: &Encoding = &BIG5_INIT;
 
 #[cfg(feature = "iso-2022-kr")]
 pub(crate) const ISO_2022_KR_INIT: Encoding =
     Encoding::new("ISO-2022-KR", VariantEncoding::Iso2022Kr);
-/// ISO-2022-KR
+/// ISO-2022-KR (RFC 1557), which shifts between ASCII and KS X 1001.
 #[cfg(feature = "iso-2022-kr")]
 pub static ISO_2022_KR: &Encoding = &ISO_2022_KR_INIT;
 

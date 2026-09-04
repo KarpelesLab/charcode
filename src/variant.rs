@@ -6,6 +6,8 @@
 
 #[cfg(feature = "big5")]
 use crate::big5::{Big5Decoder, Big5Encoder};
+#[cfg(feature = "big5")]
+use crate::big5_1984::{Big5_1984Decoder, Big5_1984Encoder};
 #[cfg(feature = "gb18030")]
 use crate::euc_cn::{Gb2312Decoder, Gb2312Encoder};
 #[cfg(feature = "euc-jp")]
@@ -64,6 +66,9 @@ pub(crate) enum VariantEncoding {
     },
     #[cfg(feature = "big5")]
     Big5,
+    /// Big5 as standardised, rather than the standard's extended index.
+    #[cfg(feature = "big5")]
+    Big5_1984,
     #[cfg(feature = "euc-jp")]
     EucJp,
     #[cfg(feature = "iso-2022-jp")]
@@ -106,6 +111,8 @@ impl VariantEncoding {
             VariantEncoding::Gb18030 { .. } => VariantDecoder::Gb18030(Gb18030Decoder::new()),
             #[cfg(feature = "big5")]
             VariantEncoding::Big5 => VariantDecoder::Big5(Big5Decoder::new()),
+            #[cfg(feature = "big5")]
+            VariantEncoding::Big5_1984 => VariantDecoder::Big5_1984(Big5_1984Decoder::new()),
             #[cfg(feature = "euc-jp")]
             VariantEncoding::EucJp => VariantDecoder::EucJp(EucJpDecoder::new()),
             #[cfg(feature = "iso-2022-jp")]
@@ -146,6 +153,8 @@ impl VariantEncoding {
             }
             #[cfg(feature = "big5")]
             VariantEncoding::Big5 => VariantEncoder::Big5(Big5Encoder),
+            #[cfg(feature = "big5")]
+            VariantEncoding::Big5_1984 => VariantEncoder::Big5_1984(Big5_1984Encoder),
             #[cfg(feature = "euc-jp")]
             VariantEncoding::EucJp => VariantEncoder::EucJp(EucJpEncoder),
             #[cfg(feature = "iso-2022-jp")]
@@ -227,6 +236,8 @@ pub(crate) enum VariantDecoder {
     Gb18030(Gb18030Decoder),
     #[cfg(feature = "big5")]
     Big5(Big5Decoder),
+    #[cfg(feature = "big5")]
+    Big5_1984(Big5_1984Decoder),
     #[cfg(feature = "euc-jp")]
     EucJp(EucJpDecoder),
     #[cfg(feature = "iso-2022-jp")]
@@ -266,6 +277,8 @@ impl VariantDecoder {
             VariantDecoder::Gb18030(d) => d.decode(src, sink, last),
             #[cfg(feature = "big5")]
             VariantDecoder::Big5(d) => d.decode(src, sink, last),
+            #[cfg(feature = "big5")]
+            VariantDecoder::Big5_1984(d) => d.decode(src, sink, last),
             #[cfg(feature = "euc-jp")]
             VariantDecoder::EucJp(d) => d.decode(src, sink, last),
             #[cfg(feature = "iso-2022-jp")]
@@ -310,6 +323,8 @@ pub(crate) enum VariantEncoder {
     Gb18030(Gb18030Encoder),
     #[cfg(feature = "big5")]
     Big5(Big5Encoder),
+    #[cfg(feature = "big5")]
+    Big5_1984(Big5_1984Encoder),
     #[cfg(feature = "euc-jp")]
     EucJp(EucJpEncoder),
     #[cfg(feature = "iso-2022-jp")]
@@ -349,6 +364,8 @@ impl VariantEncoder {
             VariantEncoder::Gb18030(e) => e.encode(src, sink),
             #[cfg(feature = "big5")]
             VariantEncoder::Big5(e) => e.encode(src, sink),
+            #[cfg(feature = "big5")]
+            VariantEncoder::Big5_1984(e) => e.encode(src, sink),
             #[cfg(feature = "euc-jp")]
             VariantEncoder::EucJp(e) => e.encode(src, sink),
             #[cfg(feature = "iso-2022-jp")]

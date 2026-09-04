@@ -218,6 +218,9 @@ struct Readme;
 mod ascii;
 #[cfg(feature = "big5")]
 mod big5;
+#[cfg(feature = "big5")]
+#[allow(non_camel_case_types)]
+mod big5_1984;
 mod code_page;
 mod decoder;
 mod encoder;

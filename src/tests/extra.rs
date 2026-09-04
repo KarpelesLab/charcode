@@ -422,3 +422,93 @@ fn iso_2022_kr_is_not_reachable_through_the_standards_lookup() {
     );
     assert!(!crate::ISO_2022_KR.is_whatwg());
 }
+
+/// Big5 reconstructed from the delta, checked against the decoder over the
+/// whole two-byte space, and round-tripped.
+#[cfg(feature = "big5")]
+#[test]
+fn big5_is_index_big5_narrowed_and_corrected() {
+    use crate::tables::big5::BIG5_DECODE;
+    use crate::tables::big5_1984::{BIG5_1984_DECODE_DELTA, BIG5_1984_ENCODE_DELTA};
+
+    let mut mapped = 0usize;
+    for lead in 0x81..=0xFEu8 {
+        for trail in (0x40..=0x7Eu8).chain(0xA1..=0xFEu8) {
+            let offset = if trail < 0x7F { 0x40 } else { 0x62 };
+            let pointer = (usize::from(lead) - 0x81) * 157 + (usize::from(trail) - offset);
+            // What Big5 itself says, working only from the tables.
+            let expected = if !(0xA1..=0xF9).contains(&lead) {
+                None
+            } else {
+                match BIG5_1984_DECODE_DELTA.binary_search_by_key(&(pointer as u16), |&(p, _)| p) {
+                    Ok(i) => match BIG5_1984_DECODE_DELTA[i].1 {
+                        0xFFFF => None,
+                        code_point => Some(code_point),
+                    },
+                    Err(_) => BIG5_DECODE.get(pointer).copied().filter(|&c| c != 0),
+                }
+            };
+            let bytes = [lead, trail];
+            match expected {
+                Some(code_point) => {
+                    mapped += 1;
+                    let expected = char::from_u32(code_point).unwrap();
+                    assert_eq!(
+                        decode(crate::BIG5, &bytes).as_deref(),
+                        Some(&*String::from(expected)),
+                        "{bytes:02X?} should be U+{code_point:04X}"
+                    );
+                }
+                None => assert_eq!(decode(crate::BIG5, &bytes), None, "pointer {pointer}"),
+            }
+        }
+    }
+    // Every cell `BIG5.TXT` maps inside leads 0xA1 to 0xF9.  Seven more it
+    // lists as U+FFFD, for cells whose Unicode mapping was never settled.
+    assert_eq!(mapped, 13_703);
+
+    // Every code point the encoder can reach comes back as itself.
+    for &(code_point, _) in BIG5_1984_ENCODE_DELTA.iter() {
+        let c = char::from_u32(u32::from(code_point)).unwrap();
+        let mut out = Vec::new();
+        crate::BIG5
+            .new_encoder()
+            .encode_from_str(&String::from(c), &mut out, true)
+            .unwrap();
+        assert_eq!(
+            decode(crate::BIG5, &out).as_deref(),
+            Some(&*String::from(c))
+        );
+    }
+}
+
+/// The two Big5s are different charsets, and the honest lookup must give the
+/// one the label actually names.
+#[cfg(all(feature = "big5", feature = "whatwg-aliases"))]
+#[test]
+fn big5_labels_do_not_resolve_to_the_hong_kong_superset() {
+    for label in [b"big5".as_slice(), b"csbig5", b"cn-big5", b"x-x-big5"] {
+        assert_eq!(Encoding::for_label(label), Some(crate::BIG5));
+        assert_eq!(Encoding::for_whatwg_label(label), Some(crate::BIG5_HKSCS));
+    }
+    // The superset keeps the label that names it, in both lookups.
+    assert_eq!(Encoding::for_label(b"big5-hkscs"), Some(crate::BIG5_HKSCS));
+    assert_eq!(
+        Encoding::for_whatwg_label(b"big5-hkscs"),
+        Some(crate::BIG5_HKSCS)
+    );
+    assert!(!crate::BIG5.is_whatwg());
+    assert!(crate::BIG5_HKSCS.is_whatwg());
+
+    // 0xA1E3 is the cell the two disagree on most visibly, and 0x8862 is
+    // HKSCS' own, below Big5's lead range entirely.
+    assert_eq!(
+        decode(crate::BIG5, b"\xA1\xE3").as_deref(),
+        Some("\u{223C}")
+    );
+    assert_eq!(
+        decode(crate::BIG5_HKSCS, b"\xA1\xE3").as_deref(),
+        Some("\u{FF5E}")
+    );
+    assert_eq!(decode(crate::BIG5, b"\x88\x62"), None);
+}

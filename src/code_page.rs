@@ -40,6 +40,9 @@ const fn cp(number: u32, encoding: &'static Encoding) -> CodePage {
 }
 
 /// An additional number for an encoding that already has a canonical one.
+// Every alias below sits behind a table feature, so a build with none is left
+// with no caller for this.
+#[allow(dead_code)]
 const fn alias(number: u32, encoding: &'static Encoding) -> CodePage {
     CodePage {
         number,
@@ -65,8 +68,9 @@ pub(crate) static CODE_PAGES: &[CodePage] = &[
     cp(936, &e::GBK_INIT), // named gb2312, but it is GBK
     #[cfg(feature = "euc-kr")]
     cp(949, &e::EUC_KR_INIT), // Unified Hangul Code
-    #[cfg(feature = "big5")]
-    cp(950, &e::BIG5_INIT),
+    // 950 is Big5, and so lives with the Big5 table itself rather than here:
+    // the standard's index of that name is Big5 plus HKSCS, which disagrees
+    // with Microsoft's 950 at 250 cells where Big5 itself disagrees at 11.
     cp(1200, &e::UTF_16LE_INIT),
     cp(1201, &e::UTF_16BE_INIT),
     #[cfg(feature = "single-byte")]

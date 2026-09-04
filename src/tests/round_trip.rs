@@ -103,7 +103,7 @@ fn x_user_defined_round_trips() {
 #[test]
 fn big5_round_trips() {
     use crate::tables::big5::BIG5_ENCODE_CODE_POINTS;
-    round_trip(BIG5, BIG5_ENCODE_CODE_POINTS.iter().copied());
+    round_trip(BIG5_HKSCS, BIG5_ENCODE_CODE_POINTS.iter().copied());
 }
 
 #[cfg(feature = "euc-kr")]

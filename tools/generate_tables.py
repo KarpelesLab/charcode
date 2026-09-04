@@ -186,6 +186,24 @@ VARIANTS = {
     "x-user-defined": "XUserDefined",
 }
 
+# The doc on the public statics for charsets outside the standard.  Keyed by
+# name; anything absent gets its own name.
+EXTRA_DOCS = {
+    "Big5": """Big5, as the Unicode Consortium maps it in `BIG5.TXT`.
+///
+/// Not the standard's index of the same name, which is Big5 plus the Hong Kong
+/// Supplementary Character Set and gives 260 of Big5's own pointers a different
+/// character; that one is [`BIG5_HKSCS`](crate::BIG5_HKSCS).  Big5 has no single
+/// official Unicode mapping, and at eleven punctuation cells this follows the
+/// Unicode Consortium rather than Microsoft's code page 950 — 0xA1E3 is U+223C
+/// TILDE OPERATOR here and U+FF5E in Microsoft's table, and so on.""",
+    "GB2312": """GB 2312-80, in its EUC-CN form.
+///
+/// Not the standard's `gb2312` label, which resolves to GBK: a superset, but
+/// one that gives two of GB 2312's code points a different character.""",
+    "ISO-2022-KR": "ISO-2022-KR (RFC 1557), which shifts between ASCII and KS X 1001.",
+}
+
 # The one-line doc on each public static; anything absent gets its own name.
 ENCODING_DOCS = {
     "UTF-8": "UTF-8, the encoding every new format should use.",
@@ -196,11 +214,21 @@ ENCODING_DOCS = {
     "UTF-16BE": "UTF-16BE.  Decode only; encoding to it yields UTF-8, per `get an output encoding`.",
     "UTF-16LE": "UTF-16LE.  Decode only; encoding to it yields UTF-8, per `get an output encoding`.",
     "x-user-defined": "x-user-defined, which maps bytes 0x80 to 0xFF into the private use area.",
-    "Big5": "Big5, with the Hong Kong Supplementary Character Set extensions.",
+    "Big5": "The standard's Big5: Big5 plus the Hong Kong Supplementary Character Set and other common extensions.  For Big5 itself see [`BIG5`].",
     "EUC-JP": "EUC-JP.  Its decoder also accepts JIS X 0212 via the 0x8F prefix.",
     "ISO-2022-JP": "ISO-2022-JP, the only stateful encoding in the standard.",
     "Shift_JIS": "Shift_JIS, including the Windows end-user defined character range.",
     "EUC-KR": "EUC-KR, in practice the Unified Hangul Code (Windows codepage 949).",
+}
+
+# Encodings the standard names after a charset whose table it does not actually
+# carry.  Its "Big5" is Big5 plus the Hong Kong Supplementary Character Set and
+# other extensions, remapping 260 of Big5's own pointers, so calling both "Big5"
+# would be the same substitution this crate refuses to make in its labels.  The
+# replacement names are themselves labels the standard defines, so
+# `for_whatwg_label` still finds them by name.
+RENAMES = {
+    "Big5": "Big5-HKSCS",
 }
 
 # WHATWG encoding name -> the Cargo feature its tables live behind.  `None` means
@@ -265,7 +293,7 @@ CONST_NAMES = {
     "x-mac-cyrillic": "X_MAC_CYRILLIC_INIT",
     "GBK": "GBK_INIT",
     "gb18030": "GB18030_INIT",
-    "Big5": "BIG5_INIT",
+    "Big5": "BIG5_HKSCS_INIT",
     "EUC-JP": "EUC_JP_INIT",
     "ISO-2022-JP": "ISO_2022_JP_INIT",
     "Shift_JIS": "SHIFT_JIS_INIT",
@@ -317,6 +345,8 @@ WHATWG_ONLY_LABELS = {
     # GB 2312 is a subset of GBK, not GBK.
     "chinese", "csgb2312", "csiso58gb231280", "gb2312", "gb_2312",
     "gb_2312-80", "iso-ir-58",
+    # Big5 itself is not Big5 plus HKSCS: 260 pointers differ.
+    "big5", "csbig5", "cn-big5", "x-x-big5",
     # Real encodings the standard neutralizes.  A caller that wants one should
     # be told this build has no such thing, not handed `replacement`.
     "csiso2022kr", "hz-gb-2312", "iso-2022-cn", "iso-2022-cn-ext",
@@ -427,6 +457,9 @@ ALGORITHMIC = [
      ["gb2312", "gb_2312", "gb_2312-80", "gb2312-80", "chinese", "csgb2312",
       "csiso58gb231280", "iso-ir-58", "euc-cn", "x-euc-cn"]),
     # ISO-2022-KR, which reuses the EUC-KR table.
+    # Big5 as standardised, which the standard's own index extends and remaps.
+    ("big5", "Big5", "BIG5", "Big5_1984", 950,
+     ["big5", "csbig5", "cn-big5", "big5-1984", "x-x-big5"]),
     ("iso-2022-kr", "ISO-2022-KR", "ISO_2022_KR", "Iso2022Kr", 50225,
      ["iso-2022-kr", "csiso2022kr", "iso2022kr"]),
     ("unicode-extras", "UTF-32BE", "UTF_32BE", "Utf32Be", 12001,
@@ -552,6 +585,84 @@ pub static GB2312_ENCODE_DELTA: [(u16, u16); %d] = [
     return decode_delta
 
 
+
+def emit_big5_1984(indexes):
+    """Big5 as standardised, expressed as a narrowing of the standard's index Big5.
+
+    The standard's index is Big5 plus the Hong Kong Supplementary Character Set
+    and other common extensions, and it is not a faithful superset: within
+    Big5's own lead range it gives 260 pointers a different character and fills
+    198 that Big5 leaves undefined.  Lead 0xA1 to 0xF9, and those 458 overrides.
+
+    Source: Unicode's MAPPINGS/OBSOLETE/EASTASIA/OTHER/BIG5.TXT, whose
+    U+FFFD entries mark the undefined cells.
+    """
+    proper = {}
+    with open(os.path.join(MAPPINGS, "BIG5.TXT"), encoding="utf-8", errors="replace") as f:
+        for line in f:
+            line = line.split("#", 1)[0].strip()
+            if not line:
+                continue
+            parts = line.split()
+            if len(parts) < 2 or not parts[0].lower().startswith("0x"):
+                continue
+            code_point = int(parts[1], 16)
+            proper[int(parts[0], 16)] = None if code_point == 0xFFFD else code_point
+
+    big5 = indexes["big5"]
+    decode_delta, encode_delta = [], []
+    remaps = 0
+    for lead in range(0xA1, 0xFA):
+        for trail in list(range(0x40, 0x7F)) + list(range(0xA1, 0xFF)):
+            offset = 0x40 if trail < 0x7F else 0x62
+            pointer = (lead - 0x81) * 157 + (trail - offset)
+            mine = proper.get((lead << 8) | trail)
+            theirs = big5[pointer] if pointer < len(big5) else None
+            if mine == theirs:
+                continue
+            if mine is None:
+                decode_delta.append((pointer, UNASSIGNED))
+            else:
+                remaps += 1
+                decode_delta.append((pointer, mine))
+                encode_delta.append((mine, pointer))
+    assert remaps == 260, remaps
+    assert len(decode_delta) == 458, len(decode_delta)
+    assert all(cp <= 0xFFFF for cp, _ in encode_delta), "Big5 proper stays in the BMP"
+    decode_delta.sort()
+    # A code point may sit at more than one pointer; the first is the one the
+    # standard's own `index Big5 pointer` operation would pick.
+    seen = {}
+    for code_point, pointer in sorted(encode_delta, key=lambda kv: (kv[0], kv[1])):
+        seen.setdefault(code_point, pointer)
+    encode_delta = sorted(seen.items())
+    parts = [HEADER, """
+//! Big5 as standardised, as a narrowing of index Big5.
+//!
+//! Lead 0xA1 to 0xF9, and the pointers where the standard's index — Big5 plus
+//! the Hong Kong Supplementary Character Set and other extensions — disagrees
+//! with Big5 itself.  `0xFFFF` marks a pointer Big5 leaves undefined.
+
+/// Where Big5 differs from index Big5 inside its own lead range.
+#[rustfmt::skip]
+pub static BIG5_1984_DECODE_DELTA: [(u16, u32); %d] = [
+%s
+];
+
+/// The same overrides by code point, for the encoder.
+#[rustfmt::skip]
+pub static BIG5_1984_ENCODE_DELTA: [(u16, u16); %d] = [
+%s
+];
+""" % (
+        len(decode_delta),
+        "\n".join("    (0x{:04X}, 0x{:04X}),".format(a, b) for a, b in decode_delta),
+        len(encode_delta),
+        "\n".join("    (0x{:04X}, 0x{:04X}),".format(a, b) for a, b in encode_delta),
+    )]
+    write(os.path.join(OUT, "big5_1984.rs"), "".join(parts))
+
+
 def emit_extra(indexes):
     """Writes the tables, `Encoding`s, labels and code pages for EXTRA."""
     groups = sorted({g for g, *_ in EXTRA})
@@ -632,16 +743,16 @@ use crate::variant::VariantEncoding;
                 '    "{n}",\n    VariantEncoding::{arm}(\n        &t::{i}_DECODE,\n'
                 '        &t::{i}_ENCODE_CODE_POINTS,\n        &t::{i}_ENCODE_BYTES,\n    ),\n);\n'
                 .format(g=g, i=ident, n=name, arm=arm))
-            parts.append('/// {n}\n#[cfg(feature = "{g}")]\npub static {i}: &Encoding = &{i}_INIT;\n'
-                         .format(g=g, i=ident, n=name))
+            parts.append('/// {d}\n#[cfg(feature = "{g}")]\npub static {i}: &Encoding = &{i}_INIT;\n'
+                         .format(g=g, i=ident, d=EXTRA_DOCS.get(name, name)))
     parts.append("\n// Algorithmic charsets, which need no table\n")
     for group, name, ident, variant, _cp, _labels in ALGORITHMIC:
         gate = "" if group is None else '#[cfg(feature = "{}")]\n'.format(group)
         parts.append(
             '\n{g}pub(crate) const {i}_INIT: Encoding =\n'
             '    Encoding::new("{n}", VariantEncoding::{v});\n'.format(g=gate, i=ident, n=name, v=variant))
-        parts.append('/// {n}\n{g}pub static {i}: &Encoding = &{i}_INIT;\n'
-                     .format(g=gate, i=ident, n=name))
+        parts.append('/// {d}\n{g}pub static {i}: &Encoding = &{i}_INIT;\n'
+                     .format(g=gate, i=ident, d=EXTRA_DOCS.get(name, name)))
     write(os.path.join(ROOT, "src", "extra_encodings.rs"), "".join(parts))
 
     # Labels and code pages, merged into the tables the lookups read.
@@ -853,6 +964,7 @@ def main():
     # --- labels ----------------------------------------------------------
     extra_rows = emit_extra(indexes)
     gb2312_delta = emit_gb2312(indexes)
+    emit_big5_1984(indexes)
     labels = []
     names = []
     for group in encodings:
@@ -972,7 +1084,7 @@ use crate::variant::VariantEncoding;
             doc = ENCODING_DOCS.get(name, "{}.".format(name))
             gate = cfg(name)
             parts.append('\n{}pub(crate) const {}: Encoding = Encoding::new("{}", {});\n'
-                         .format(gate, const, name, variant))
+                         .format(gate, const, RENAMES.get(name, name), variant))
             parts.append('/// {}\n{}pub static {}: &Encoding = &{};\n'
                          .format(doc, gate, const[:-len("_INIT")], const))
     write(os.path.join(ROOT, "src", "encodings.rs"), "".join(parts))
@@ -1024,6 +1136,8 @@ pub static DATA: &str = %s;
 
 #[cfg(feature = "big5")]
 pub mod big5;
+#[cfg(feature = "big5")]
+pub mod big5_1984;
 #[cfg(feature = "euc-kr")]
 pub mod euc_kr;
 #[cfg(feature = "gb18030")]

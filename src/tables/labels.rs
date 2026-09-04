@@ -72,13 +72,19 @@ pub static LABELS: &[Label] = &[
     #[cfg(feature = "big5")]
     Label {
         text: "big5",
-        encoding: &e::BIG5_INIT,
-        whatwg: true,
+        encoding: &x::BIG5_INIT,
+        whatwg: false,
+    },
+    #[cfg(feature = "big5")]
+    Label {
+        text: "big5-1984",
+        encoding: &x::BIG5_INIT,
+        whatwg: false,
     },
     #[cfg(feature = "big5")]
     Label {
         text: "big5-hkscs",
-        encoding: &e::BIG5_INIT,
+        encoding: &e::BIG5_HKSCS_INIT,
         whatwg: true,
     },
     #[cfg(feature = "gb18030")]
@@ -90,8 +96,8 @@ pub static LABELS: &[Label] = &[
     #[cfg(feature = "big5")]
     Label {
         text: "cn-big5",
-        encoding: &e::BIG5_INIT,
-        whatwg: true,
+        encoding: &x::BIG5_INIT,
+        whatwg: false,
     },
     #[cfg(feature = "dos")]
     Label {
@@ -304,8 +310,8 @@ pub static LABELS: &[Label] = &[
     #[cfg(feature = "big5")]
     Label {
         text: "csbig5",
-        encoding: &e::BIG5_INIT,
-        whatwg: true,
+        encoding: &x::BIG5_INIT,
+        whatwg: false,
     },
     #[cfg(feature = "euc-kr")]
     Label {
@@ -2054,8 +2060,8 @@ pub static LABELS: &[Label] = &[
     #[cfg(feature = "big5")]
     Label {
         text: "x-x-big5",
-        encoding: &e::BIG5_INIT,
-        whatwg: true,
+        encoding: &x::BIG5_INIT,
+        whatwg: false,
     },
 ];
 
@@ -2100,13 +2106,13 @@ pub static WHATWG_LABELS: &[Label] = &[
     #[cfg(feature = "big5")]
     Label {
         text: "big5",
-        encoding: &e::BIG5_INIT,
+        encoding: &e::BIG5_HKSCS_INIT,
         whatwg: true,
     },
     #[cfg(feature = "big5")]
     Label {
         text: "big5-hkscs",
-        encoding: &e::BIG5_INIT,
+        encoding: &e::BIG5_HKSCS_INIT,
         whatwg: true,
     },
     #[cfg(feature = "gb18030")]
@@ -2118,7 +2124,7 @@ pub static WHATWG_LABELS: &[Label] = &[
     #[cfg(feature = "big5")]
     Label {
         text: "cn-big5",
-        encoding: &e::BIG5_INIT,
+        encoding: &e::BIG5_HKSCS_INIT,
         whatwg: true,
     },
     #[cfg(feature = "single-byte")]
@@ -2190,7 +2196,7 @@ pub static WHATWG_LABELS: &[Label] = &[
     #[cfg(feature = "big5")]
     Label {
         text: "csbig5",
-        encoding: &e::BIG5_INIT,
+        encoding: &e::BIG5_HKSCS_INIT,
         whatwg: true,
     },
     #[cfg(feature = "euc-kr")]
@@ -3410,7 +3416,7 @@ pub static WHATWG_LABELS: &[Label] = &[
     #[cfg(feature = "big5")]
     Label {
         text: "x-x-big5",
-        encoding: &e::BIG5_INIT,
+        encoding: &e::BIG5_HKSCS_INIT,
         whatwg: true,
     },
 ];
@@ -3479,7 +3485,7 @@ pub static ALL_ENCODINGS: &[&Encoding] = &[
     #[cfg(feature = "gb18030")]
     &e::GB18030_INIT,
     #[cfg(feature = "big5")]
-    &e::BIG5_INIT,
+    &e::BIG5_HKSCS_INIT,
     #[cfg(feature = "euc-jp")]
     &e::EUC_JP_INIT,
     #[cfg(feature = "iso-2022-jp")]
@@ -3566,6 +3572,8 @@ pub static ALL_ENCODINGS: &[&Encoding] = &[
     &x::US_ASCII_INIT,
     #[cfg(feature = "gb18030")]
     &x::GB2312_INIT,
+    #[cfg(feature = "big5")]
+    &x::BIG5_INIT,
     #[cfg(feature = "iso-2022-kr")]
     &x::ISO_2022_KR_INIT,
     #[cfg(feature = "unicode-extras")]

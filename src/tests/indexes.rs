@@ -223,11 +223,11 @@ fn big5_index() {
             _ => None,
         };
         if let Some(pair) = pair {
-            assert_eq!(decode_strict(BIG5, &bytes).as_deref(), Some(pair));
+            assert_eq!(decode_strict(BIG5_HKSCS, &bytes).as_deref(), Some(pair));
         } else if code_point == 0 {
-            assert_eq!(decode_strict(BIG5, &bytes), None, "pointer {pointer}");
+            assert_eq!(decode_strict(BIG5_HKSCS, &bytes), None, "pointer {pointer}");
         } else {
-            expect_char(BIG5, &bytes, code_point);
+            expect_char(BIG5_HKSCS, &bytes, code_point);
         }
     }
 }

@@ -126,7 +126,7 @@ fn errors_can_be_reported_instead() {
 #[cfg(all(feature = "big5", feature = "gb18030"))]
 #[test]
 fn the_minimum_buffer_size_makes_progress() {
-    let mut decoder = BIG5.new_decoder_with(DecodeOptions::new().bom(Bom::Ignore));
+    let mut decoder = BIG5_HKSCS.new_decoder_with(DecodeOptions::new().bom(Bom::Ignore));
     let mut buffer = [0u8; DECODER_MIN_BUFFER];
     let input = b"\xA4\x40\xA4\x40";
     let mut read = 0;
@@ -220,7 +220,7 @@ fn code_pages_resolve_and_round_trip() {
         (932, SHIFT_JIS),
         (936, GBK),
         (949, EUC_KR),
-        (950, BIG5),
+        (950, crate::BIG5),
         (1200, UTF_16LE),
         (1201, UTF_16BE),
         (1252, WINDOWS_1252),

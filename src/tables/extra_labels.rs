@@ -113,6 +113,12 @@ pub static EXTRA_CODE_PAGES: &[CodePage] = &[
         encoding: &x::IBM875_INIT,
         canonical: true,
     },
+    #[cfg(feature = "big5")]
+    CodePage {
+        number: 950,
+        encoding: &x::BIG5_INIT,
+        canonical: true,
+    },
     #[cfg(feature = "ebcdic")]
     CodePage {
         number: 1026,
