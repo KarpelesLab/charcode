@@ -1,0 +1,99 @@
+//! Lookups over the generated index tables.
+//!
+//! Decode tables are indexed by pointer and use 0 to mean "no code point at this
+//! pointer"; no index in the standard maps a pointer to U+0000, so the sentinel is
+//! unambiguous.  Encode tables are two parallel arrays sorted by code point, giving
+//! the `index pointer for code point` operation as a binary search.
+
+use crate::tables::gb18030::GB18030_RANGES;
+
+/// `the index code point for pointer in index`, for a 16-bit table.
+#[inline]
+pub(crate) fn code_point(table: &[u16], pointer: usize) -> Option<u32> {
+    match table.get(pointer).copied() {
+        None | Some(0) => None,
+        Some(cp) => Some(u32::from(cp)),
+    }
+}
+
+/// `the index code point for pointer in index`, for a 32-bit table (Big5 only).
+#[inline]
+pub(crate) fn code_point_wide(table: &[u32], pointer: usize) -> Option<u32> {
+    match table.get(pointer).copied() {
+        None | Some(0) => None,
+        Some(cp) => Some(cp),
+    }
+}
+
+/// `the index pointer for code point in index`, for a 16-bit table.
+#[inline]
+pub(crate) fn pointer(code_points: &[u16], pointers: &[u16], scalar: u32) -> Option<u16> {
+    if scalar > 0xFFFF {
+        return None;
+    }
+    let i = code_points.binary_search(&(scalar as u16)).ok()?;
+    pointers.get(i).copied()
+}
+
+/// `the index pointer for code point in index`, for a 32-bit table (Big5 only).
+#[inline]
+pub(crate) fn pointer_wide(code_points: &[u32], pointers: &[u16], scalar: u32) -> Option<u16> {
+    let i = code_points.binary_search(&scalar).ok()?;
+    pointers.get(i).copied()
+}
+
+/// `the index gb18030 ranges code point for pointer`.
+pub(crate) fn gb18030_ranges_code_point(pointer: u32) -> Option<u32> {
+    if (pointer > 39419 && pointer < 189_000) || pointer > 1_237_575 {
+        return None;
+    }
+    if pointer == 7457 {
+        return Some(0xE7C7);
+    }
+    let i = GB18030_RANGES
+        .partition_point(|&(p, _)| p <= pointer)
+        .checked_sub(1)?;
+    let (offset, code_point_offset) = GB18030_RANGES[i];
+    Some(code_point_offset + (pointer - offset))
+}
+
+/// `the index gb18030 ranges pointer for code point`.
+pub(crate) fn gb18030_ranges_pointer(scalar: u32) -> Option<u32> {
+    if scalar == 0xE7C7 {
+        return Some(7457);
+    }
+    let i = GB18030_RANGES
+        .partition_point(|&(_, c)| c <= scalar)
+        .checked_sub(1)?;
+    let (offset, code_point_offset) = GB18030_RANGES[i];
+    Some(offset + (scalar - code_point_offset))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn ranges_round_trip() {
+        for &pointer in &[0u32, 7457, 39419, 189_000, 1_237_575] {
+            let cp = gb18030_ranges_code_point(pointer).expect("mapped pointer");
+            assert_eq!(
+                gb18030_ranges_pointer(cp),
+                Some(pointer),
+                "pointer {pointer}"
+            );
+        }
+        assert_eq!(gb18030_ranges_code_point(7457), Some(0xE7C7));
+        assert_eq!(gb18030_ranges_code_point(39420), None);
+        assert_eq!(gb18030_ranges_code_point(1_237_576), None);
+        assert_eq!(gb18030_ranges_code_point(189_000), Some(0x10000));
+        assert_eq!(gb18030_ranges_pointer(0x10FFFF), Some(1_237_575));
+    }
+
+    #[test]
+    fn sentinel_means_unmapped() {
+        assert_eq!(code_point(&[0, 0x41], 0), None);
+        assert_eq!(code_point(&[0, 0x41], 1), Some(0x41));
+        assert_eq!(code_point(&[0, 0x41], 2), None);
+    }
+}
