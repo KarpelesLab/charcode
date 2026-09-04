@@ -539,8 +539,11 @@ mod tests {
         // have meant there rather than just "unknown".
         let message = parse_args(&["-f", "hz-gb-2312"]).unwrap_err().0;
         assert!(message.contains("WHATWG"), "{message}");
-        let message = parse_args(&["-f", "gb2312"]).unwrap_err().0;
-        assert!(message.contains("GBK"), "{message}");
+        // GB 2312 exists now, and is not the GBK the standard resolves the
+        // label to.
+        assert_eq!(parse_options(&["-f", "gb2312"]).from, charcode::GB2312);
+        let message = parse_args(&["-f", "iso-2022-kr"]).unwrap_err().0;
+        assert!(message.contains("WHATWG"), "{message}");
     }
 
     #[test]

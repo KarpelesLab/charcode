@@ -190,19 +190,11 @@ fn lookup_and_metadata_need_no_allocator() {
     assert_eq!(UTF_16BE.output_encoding(), UTF_8);
     // The standard's 40, plus ISO-8859-1 and US-ASCII, which it has no room
     // for.  The extra groups add more still.
-    // The standard's 40, ISO-8859-1 and US-ASCII which it has no room for,
-    // and — with `single-byte` — the two ISO 8859 parts it resolves elsewhere.
-    #[cfg(all(
-        feature = "single-byte",
-        not(any(
-            feature = "dos",
-            feature = "ebcdic",
-            feature = "mac",
-            feature = "misc",
-            feature = "unicode-extras"
-        ))
-    ))]
-    assert_eq!(Encoding::all().len(), 44);
+    // The standard defines forty encodings, whatever else this build carries.
+    // Counting them beats asserting a total, which changes every time another
+    // charset the standard has no room for is added.
+    #[cfg(feature = "whatwg")]
+    assert_eq!(Encoding::all().iter().filter(|e| e.is_whatwg()).count(), 40);
     assert!(Encoding::all().len() >= 42);
     assert!(IBM866.labels().any(|label| label == "cp866"));
     assert!(WINDOWS_1252.is_single_byte());

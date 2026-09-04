@@ -141,6 +141,68 @@ fn gb18030_four_byte_ranges() {
     }
 }
 
+/// GB 2312-80 is index gb18030 narrowed to its own bytes and corrected at the
+/// two pointers where the two charsets disagree.
+#[cfg(feature = "gb18030")]
+#[test]
+fn gb2312_is_a_corrected_narrowing_of_gb18030() {
+    use crate::GB2312;
+    use crate::index;
+    use crate::tables::gb2312::GB2312_DECODE_DELTA;
+    use crate::tables::gb18030::GB18030_DECODE;
+
+    let mut mapped = 0;
+    for lead in 0x81..=0xFEu8 {
+        for trail in 0x40..=0xFEu8 {
+            let bytes = [lead, trail];
+            let inside = (0xA1..=0xF7).contains(&lead) && (0xA1..=0xFE).contains(&trail);
+            let decoded = decode_strict(GB2312, &bytes);
+            if !inside {
+                assert_eq!(decoded, None, "GB2312 should refuse {bytes:02X?}");
+                continue;
+            }
+            let pointer = (usize::from(lead) - 0x81) * 190 + (usize::from(trail) - 0x41);
+            // 0xFFFF in the delta means GB 2312 leaves the pointer unassigned
+            // where GBK fills it in.
+            let expected = match GB2312_DECODE_DELTA
+                .binary_search_by_key(&(pointer as u16), |&(p, _)| p)
+                .ok()
+                .map(|i| GB2312_DECODE_DELTA[i].1)
+            {
+                Some(0xFFFF) => None,
+                Some(code_point) => Some(u32::from(code_point)),
+                None => index::code_point(&GB18030_DECODE, pointer),
+            };
+            match expected {
+                Some(code_point) => {
+                    mapped += 1;
+                    expect_char(GB2312, &bytes, code_point);
+                    // And it round-trips.
+                    let c = char::from_u32(code_point).unwrap();
+                    let mut out = alloc::vec::Vec::new();
+                    GB2312
+                        .new_encoder()
+                        .encode_from_str(&alloc::string::String::from(c), &mut out, true)
+                        .unwrap_or_else(|e| panic!("GB2312 cannot encode {e}"));
+                    assert_eq!(out, bytes, "U+{code_point:04X}");
+                }
+                None => assert_eq!(decoded, None, "{bytes:02X?}"),
+            }
+        }
+    }
+    assert_eq!(mapped, 7445, "GB 2312-80 has 7445 code points");
+
+    // The two corrections, spelled out.
+    expect_char(GB2312, b"\xA1\xA4", 0x30FB);
+    expect_char(GB2312, b"\xA1\xAA", 0x2015);
+    expect_char(GBK, b"\xA1\xA4", 0x00B7);
+    expect_char(GBK, b"\xA1\xAA", 0x2014);
+
+    // GBK's four-byte form and its low lead bytes are not GB 2312's.
+    assert_eq!(decode_strict(GB2312, b"\x84\x31\xA4\x39"), None);
+    assert_eq!(decode_strict(GB2312, b"\x80"), None);
+}
+
 #[cfg(feature = "big5")]
 #[test]
 fn big5_index() {

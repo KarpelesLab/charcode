@@ -11,6 +11,7 @@ script nor a network connection.  Re-run it only to pick up upstream changes.
 
 import json
 import os
+import re
 import sys
 import urllib.request
 
@@ -421,6 +422,10 @@ ALGORITHMIC = [
     (None, "US-ASCII", "US_ASCII", "Identity(crate::identity::Identity::ascii())", 20127,
      ["us-ascii", "ascii", "ansi_x3.4-1968", "iso-ir-6", "iso646-us", "us", "csascii",
       "iso_646.irv:1991", "ansi_x3.4-1986"]),
+    # GB 2312-80, which reuses index gb18030 and so rides its feature.
+    ("gb18030", "GB2312", "GB2312", "Gb2312", 20936,
+     ["gb2312", "gb_2312", "gb_2312-80", "gb2312-80", "chinese", "csgb2312",
+      "csiso58gb231280", "iso-ir-58", "euc-cn", "x-euc-cn"]),
     ("unicode-extras", "UTF-32BE", "UTF_32BE", "Utf32Be", 12001,
      ["utf-32be", "utf32be"]),
     ("unicode-extras", "UTF-32LE", "UTF_32LE", "Utf32Le", 12000,
@@ -451,6 +456,97 @@ def load_mapping(filename):
                 table[byte] = int(parts[1], 16)
     return table
 
+
+
+
+UNASSIGNED = 0xFFFF
+
+
+def emit_gb2312(indexes):
+    """GB 2312-80, as a narrowing of the standard's index gb18030.
+
+    GB 2312 is EUC-CN's G1 set: lead 0xA1-0xF7, trail 0xA1-0xFE.  Every one of
+    its 7445 code points is in index gb18030, and the two disagree at exactly
+    two pointers, so the charset needs no table of its own — only the byte
+    range and those two overrides.
+
+    Source: glibc-EUC_CN-2.3.3.ucm from unicode-org/icu-data, which reproduces
+    Unicode's withdrawn MAPPINGS/OBSOLETE/EASTASIA/GB/GB2312.TXT (Unicode 3.0,
+    table version 1.0, 1999-10-08) bit for bit over the two-byte range.
+    """
+    entries = {}
+    path = os.path.join(MAPPINGS, "GB2312-EUC_CN.ucm")
+    with open(path, encoding="utf-8", errors="replace") as f:
+        for line in f:
+            m = re.match(r"<U([0-9A-Fa-f]{4,6})>\s+((?:\\x[0-9A-Fa-f]{2})+)\s+\|0", line)
+            if not m:
+                continue
+            code_point = int(m.group(1), 16)
+            byte_seq = [int(b, 16) for b in re.findall(r"\\x([0-9A-Fa-f]{2})", m.group(2))]
+            if len(byte_seq) == 2:
+                entries[(byte_seq[0], byte_seq[1])] = code_point
+    assert len(entries) == 7445, len(entries)
+    leads = {lead for lead, _ in entries}
+    trails = {trail for _, trail in entries}
+    assert (min(leads), max(leads)) == (0xA1, 0xF7), (min(leads), max(leads))
+    assert (min(trails), max(trails)) == (0xA1, 0xFE), (min(trails), max(trails))
+    # Level 1 and level 2 hanzi, as GB 2312-80 defines them.
+    level1 = sum(1 for (lead, _), _ in entries.items() if 0xB0 <= lead <= 0xD7)
+    level2 = sum(1 for (lead, _), _ in entries.items() if 0xD8 <= lead <= 0xF7)
+    assert (level1, level2) == (3755, 3008), (level1, level2)
+
+    # The byte range alone is not the charset: GBK fills rows 10 to 15, which
+    # GB 2312 leaves unassigned, and those rows sit inside the lead range.  So
+    # the delta carries both the corrections and the exclusions.
+    gb = indexes["gb18030"]
+    decode_delta, encode_delta = [], []
+    remaps = 0
+    for lead in range(0xA1, 0xF8):
+        for trail in range(0xA1, 0xFF):
+            pointer = (lead - 0x81) * 190 + (trail - 0x41)
+            mine = entries.get((lead, trail))
+            theirs = gb[pointer]
+            if mine == theirs:
+                continue
+            if mine is None:
+                decode_delta.append((pointer, UNASSIGNED))
+            else:
+                remaps += 1
+                decode_delta.append((pointer, mine))
+                encode_delta.append((mine, pointer))
+    assert remaps == 2, remaps
+    assert len(decode_delta) == 735, len(decode_delta)
+    decode_delta.sort()
+    encode_delta.sort()
+    parts = [HEADER, """
+//! GB 2312-80, expressed as a narrowing of index gb18030.
+//!
+//! Lead 0xA1 to 0xF7, trail 0xA1 to 0xFE, minus the 733 pointers GBK fills in
+//! rows 10 to 15 that GB 2312 leaves unassigned, and corrected at the two
+//! pointers where GBK gives a different character.  The remaining 7443 code
+//! points index gb18030 already holds unchanged, so there is no table here.
+
+/// Where GB 2312-80 differs from index gb18030 inside its own byte range:
+/// `0xFFFF` for a pointer GB 2312 leaves unassigned and GBK fills, and the code
+/// point itself for the two GBK gets wrong.
+#[rustfmt::skip]
+pub static GB2312_DECODE_DELTA: [(u16, u16); %d] = [
+%s
+];
+
+/// The same overrides by code point, for the encoder.
+#[rustfmt::skip]
+pub static GB2312_ENCODE_DELTA: [(u16, u16); %d] = [
+%s
+];
+""" % (
+        len(decode_delta),
+        "\n".join("    (0x{:04X}, 0x{:04X}),".format(a, b) for a, b in decode_delta),
+        len(encode_delta),
+        "\n".join("    (0x{:04X}, 0x{:04X}),".format(a, b) for a, b in encode_delta),
+    )]
+    write(os.path.join(OUT, "gb2312.rs"), "".join(parts))
+    return decode_delta
 
 
 def emit_extra(indexes):
@@ -753,6 +849,7 @@ def main():
 
     # --- labels ----------------------------------------------------------
     extra_rows = emit_extra(indexes)
+    gb2312_delta = emit_gb2312(indexes)
     labels = []
     names = []
     for group in encodings:
@@ -928,6 +1025,8 @@ pub mod big5;
 pub mod euc_kr;
 #[cfg(feature = "gb18030")]
 pub mod gb18030;
+#[cfg(feature = "gb18030")]
+pub mod gb2312;
 #[cfg(any(feature = "euc-jp", feature = "iso-2022-jp", feature = "shift-jis"))]
 pub mod jis;
 #[cfg(any(\n    feature = "dos",\n    feature = "ebcdic",\n    feature = "mac",\n    feature = "misc",\n    feature = "single-byte"\n))]

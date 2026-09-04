@@ -22,6 +22,8 @@ pub mod extra;
 pub mod extra_labels;
 #[cfg(feature = "gb18030")]
 pub mod gb18030;
+#[cfg(feature = "gb18030")]
+pub mod gb2312;
 #[cfg(any(feature = "euc-jp", feature = "iso-2022-jp", feature = "shift-jis"))]
 pub mod jis;
 pub mod labels;

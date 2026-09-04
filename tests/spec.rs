@@ -68,10 +68,20 @@ fn the_two_lookups_disagree_on_purpose() {
     assert_eq!(Encoding::for_label(b"tis-620"), Some(ISO_8859_11));
     assert_eq!(Encoding::for_whatwg_label(b"tis-620"), Some(WINDOWS_874));
 
-    // A label naming a charset this build does not have yet resolves to
-    // nothing, rather than quietly to a superset of it.
-    assert_eq!(Encoding::for_label(b"gb2312"), None);
+    // GB 2312 is its own charset, not the GBK the standard resolves it to;
+    // the two disagree at two of GB 2312's code points.
+    assert_eq!(Encoding::for_label(b"gb2312"), Some(GB2312));
     assert_eq!(Encoding::for_whatwg_label(b"gb2312"), Some(GBK));
+    assert_eq!(decode(GB2312, b"\xA1\xAA"), "\u{2015}");
+    assert_eq!(decode(GBK, b"\xA1\xAA"), "\u{2014}");
+
+    // A label naming a charset this build does not have yet resolves to
+    // nothing, rather than quietly to something adjacent.
+    assert_eq!(Encoding::for_label(b"iso-2022-kr"), None);
+    assert_eq!(
+        Encoding::for_whatwg_label(b"iso-2022-kr"),
+        Some(REPLACEMENT)
+    );
 
     // A *faithful* superset is a different matter.  WHATWG's EUC-KR is the
     // Unified Hangul Code, which contains every one of KS X 1001's 8224 code
@@ -589,7 +599,7 @@ fn is_whatwg_marks_exactly_the_standards_encodings() {
         // Windows superset instead.
         if matches!(
             encoding.name(),
-            "ISO-8859-1" | "ISO-8859-9" | "ISO-8859-11" | "US-ASCII"
+            "ISO-8859-1" | "ISO-8859-9" | "ISO-8859-11" | "US-ASCII" | "GB2312"
         ) {
             assert!(!encoding.is_whatwg(), "{}", encoding.name());
             continue;

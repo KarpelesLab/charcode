@@ -221,6 +221,8 @@ mod big5;
 mod code_page;
 mod decoder;
 mod encoder;
+#[cfg(feature = "gb18030")]
+mod euc_cn;
 #[cfg(feature = "euc-jp")]
 mod euc_jp;
 #[cfg(feature = "euc-kr")]

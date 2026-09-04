@@ -6,6 +6,8 @@
 
 #[cfg(feature = "big5")]
 use crate::big5::{Big5Decoder, Big5Encoder};
+#[cfg(feature = "gb18030")]
+use crate::euc_cn::{Gb2312Decoder, Gb2312Encoder};
 #[cfg(feature = "euc-jp")]
 use crate::euc_jp::{EucJpDecoder, EucJpEncoder};
 #[cfg(feature = "euc-kr")]
@@ -53,6 +55,8 @@ pub(crate) enum VariantEncoding {
     #[cfg(feature = "unicode-extras")]
     Utf7,
     #[cfg(feature = "gb18030")]
+    Gb2312,
+    #[cfg(feature = "gb18030")]
     Gb18030 {
         is_gbk: bool,
     },
@@ -93,6 +97,8 @@ impl VariantEncoding {
             VariantEncoding::Utf7 => VariantDecoder::Utf7(Utf7Decoder::new()),
             // GBK and gb18030 share a decoder.
             #[cfg(feature = "gb18030")]
+            VariantEncoding::Gb2312 => VariantDecoder::Gb2312(Gb2312Decoder::new()),
+            #[cfg(feature = "gb18030")]
             VariantEncoding::Gb18030 { .. } => VariantDecoder::Gb18030(Gb18030Decoder::new()),
             #[cfg(feature = "big5")]
             VariantEncoding::Big5 => VariantDecoder::Big5(Big5Decoder::new()),
@@ -126,6 +132,8 @@ impl VariantEncoding {
             VariantEncoding::FullByte(_, code_points, bytes) => {
                 VariantEncoder::FullByte(FullByteEncoder::new(code_points, bytes))
             }
+            #[cfg(feature = "gb18030")]
+            VariantEncoding::Gb2312 => VariantEncoder::Gb2312(Gb2312Encoder),
             #[cfg(feature = "gb18030")]
             VariantEncoding::Gb18030 { is_gbk } => {
                 VariantEncoder::Gb18030(Gb18030Encoder::new(is_gbk))
@@ -204,6 +212,8 @@ pub(crate) enum VariantDecoder {
     #[cfg(feature = "unicode-extras")]
     Utf7(Utf7Decoder),
     #[cfg(feature = "gb18030")]
+    Gb2312(Gb2312Decoder),
+    #[cfg(feature = "gb18030")]
     Gb18030(Gb18030Decoder),
     #[cfg(feature = "big5")]
     Big5(Big5Decoder),
@@ -238,6 +248,8 @@ impl VariantDecoder {
             VariantDecoder::Utf32(d) => d.decode(src, sink, last),
             #[cfg(feature = "unicode-extras")]
             VariantDecoder::Utf7(d) => d.decode(src, sink, last),
+            #[cfg(feature = "gb18030")]
+            VariantDecoder::Gb2312(d) => d.decode(src, sink, last),
             #[cfg(feature = "gb18030")]
             VariantDecoder::Gb18030(d) => d.decode(src, sink, last),
             #[cfg(feature = "big5")]
@@ -279,6 +291,8 @@ pub(crate) enum VariantEncoder {
     #[cfg(feature = "full-byte")]
     FullByte(FullByteEncoder),
     #[cfg(feature = "gb18030")]
+    Gb2312(Gb2312Encoder),
+    #[cfg(feature = "gb18030")]
     Gb18030(Gb18030Encoder),
     #[cfg(feature = "big5")]
     Big5(Big5Encoder),
@@ -313,6 +327,8 @@ impl VariantEncoder {
             VariantEncoder::SingleByte(e) => e.encode(src, sink),
             #[cfg(feature = "full-byte")]
             VariantEncoder::FullByte(e) => e.encode(src, sink),
+            #[cfg(feature = "gb18030")]
+            VariantEncoder::Gb2312(e) => e.encode(src, sink),
             #[cfg(feature = "gb18030")]
             VariantEncoder::Gb18030(e) => e.encode(src, sink),
             #[cfg(feature = "big5")]

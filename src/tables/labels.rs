@@ -81,6 +81,12 @@ pub static LABELS: &[Label] = &[
         encoding: &e::BIG5_INIT,
         whatwg: true,
     },
+    #[cfg(feature = "gb18030")]
+    Label {
+        text: "chinese",
+        encoding: &x::GB2312_INIT,
+        whatwg: false,
+    },
     #[cfg(feature = "big5")]
     Label {
         text: "cn-big5",
@@ -313,6 +319,12 @@ pub static LABELS: &[Label] = &[
         encoding: &e::EUC_JP_INIT,
         whatwg: true,
     },
+    #[cfg(feature = "gb18030")]
+    Label {
+        text: "csgb2312",
+        encoding: &x::GB2312_INIT,
+        whatwg: false,
+    },
     #[cfg(feature = "ebcdic")]
     Label {
         text: "csibm037",
@@ -396,6 +408,12 @@ pub static LABELS: &[Label] = &[
         text: "csiso2022jp",
         encoding: &e::ISO_2022_JP_INIT,
         whatwg: true,
+    },
+    #[cfg(feature = "gb18030")]
+    Label {
+        text: "csiso58gb231280",
+        encoding: &x::GB2312_INIT,
+        whatwg: false,
     },
     #[cfg(feature = "single-byte")]
     Label {
@@ -635,6 +653,12 @@ pub static LABELS: &[Label] = &[
         encoding: &e::ISO_8859_7_INIT,
         whatwg: true,
     },
+    #[cfg(feature = "gb18030")]
+    Label {
+        text: "euc-cn",
+        encoding: &x::GB2312_INIT,
+        whatwg: false,
+    },
     #[cfg(feature = "euc-jp")]
     Label {
         text: "euc-jp",
@@ -652,6 +676,30 @@ pub static LABELS: &[Label] = &[
         text: "gb18030",
         encoding: &e::GB18030_INIT,
         whatwg: true,
+    },
+    #[cfg(feature = "gb18030")]
+    Label {
+        text: "gb2312",
+        encoding: &x::GB2312_INIT,
+        whatwg: false,
+    },
+    #[cfg(feature = "gb18030")]
+    Label {
+        text: "gb2312-80",
+        encoding: &x::GB2312_INIT,
+        whatwg: false,
+    },
+    #[cfg(feature = "gb18030")]
+    Label {
+        text: "gb_2312",
+        encoding: &x::GB2312_INIT,
+        whatwg: false,
+    },
+    #[cfg(feature = "gb18030")]
+    Label {
+        text: "gb_2312-80",
+        encoding: &x::GB2312_INIT,
+        whatwg: false,
     },
     #[cfg(feature = "gb18030")]
     Label {
@@ -1007,6 +1055,12 @@ pub static LABELS: &[Label] = &[
     Label {
         text: "iso-ir-166",
         encoding: &x::ISO_8859_11_INIT,
+        whatwg: false,
+    },
+    #[cfg(feature = "gb18030")]
+    Label {
+        text: "iso-ir-58",
+        encoding: &x::GB2312_INIT,
         whatwg: false,
     },
     Label {
@@ -1860,6 +1914,12 @@ pub static LABELS: &[Label] = &[
         text: "x-cp1258",
         encoding: &e::WINDOWS_1258_INIT,
         whatwg: true,
+    },
+    #[cfg(feature = "gb18030")]
+    Label {
+        text: "x-euc-cn",
+        encoding: &x::GB2312_INIT,
+        whatwg: false,
     },
     #[cfg(feature = "euc-jp")]
     Label {
@@ -3486,6 +3546,8 @@ pub static ALL_ENCODINGS: &[&Encoding] = &[
     &x::KZ_1048_INIT,
     &x::ISO_8859_1_INIT,
     &x::US_ASCII_INIT,
+    #[cfg(feature = "gb18030")]
+    &x::GB2312_INIT,
     #[cfg(feature = "unicode-extras")]
     &x::UTF_32BE_INIT,
     #[cfg(feature = "unicode-extras")]

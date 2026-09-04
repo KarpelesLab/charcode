@@ -149,10 +149,12 @@ jobs:
           # what it would have meant there.  The message is captured rather
           # than piped, since `pipefail` would see the non-zero exit that is
           # the point of the check.
-          ! "$bin" -f gb2312 </dev/null 2>/dev/null
-          refusal="$("$bin" -f gb2312 </dev/null 2>&1 || true)"
+          ! "$bin" -f iso-2022-kr </dev/null 2>/dev/null
+          refusal="$("$bin" -f iso-2022-kr </dev/null 2>&1 || true)"
           grep -q 'WHATWG' <<<"$refusal"
-          grep -q 'GBK' <<<"$refusal"
+          # GB 2312 is its own charset here, and disagrees with GBK.
+          printf '\xa1\xaa' | "$bin" -f gb2312 | diff - <(printf '\xe2\x80\x95')
+          printf '\xa1\xaa' | "$bin" -f gbk    | diff - <(printf '\xe2\x80\x94')
           # A lossy conversion must report itself in the exit status.
           if printf 'a\xff' | "$bin" -c > /dev/null 2>&1; then
             echo "expected a non-zero exit for a lossy conversion" >&2

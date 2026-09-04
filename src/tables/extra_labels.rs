@@ -184,6 +184,12 @@ pub static EXTRA_CODE_PAGES: &[CodePage] = &[
         encoding: &x::IBM424_INIT,
         canonical: true,
     },
+    #[cfg(feature = "gb18030")]
+    CodePage {
+        number: 20936,
+        encoding: &x::GB2312_INIT,
+        canonical: true,
+    },
     CodePage {
         number: 28591,
         encoding: &x::ISO_8859_1_INIT,

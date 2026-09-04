@@ -498,6 +498,12 @@ pub(crate) const US_ASCII_INIT: Encoding = Encoding::new(
 /// US-ASCII
 pub static US_ASCII: &Encoding = &US_ASCII_INIT;
 
+#[cfg(feature = "gb18030")]
+pub(crate) const GB2312_INIT: Encoding = Encoding::new("GB2312", VariantEncoding::Gb2312);
+/// GB2312
+#[cfg(feature = "gb18030")]
+pub static GB2312: &Encoding = &GB2312_INIT;
+
 #[cfg(feature = "unicode-extras")]
 pub(crate) const UTF_32BE_INIT: Encoding = Encoding::new("UTF-32BE", VariantEncoding::Utf32Be);
 /// UTF-32BE
