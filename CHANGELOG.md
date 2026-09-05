@@ -7,6 +7,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0](https://github.com/KarpelesLab/charcode/compare/v0.1.5...v0.2.0) - 2026-09-05
+
+### Added
+
+- add SCSU behind its own feature
+- add ISO-2022-JP-2 behind its own feature
+- add ISO-2022-CN behind its own feature
+- add EUC-JP and ISO-2022-JP themselves, on the shared JIS X 0208 delta
+- add Shift_JIS itself, and rename the standard's to windows-31j
+- add Big5 itself, and rename the standard's index to Big5-HKSCS
+- add ISO-2022-KR behind its own feature
+- add GB 2312-80, the charset `gb2312` names
+- add true ISO-8859-9 and ISO-8859-11/TIS-620
+- [**breaking**] replace the method pairs with options objects
+
+### Fixed
+
+- *(docs)* qualify the cross-links between the standard's encodings and the charsets
+- distinguish a lenient superset from a remapping
+- *(ci)* capture the refusal message instead of piping it
+- *(ci)* assert the CLI's behaviour rather than a count
+- [**breaking**] stop the general lookup returning the standard's substitutions
+- *(test)* stop racing the CLI's own exit when writing its input
+- *(ci)* make the generated-tables check reproducible
+
+### Other
+
+- release v0.1.5 ([#6](https://github.com/KarpelesLab/charcode/pull/6))
+- release v0.1.4 ([#5](https://github.com/KarpelesLab/charcode/pull/5))
+- 47, not 46 — ISO-2022-CN landed after that count
+- describe the charsets outside the standard and why they are separate
+- release v0.1.3 ([#4](https://github.com/KarpelesLab/charcode/pull/4))
+- inline the hot helpers and bucket the encode tables
+- stop rescanning the whole input on every streaming call
+- release v0.1.2 ([#3](https://github.com/KarpelesLab/charcode/pull/3))
+
 ## [0.1.5](https://github.com/KarpelesLab/charcode/compare/v0.1.4...v0.1.5) - 2026-09-04
 
 ### Added
